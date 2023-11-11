@@ -1524,6 +1524,13 @@ OwnedArr<const T> bake_const_arr(Array<T>&& arr) {
   return OwnedArr<const T>(d, s);
 }
 
+template<typename T, typename U>
+OwnedArr<T> cast_arr(OwnedArr<U>&& arr) {
+  static_assert(std::is_trivial_v<T> && std::is_trivial_v<U>);
+  static_assert(sizeof(T) % sizeof(U) == 0);
+  return { reinterpret_cast<T*>(std::exchange(arr.data, nullptr)), 
+           std::exchange(arr.size, 0) / sizeof(U) };
+}
 
 template<typename T>
 void serialise_to_array(Array<uint8_t>& bytes, const T& t) {

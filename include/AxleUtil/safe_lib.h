@@ -312,6 +312,13 @@ constexpr auto const_view_arr(const T& t, usize start, usize count)
   };
 }
 
+template<typename T, typename U>
+ViewArr<T> cast_arr(const ViewArr<U>& arr) {
+  static_assert(std::is_trivial_v<T> && std::is_trivial_v<U>);
+  static_assert(sizeof(T) % sizeof(U) == 0);
+  return { reinterpret_cast<T*>(arr.data), arr.size / sizeof(U) };
+}
+
 template<typename T, size_t size>
 struct ConstArray {
   T data[size];
