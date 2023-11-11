@@ -346,11 +346,11 @@ struct Viewable<ConstArray<T, size>> {
 
 #define FOR(name, it) \
 for(auto it = (name).begin(), JOIN(__end, __LINE__) = (name).end(); \
-it < JOIN(__end, __LINE__); it++)
+it != JOIN(__end, __LINE__); ++it)
 
 #define FOR_MUT(name, it) \
 for(auto it = (name).mut_begin(), JOIN(__end, __LINE__) = (name).mut_end(); \
-it < JOIN(__end, __LINE__); it++)
+it != JOIN(__end, __LINE__); ++it)
 
 
 constexpr uint8_t absolute(int8_t i) {

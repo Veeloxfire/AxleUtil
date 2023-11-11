@@ -770,44 +770,61 @@ void reverse_array(Array<T>& arr) noexcept {
 template<typename T>
 struct BucketArray {
   struct BLOCK {
-    constexpr static size_t BLOCK_SIZE = 32;
+    union EL {
+      char _unused;
+      T el;
+
+      EL() : _unused(0) {}
+      ~EL() {}
+    };
+
+    constexpr static size_t BLOCK_SIZE = 64;
 
     size_t filled = 0;
     BLOCK* next = nullptr;
 
-    T data[BLOCK_SIZE];
-
-    ~BLOCK() {
-      free_destruct_single<BLOCK>(next);
-    }
+    EL data[BLOCK_SIZE];
   };
 
   struct Iter {
     size_t index = 0;
     BLOCK* block = nullptr;
+    
+    constexpr void next() {
+      if(block == nullptr) return;
 
-    Iter() = default;
-
-    void next() {
       index++;
-      if (index == BLOCK::BLOCK_SIZE) {
+      if (index >= block->filled) {
         index = 0;
         block = block->next;
       }
-      else if (index == block->filled) {
-        index = 0;
-        block = nullptr;
+    }
+
+    constexpr T* get() const {
+      if(block == nullptr) return nullptr;
+      else {
+        ASSERT(block->filled > index);
+        return &block->data[index].el;
       }
     }
 
-    T* get() {
-      return block->data + index;
+    constexpr Iter& operator++() {
+      next();
+      return *this;
     }
 
-    bool operator!=(const Iter& i) const {
+    constexpr T& operator*() const {
+      return *get();
+    }
+
+    constexpr T* operator->() const {
+      return get();
+    }
+
+    constexpr bool operator!=(const Iter& i) const {
       return (index != i.index) || (block != i.block);
     }
-    bool operator==(const Iter& i) const {
+    constexpr bool operator==(const Iter& i) const {
       return (index == i.index) && (block == i.block);
     }
   };
@@ -816,77 +833,97 @@ struct BucketArray {
     size_t index = 0;
     const BLOCK* block = nullptr;
 
-    ConstIter() = default;
+    constexpr void next() {
+      if(block == nullptr) return;
 
-    void next() {
       index++;
-      if (index == BLOCK::BLOCK_SIZE) {
+      if (index >= block->filled) {
         index = 0;
         block = block->next;
       }
-      else if (index == block->filled) {
-        index = 0;
-        block = nullptr;
+    }
+
+    constexpr const T* get() const {
+      if(block == nullptr) return nullptr;
+      else {
+        ASSERT(block->filled > index);
+        return &block->data[index].el;
       }
     }
 
-    const T* get() const {
-      return block->data + index;
+    constexpr ConstIter& operator++() {
+      next();
+      return *this;
     }
 
-    bool operator!=(const ConstIter& i) const {
+    constexpr const T& operator*() const {
+      return *get();
+    }
+
+    constexpr const T* operator->() const {
+      return get();
+    }
+    constexpr bool operator!=(const ConstIter& i) const {
       return (index != i.index) || (block != i.block);
     }
-    bool operator==(const ConstIter& i) const {
+    constexpr bool operator==(const ConstIter& i) const {
       return (index == i.index) && (block == i.block);
     }
   };
 
-  Iter begin_iter() {
-    if (first->filled == 0) {
-      return Iter();
-    }
-    else {
-      return Iter{ 0, first };
-    }
+  Iter mut_begin() {
+    return { 0, first };
   }
 
-  Iter end_iter() {
-    return Iter();
+  Iter mut_end() {
+    return {};
   }
 
-  ConstIter begin_const_iter() const {
-    if (first->filled == 0) {
-      return ConstIter();
-    }
-    else {
-      return ConstIter{ 0, first };
-    }
+  ConstIter begin() const {
+    return { 0, first };
   }
 
-  ConstIter end_const_iter() const {
-    return ConstIter();
+  ConstIter end() const {
+    return {};
   }
 
   BLOCK* first = nullptr;
   BLOCK* last = nullptr;
 
-  BucketArray() : first(allocate_default<BLOCK>()), last(first) {}
   ~BucketArray() {
-    free_destruct_single<BLOCK>(first);
+    BLOCK* b = first;
+    while(b != nullptr) {
+      BLOCK* next = b->next;
+      for(usize i = 0; i < b->filled; ++i) {
+        b->data[i].el.~T();
+      }
+      free_destruct_single<BLOCK>(b);
+      b = next;
+    }
   }
 
   template<typename ... U>
   T* insert(U&& ... u) {
-    if (last->filled == BLOCK::BLOCK_SIZE) {
+    if(last == nullptr) {
+      first = allocate_default<BLOCK>();
+      last = first;
+
+      first->next = nullptr;
+      first->filled = 0;
+    }
+    else if (last->filled == BLOCK::BLOCK_SIZE) {
       last->next = allocate_default<BLOCK>();
       last = last->next;
+
+      last->next = nullptr;
+      last->filled = 0;
     }
 
-    new (last->data + last->filled) T(std::forward<U>(u)...);
+    T* el = &last->data[last->filled].el;
+    new (el) T(std::forward<U>(u)...);
     last->filled++;
 
-    return last->data + last->filled - 1;
+    return el;
   }
 };
 

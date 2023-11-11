@@ -1,3 +1,4 @@
+#include "AxleUtil/utility.h"
 #include <AxleTest/unit_tests.h>
 
 static constexpr int RANDOM_ARR[] = {
@@ -595,4 +596,37 @@ TEST_FUNCTION(BIT_ARRAY, intersects) {
   }
 
   TEST_EQ(true, arr2.intersects(arr));
+}
+
+TEST_FUNCTION(BucketArray, basic) {
+  BucketArray<int> arr = {};
+
+  for(int i: RANDOM_ARR) {
+    arr.insert(i);
+  }
+
+  {
+    usize index = 0;
+    FOR(arr, it) {
+      TEST_EQ(*it, RANDOM_ARR[index]);
+      index += 1;
+    }
+  }
+
+  {
+    usize index = 0;
+    FOR_MUT(arr, it) {
+      TEST_EQ(*it, RANDOM_ARR[index]);
+      index += 1;
+    }
+  }
+
+  const int* first = arr.begin().get();
+
+  for(usize i = 0; i < BucketArray<int>::BLOCK::BLOCK_SIZE * 2; ++i) {
+    arr.insert(static_cast<int>(i));
+  }
+
+  const int* first2 = arr.begin().get();
+  TEST_EQ(first, first2);//should be stable iterators
 }
