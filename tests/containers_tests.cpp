@@ -157,8 +157,25 @@ TEST_FUNCTION(Util_OwnedArr, bake) {
 
   TEST_EQ((int*)nullptr, ints_arr.data);
   TEST_EQ((usize)0, ints_arr.size);
-  TEST_ARR_EQ(RANDOM_ARR, RANDOM_ARR_SIZE, ints_arr2.data, ints_arr2.size);
-  
+  TEST_ARR_EQ(RANDOM_ARR, RANDOM_ARR_SIZE, ints_arr2.data, ints_arr2.size); 
+}
+
+TEST_FUNCTION(Util_OwnedArr, copy_bake) {
+  Array<int> ints = {};
+
+  for (int i : RANDOM_ARR) {
+    ints.insert(i);
+  }
+
+  OwnedArr<int> ints_arr = copy_bake_arr(ints);
+
+  static_assert(IS_SAME_TYPE<decltype(ints_arr[0]), int&>, "Must return ref");
+
+  TEST_NEQ((int*)nullptr, ints.data);
+  TEST_NEQ((usize)0, ints.size);
+  TEST_NEQ((usize)0, ints.capacity);
+  TEST_ARR_EQ(RANDOM_ARR, RANDOM_ARR_SIZE, ints_arr.data, ints_arr.size);
+  TEST_ARR_EQ(ints.data, ints.size, ints_arr.data, ints_arr.size);
 }
 
 TEST_FUNCTION(Util_OwnedArr, bake_const) {
@@ -172,6 +189,7 @@ TEST_FUNCTION(Util_OwnedArr, bake_const) {
 
   static_assert(IS_SAME_TYPE<decltype(ints_arr[0]), const int&>, "Must return const ref");
 
+  TEST_EQ(prev_size, ints_arr.size);
   TEST_EQ((int*)nullptr, ints.data);
   TEST_EQ((usize)0, ints.size);
   TEST_EQ((usize)0, ints.capacity);
@@ -187,15 +205,7 @@ TEST_FUNCTION(Util_OwnedArr, bake_const) {
 }
 
 TEST_FUNCTION(Util_OwnedArr, copy) {
-  Array<int> ints = {};
-
-  for (int i : RANDOM_ARR) {
-    ints.insert(i);
-  }
-
-  TEST_ARR_EQ(RANDOM_ARR, RANDOM_ARR_SIZE, ints.data, ints.size);
-
-  OwnedArr<int> arr = copy_arr(ints);
+  OwnedArr<int> arr = copy_arr(RANDOM_ARR);
 
   TEST_ARR_EQ(RANDOM_ARR, RANDOM_ARR_SIZE, arr.data, arr.size);
 

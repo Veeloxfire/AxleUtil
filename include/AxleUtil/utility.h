@@ -711,7 +711,7 @@ struct Viewable<Array<T>> {
 };
 
 template<typename T>
-void copy_array(const Array<T>& from, Array<T>& to) noexcept {
+void copy_arr_to(const Array<T>& from, Array<T>& to) noexcept {
   to.clear();
   to.reserve_total(from.size);
 
@@ -723,9 +723,9 @@ void copy_array(const Array<T>& from, Array<T>& to) noexcept {
 }
 
 template<typename T>
-Array<T> copy_array(const Array<T>& from) noexcept {
+Array<T> copy_arr(const Array<T>& from) noexcept {
   Array<T> to = {};
-  copy_array(from, to);
+  copy_arr_to(from, to);
   return to;
 }
 
@@ -1529,13 +1529,23 @@ OwnedArr<T> copy_arr(const T* source, usize n) {
   return OwnedArr<T>(arr, n);
 }
 
+template<typename T, usize N>
+OwnedArr<T> copy_arr(const T(&source)[N]) {
+  T* arr = allocate_default<T>(N);
+
+  for (usize i = 0; i < N; ++i) {
+    arr[i] = source[i];
+  }
+  return OwnedArr<T>(arr, N);
+}
+
 template<typename T>
 OwnedArr<T> copy_arr(const OwnedArr<T>& in_arr) {
   return copy_arr(in_arr.data, in_arr.size);
 }
 
 template<typename T>
-OwnedArr<T> copy_arr(const Array<T>& in_arr) {
+OwnedArr<T> copy_bake_arr(const Array<T>& in_arr) {
   return copy_arr(in_arr.data, in_arr.size);
 }
 

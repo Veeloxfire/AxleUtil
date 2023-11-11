@@ -146,7 +146,6 @@ namespace UNIT_TESTS {
   }
 }
 
-
 namespace Format {
   template<typename T>
   struct FormatArg<UNIT_TESTS::TestFormat<T>> {
@@ -163,7 +162,6 @@ namespace Format {
       Format::FormatArg<PrintPtr>::load_string(res, {tf.t});
     }
   };
-
 }
 
 #define TEST_EQ(expected, actual) do {\
