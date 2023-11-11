@@ -43,23 +43,19 @@ namespace UNIT_TESTS {
   void test_main();
 
   template<typename T>
+  struct TestFormat {
+    const T& t;
+  };
+
+  template<typename T>
   void test_eq(TestErrors* errors, usize line,
                const ViewArr<const char>& expected_str, const T& expected,
                const ViewArr<const char>& actual_str, const T& actual) {
     if (expected != actual) {
       errors->report_error("Test assert failed!\nLine: {}, Test: {}\nExpected: {} = {}\nActual: {} = {}",
-                           line, errors->test_name, expected_str, expected, actual_str, actual);
-    }
-  }
-
-
-  template<typename T>
-  void test_eq(TestErrors* errors, usize line,
-               const ViewArr<const char>& expected_str, T* expected,
-               const ViewArr<const char>& actual_str, T* actual) {
-    if (expected != actual) {
-      errors->report_error("Test assert failed!\nLine: {}, Test: {}\nExpected: {} = {}\nActual: {} = {}",
-                           line, errors->test_name, expected_str, PrintPtr{ expected }, actual_str, PrintPtr{ actual });
+                           line, errors->test_name, 
+                           expected_str, TestFormat(expected),
+                           actual_str, TestFormat(actual));
     }
   }
 
@@ -69,22 +65,12 @@ namespace UNIT_TESTS {
                 const ViewArr<const char>& actual_str, const T& actual) {
     if (expected == actual) {
       errors->report_error("Test assert failed!\nLine: {}, Test: {}\n{} = {}\n{} = {}\nThese should not be equal",
-                           line, errors->test_name, expected_str, expected, actual_str, actual);
+                           line, errors->test_name, 
+                           expected_str, TestFormat(expected),
+                           actual_str, TestFormat(actual));
     }
   }
-
-
-  template<typename T>
-  void test_neq(TestErrors* errors, usize line,
-                const ViewArr<const char>& expected_str, T* expected,
-                const ViewArr<const char>& actual_str, T* actual) {
-    if (expected == actual) {
-      errors->report_error("Test assert failed!\nLine: {}, Test: {}\n{} = {}\n{} = {}\nThese should not be equal",
-                           line, errors->test_name, expected_str, PrintPtr{ expected }, actual_str, PrintPtr{ actual });
-    }
-  }
-
-
+ 
   template<typename T>
   void test_eq_arr(TestErrors* errors, usize line,
                    const ViewArr<const char>& expected_str, const T* expected,
@@ -106,13 +92,18 @@ namespace UNIT_TESTS {
     return;
 
   ERROR:
+    constexpr auto t_format = []<typename U>(Format::Formatter auto& res,
+                                             const U& t) {
+      Format::FormatArg<TestFormat<U>>::load_string(res, {t});
+    };
+
     errors->report_error("Test assert failed!\nLine: {}, Test: {}\n"
                          "Expected Size: {} = {}\nActual Size: {} = {}\n"
                          "Expected Array: {} = {}\n"
                          "Actual Array: {} = {}",
                          line, errors->test_name, esize_str, e_size, asize_str, a_size,
-                         expected_str, PrintList<T>{expected, e_size},
-                         actual_str, PrintList<T>{actual, a_size});
+                         expected_str, PrintListCF{expected, e_size, t_format},
+                         actual_str, PrintListCF{actual, a_size, t_format});
     return;
   }
 
@@ -153,6 +144,26 @@ namespace UNIT_TESTS {
                             expected_str, view_arr<L, const char>(expected),
                             actual_str, view_arr<R, const char>(actual));
   }
+}
+
+
+namespace Format {
+  template<typename T>
+  struct FormatArg<UNIT_TESTS::TestFormat<T>> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, UNIT_TESTS::TestFormat<T> tf) {
+      Format::FormatArg<T>::load_string(res, tf.t);
+    }
+  };
+
+  template<typename T>
+  struct FormatArg<UNIT_TESTS::TestFormat<T*>> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, UNIT_TESTS::TestFormat<T*> tf) {
+      Format::FormatArg<PrintPtr>::load_string(res, {tf.t});
+    }
+  };
+
 }
 
 #define TEST_EQ(expected, actual) do {\

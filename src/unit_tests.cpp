@@ -92,7 +92,7 @@ void UNIT_TESTS::print_failed_tests(const UNIT_TESTS::TestContext& context) {
     IO::err_print("\nSome tests failed!\n");
 
     for (const auto &t : context.failed_tests) {
-      OwnedArr ts = format_type_set(view_arr(t.first_error), 2, 20);
+      OwnedArr ts = format_type_set(view_arr(t.first_error), 2, 80);
 
       IO::err_format("\n===========\n{} failed with errors:\n{}\n", 
                      t.test_name, ts);

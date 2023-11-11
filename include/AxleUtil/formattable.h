@@ -40,6 +40,15 @@ struct PrintList {
   usize size;
 };
 
+template<typename T, typename L>
+struct PrintListCF {
+  const T* arr;
+  usize size;
+
+  const L& format;
+};
+
+
 namespace Format {
   template<typename F>
   concept Formatter = requires(F & f, char c, const char* ptr, usize n,
@@ -407,6 +416,25 @@ namespace Format {
       }
     }
   };
+
+
+  template<typename T, typename L>
+  struct FormatArg<PrintListCF<T, L>> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, const PrintListCF<T, L>& arr) {
+      usize i = 0;
+      if (i < arr.size) {
+        arr.format(res, arr.arr[i]);
+        ++i;
+        for (; i < arr.size; ++i) {
+          res.load_string_lit(", ");
+          arr.format(res, arr.arr[i]);
+        }
+      }
+    }
+  };
+
+
 
   template<usize N>
   struct FormatArg<const char[N]> {
