@@ -2,7 +2,9 @@
 #include <AxleUtil/strings.h>
 #include <AxleUtil/os/os_windows.h>
 
+#ifdef AXLE_TRACING
 #include <Tracer/trace.h>
+#endif
 
 static constexpr usize BUFFER_SIZE = 1024;
 
@@ -27,7 +29,7 @@ namespace FILES {
 }
 
 FILES::FileData::FileData(HANDLE h) : handle(h) {
-  LARGE_INTEGER li = { 0 };
+  LARGE_INTEGER li = { {0} };
   GetFileSizeEx(h, &li);
 
   real_file_size = (usize)li.QuadPart;
@@ -47,7 +49,9 @@ FILES::FileData::FileData(HANDLE h) : handle(h) {
 
 FILES::OpenedFile FILES::open(const ViewArr<const char>& name,
                               OPEN_MODE open_mode) {
+#ifdef AXLE_TRACING
   TRACING_FUNCTION();
+#endif
 
   Windows::NativePath path = name;
 
@@ -87,7 +91,9 @@ FILES::OpenedFile FILES::open(const ViewArr<const char>& name,
 
 FILES::OpenedFile FILES::create(const ViewArr<const char>& name,
                                 OPEN_MODE open_mode) {
+#ifdef AXLE_TRACING
   TRACING_FUNCTION();
+#endif
 
   Windows::NativePath path = name;
 
@@ -127,7 +133,9 @@ FILES::OpenedFile FILES::create(const ViewArr<const char>& name,
 
 FILES::OpenedFile FILES::replace(const ViewArr<const char>& name,
                                  OPEN_MODE open_mode) {
+#ifdef AXLE_TRACING
   TRACING_FUNCTION();
+#endif
 
   Windows::NativePath path = name;
 
@@ -171,7 +179,9 @@ bool FILES::exist(const ViewArr<const char>& name) {
 }
 
 void FILES::close(FileData* file) {
+#ifdef AXLE_TRACING
   TRACING_FUNCTION();
+#endif
 
   free_destruct_single(file);
 }
@@ -261,6 +271,7 @@ static BufferRange get_loaded_range(FILES::FileData* file, usize ptr, usize num_
 
 
 static void small_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
+  ASSERT(num_bytes <= BUFFER_SIZE);
   usize space_in_file = file->real_file_size - file->real_buffer_ptr;
   usize can_read_size = BUFFER_SIZE > space_in_file ? space_in_file : BUFFER_SIZE;
 
@@ -277,7 +288,7 @@ static void small_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t
 
 static void big_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
   ASSERT(num_bytes > BUFFER_SIZE);
-  ASSERT(num_bytes < file->real_file_size - file->real_buffer_ptr);
+  ASSERT(num_bytes <= file->real_file_size - file->real_buffer_ptr);
 
   BOOL read = ReadFile(file->handle, bytes, (DWORD)num_bytes, NULL, NULL);
   ASSERT(read);
@@ -290,8 +301,8 @@ static void big_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t* 
 }
 
 static void generic_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
-  if (num_bytes > BUFFER_SIZE) {
-    big_buffer_read(file, abstract_ptr, bytes, num_bytes);
+  if (num_bytes <= BUFFER_SIZE) {
+    small_buffer_read(file, abstract_ptr, bytes, num_bytes);
   }
   else {
     big_buffer_read(file, abstract_ptr, bytes, num_bytes);
@@ -396,24 +407,24 @@ size_t FILES::size_of_file(FileData* file) {
   return file->abstract_file_size;
 }
 
-OwnedArr<const char> FILES::load_file_to_string(const ViewArr<const char>& file_name) {
+OwnedArr<u8> FILES::read_full_file(const ViewArr<const char>& file_name) {
+#ifdef AXLE_TRACING
   TRACING_FUNCTION();
+#endif
 
   Windows::NativePath path = file_name;
   HANDLE h = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
   if (h == INVALID_HANDLE_VALUE) return {};
+  DEFER(h) { CloseHandle(h); };
+
   LARGE_INTEGER li = {};
   GetFileSizeEx(h, &li);
 
-  char* string = allocate_default<char>(li.QuadPart + 1);
-  BOOL read = ReadFile(h, string, (DWORD)li.QuadPart, NULL, NULL);
+  u8* data = allocate_default<u8>(li.QuadPart);
+  BOOL read = ReadFile(h, data, (DWORD)li.QuadPart, NULL, NULL);
   ASSERT(read);
 
-  string[li.QuadPart] = '\0';
-
-  CloseHandle(h);
-
-  return { string, static_cast<usize>(li.QuadPart) };
+  return { data, static_cast<usize>(li.QuadPart) };
 }
 
 FILES::ErrorCode FILES::write(FileData* file, const uint8_t* bytes, size_t num_bytes) {

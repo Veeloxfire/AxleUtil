@@ -70,7 +70,7 @@ return lit_view_arr(ErrorCodeString :: NAME);
   void seek_from_start(FileData* file, size_t offset);
   size_t get_current_pos(FileData* file);
 
-  OwnedArr<const char> load_file_to_string(const ViewArr<const char>& file_name);
+  OwnedArr<u8> read_full_file(const ViewArr<const char>& file_name);
 
   ErrorCode write(FileData* file, const uint8_t* arr, size_t length);
   ErrorCode write_padding_bytes(FileData* file, uint8_t byte, size_t num);

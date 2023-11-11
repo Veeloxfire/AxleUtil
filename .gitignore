@@ -1,7 +1,4 @@
-.vs/
-Debug/
-Release/
-x64/
+.**/
 
 **.sln
 **.vcxproj
@@ -18,9 +15,6 @@ x64/
 **.obj
 **.json
 **.trace
-
-/sandbox/out/**
-/integration_tests/out/**
 
 CMakeCache.txt
 cmake_install.cmake

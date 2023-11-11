@@ -2,8 +2,6 @@
 #include <AxleUtil/strings.h>
 #include <AxleUtil/io.h>
 
-#include <Tracer/trace.h>
-
 void throw_testing_assertion(const char* message) {
   if (std::uncaught_exceptions() == 0) {
     throw std::exception(message);

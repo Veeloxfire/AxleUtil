@@ -1,14 +1,22 @@
 #include <AxleUtil/safe_lib.h>
 #include <AxleUtil/threading.h>
 #include <AxleUtil/os/os_windows.h>
+#include <AxleUtil/memory.h>
 
+#include <intrin.h>
+
+#ifdef AXLE_TRACING
 #include <Tracer/trace.h>
+#endif
 
 bool SpinLockMutex::acquire_if_free() {
   return _InterlockedCompareExchange8(&held, '\1', '\0') == '\0';
 }
 
 void SpinLockMutex::acquire() {
+#ifdef AXLE_TRACING
+  TRACING_FUNCTION();
+#endif
   while (!acquire_if_free()) {}
 }
 

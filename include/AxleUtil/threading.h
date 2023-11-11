@@ -1,8 +1,6 @@
 #ifndef AXLEUTIL_THREADING_H_
 #define AXLEUTIL_THREADING_H_
 
-#include <atomic>
-
 struct SpinLockMutex {
   volatile char held;
 

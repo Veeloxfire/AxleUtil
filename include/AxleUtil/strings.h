@@ -1,7 +1,7 @@
 #ifndef AXLEUTIL_STRINGS_H_
 #define AXLEUTIL_STRINGS_H_
 
-#include <AxleUtil/utility.h>
+#include <AxleUtil/safe_lib.h>
 #include <AxleUtil/format.h>
 
 struct InternString {
@@ -23,13 +23,15 @@ struct InternString {
   }
 };
 
-constexpr ViewArr<const char> view_arr(const InternString* str) {
-  return { str->string, str->len };
-}
+template<>
+struct Viewable<const InternString*> {
+  using ViewT = const char;
 
-constexpr ViewArr<const char> const_view_arr(const InternString* str) {
-  return { str->string, str->len };
-}
+  template<typename U>
+  static constexpr ViewArr<U> view(const InternString* str) {
+    return {str->string, str->len};
+  }
+};
 
 namespace Format {
   template<>
@@ -49,8 +51,12 @@ namespace Format {
   };
 }
 
+namespace Intern {
+  inline constexpr InternString TOMBSTONE_STR = {0,0,{'\0'}};
+  inline constexpr const InternString* TOMBSTONE = &TOMBSTONE_STR;
 
-extern const InternString* TOMBSTONE;
+  bool is_alphabetical_order(const InternString* l, const InternString* r);
+}
 
 struct Table {
   constexpr static float LOAD_FACTOR = 0.75;
@@ -88,7 +94,7 @@ struct StringInterner {
 
     Format::format_to_formatter(formatter, fmt, ts...);
 
-    return intern(formatter.view());
+    return intern(view_arr(formatter));
   }
 };
 
@@ -142,7 +148,8 @@ struct InternHashTable {
       i += 1;
 
       const InternString** keys = table->key_arr() + i;
-      while (i < table->el_capacity && (*keys == nullptr || *keys == TOMBSTONE)) {
+      while (i < table->el_capacity
+        && (*keys == nullptr || *keys == Intern::TOMBSTONE)) {
         keys += 1;
         i += 1;
       }
@@ -184,7 +191,7 @@ struct InternHashTable {
       for (size_t i = 0; i < el_capacity; i++) {
         const InternString* key = keys[i];
 
-        if (key != nullptr && key != TOMBSTONE) {
+        if (key != nullptr && key != Intern::TOMBSTONE) {
           vals[i].~T();
         }
       }
@@ -198,7 +205,7 @@ struct InternHashTable {
   }
 
   bool contains(const InternString* key) const {
-    ASSERT(key != nullptr && key != TOMBSTONE);
+    ASSERT(key != nullptr && key != Intern::TOMBSTONE);
     if (el_capacity == 0) return false;
 
     const InternString** keys = key_arr();
@@ -210,7 +217,7 @@ struct InternHashTable {
       if (test_key == key) {
         return true;
       }
-      else if (test_key == nullptr || test_key == TOMBSTONE) {
+      else if (test_key == nullptr || test_key == Intern::TOMBSTONE) {
         return false;
       }
 
@@ -221,7 +228,7 @@ struct InternHashTable {
   }
 
   size_t get_soa_index(const InternString* key) const {
-    ASSERT(key != nullptr && key != TOMBSTONE);
+    ASSERT(key != nullptr && key != Intern::TOMBSTONE);
     const InternString** hash_arr = (const InternString**)data;
 
     bool found_tombstone = false;
@@ -234,7 +241,7 @@ struct InternHashTable {
       if (key == test_key) {
         return index;
       }
-      else if (test_key == TOMBSTONE && !found_tombstone) {
+      else if (test_key == Intern::TOMBSTONE && !found_tombstone) {
         found_tombstone = true;
         tombstone_index = index;
       }
@@ -275,7 +282,7 @@ struct InternHashTable {
       for (size_t i = 0; i < old_el_cap; i++) {
         const InternString* key = old_hash_arr[i];
 
-        if (key != nullptr && key != TOMBSTONE) {
+        if (key != nullptr && key != Intern::TOMBSTONE) {
           const size_t new_index = get_soa_index(key);
 
           hash_arr[new_index] = key;
@@ -294,7 +301,7 @@ struct InternHashTable {
   }
 
   T* get_val(const InternString* const key) const {
-    ASSERT(key != nullptr && key != TOMBSTONE);
+    ASSERT(key != nullptr && key != Intern::TOMBSTONE);
     if (el_capacity == 0) return nullptr;
 
     const size_t soa_index = get_soa_index(key);
@@ -302,14 +309,14 @@ struct InternHashTable {
     const InternString* test_key = key_arr()[soa_index];
     if (test_key == key) return val_arr() + soa_index;
     else {
-      ASSERT(test_key == nullptr || test_key == TOMBSTONE);
+      ASSERT(test_key == nullptr || test_key == Intern::TOMBSTONE);
       return nullptr;
     }
 
   }
 
   void insert(const InternString* const key, T&& val) {
-    ASSERT(key != nullptr && key != TOMBSTONE);
+    ASSERT(key != nullptr && key != Intern::TOMBSTONE);
     if (el_capacity == 0) {
       el_capacity = 8;
       data = allocate_default<uint8_t>(8 * (sizeof(const InternString*) + sizeof(T)));
@@ -329,7 +336,7 @@ struct InternHashTable {
         return;
       }
 
-      ASSERT(*key_loc == nullptr || *key_loc == TOMBSTONE);
+      ASSERT(*key_loc == nullptr || *key_loc == Intern::TOMBSTONE);
 
       *key_loc = key;
       val_arr()[soa_index] = std::move(val);
@@ -342,7 +349,7 @@ struct InternHashTable {
   }
 
   T* get_or_create(const InternString* const key) {
-    ASSERT(key != nullptr && key != TOMBSTONE);
+    ASSERT(key != nullptr && key != Intern::TOMBSTONE);
     if (el_capacity == 0) {
       el_capacity = 8;
       data = allocate_default<uint8_t>(8 * (sizeof(const InternString*) + sizeof(T)));
@@ -366,7 +373,7 @@ struct InternHashTable {
         return val_arr() + soa_index;
       }
 
-      ASSERT(*test_key == nullptr || *test_key == TOMBSTONE);
+      ASSERT(*test_key == nullptr || *test_key == Intern::TOMBSTONE);
 
       T* val = val_arr() + soa_index;
 
@@ -389,7 +396,5 @@ struct InternHashTable {
     }
   }
 };
-
-bool is_alphabetical_order(const InternString* l, const InternString* r);
-
 #endif
+

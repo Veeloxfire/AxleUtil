@@ -22,7 +22,7 @@ namespace Format {
     constexpr static usize LOCAL_ARR_SIZE = ArraySize<decltype(LocalArr::arr)>::VAL;
 
     static_assert(sizeof(HeapArr) == sizeof(LocalArr));
-    static_assert(sizeof(LocalArr) < 256);
+    static_assert(sizeof(LocalArr) < UINT8_MAX);//uses a u8 to determine size
 
     union {
       LocalArr local_arr = {};
@@ -46,16 +46,7 @@ namespace Format {
       else {
         return copy_arr(local_arr.arr, static_cast<usize>(local_arr.size));
       }
-    }
-
-    ViewArr<char> view() {
-      if (local_arr.heap) {
-        return view_arr(heap_arr.arr);
-      }
-      else {
-        return { local_arr.arr, static_cast<usize>(local_arr.size) };
-      }
-    }
+    } 
 
     inline void load_string(const char* str, usize N) {
       ASSERT(N > 0);
@@ -127,7 +118,22 @@ namespace Format {
   };
 }
 
-//Does null terminate
+template<>
+struct Viewable<Format::ArrayFormatter> {
+  using ViewT = const char;
+
+  template<typename U>
+  static constexpr ViewArr<U> view(const Format::ArrayFormatter& f) {
+    if (f.local_arr.heap) {
+      return view_arr(f.heap_arr.arr);
+    }
+    else {
+      return { f.local_arr.arr, static_cast<usize>(f.local_arr.size) };
+    }
+  }
+};
+
+//Doesn't null terminate
 template<typename ... T>
 OwnedArr<char> format(const Format::FormatString& format, const T& ... ts) {
   Format::ArrayFormatter result = {};

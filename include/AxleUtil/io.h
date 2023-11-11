@@ -147,7 +147,7 @@ namespace IO {
   template<typename ... T>
   void format(const Format::FormatString& format, const T& ... ts) {
     IO_Single::ScopeLock lock;
-    Format::STPrintFormatter result = {};
+    Format::STPrintFormatter result;
 
     Format::format_to_formatter(result, format, ts...);
   }
@@ -155,7 +155,7 @@ namespace IO {
   template<typename ... T>
   void err_format(const Format::FormatString& format, const T& ... ts) {
     IO_Single::ScopeLock lock;
-    Format::STErrPrintFormatter result = {};
+    Format::STErrPrintFormatter result;
 
     Format::format_to_formatter(result, format, ts...);
   }

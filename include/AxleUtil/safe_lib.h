@@ -24,6 +24,8 @@ using usize = size_t;
 #define JOI2(a, b) a ## b
 #define JOIN(a, b) JOI2(a, b)
 
+#define TODO() static_assert(false, "Code is broken")
+
 void throw_testing_assertion(const char* message);
 void abort_assertion(const char* message);
 
@@ -64,6 +66,22 @@ constexpr inline bool memeq_ts(const T* buff1, const T* buff2, size_t length) {
   return true;
 }
 
+constexpr bool streq_ts(const char* str1, const char* str2) {
+  while (str1[0] != '\0' && str1[0] == str2[0]) {
+    str1++;
+    str2++;
+  }
+
+  return str1[0] == str2[0];//both are ended
+}
+
+constexpr size_t strlen_ts(const char* c) {
+  const char* const base = c;
+  while (*c != '\0') { c++; }
+
+  return c - base;
+}
+
 template<typename T>
 constexpr inline void default_init(T* const dest, const size_t dest_size) {
   for (size_t i = 0; i < dest_size; i++) {
@@ -88,281 +106,11 @@ constexpr inline void destruct_single(T* const ptr) {
   ptr->~T();
 }
 
-
 template<typename T>
-void reset_type(T* t) noexcept {
+constexpr void reset_type(T* t) noexcept {
   t->~T();
   new(t) T();
 }
-
-
-#ifdef COUNT_ALLOC
-template<typename T>
-void free_heap_check(T* ptr, size_t num_bytes) {
-  const uint8_t* ptr_end = (const uint8_t*)ptr + num_bytes;
-
-  for (size_t i = 0; i < 4; i++) {
-    ASSERT(ptr_end[i] == 0xFD);
-  }
-}
-
-struct ALLOC_COUNTER {
-  using DESTRUCTOR = void (*)(void*, size_t);
-
-  struct Allocation {
-    const char* type_name;
-    const void* mem;
-    size_t element_size;
-    size_t count;
-    DESTRUCTOR destruct_arr;
-  };
-
-  Allocation* allocs = nullptr;
-  size_t num_allocs = 0;
-  size_t capacity = 0;
-
-  size_t current_allocated_size = 0;
-
-  size_t max_allocated_blocks = 0;
-  size_t max_allocated_size   = 0;
-
-  size_t update_calls = 0;
-  size_t null_remove_calls = 0;
-  size_t valid_remove_calls = 0;
-  size_t insert_calls = 0;
-
-  inline void reset() {
-    allocs = nullptr;
-    num_allocs = 0;
-    capacity = 0;
-
-    current_allocated_size = 0;
-
-    max_allocated_blocks = 0;
-    max_allocated_size   = 0;
-
-    update_calls = 0;
-    null_remove_calls = 0;
-    valid_remove_calls = 0;
-    insert_calls = 0;
-  }
-
-  template<typename T>
-  void insert(T* t, size_t num) {
-    insert_calls++;
-
-    if (capacity == num_allocs) {
-      if (capacity == 0) {
-        capacity = 8;
-      }
-      else {
-        capacity <<= 1;
-      }
-
-
-      auto* new_allocs = (Allocation*)std::realloc(allocs, capacity * sizeof(Allocation));
-      ASSERT(new_allocs != nullptr);
-
-      allocs = new_allocs;
-    }
-
-    allocs[num_allocs].type_name = typeid(T).name();
-    allocs[num_allocs].mem  = (const void*)t;
-    allocs[num_allocs].element_size = sizeof(T);
-    allocs[num_allocs].count = num;
-    allocs[num_allocs].destruct_arr = (DESTRUCTOR)&destruct_arr<T>;
-
-    num_allocs++;
-    if (num_allocs > max_allocated_blocks) {
-      max_allocated_blocks = num_allocs;
-    }
-
-    current_allocated_size += num * sizeof(T);
-    if (current_allocated_size > max_allocated_size) {
-      max_allocated_size = current_allocated_size;
-    }
-  }
-
-  template<typename T>
-  void update(T* from, T* to, size_t num) {
-    if (from == nullptr) {
-      insert<T>(to, num);
-      return;
-    }
-
-    update_calls++;
-
-    const void* f_v = (const void*)from;
-
-    auto i = allocs;
-    const auto end = allocs + num_allocs;
-
-    for (; i < end; i++) {
-      if (i->mem == f_v) {
-        i->mem = (const void*)to;
-
-        current_allocated_size -= (i->count * i->element_size);
-        i->count = num;
-        current_allocated_size += (i->count * i->element_size);
-
-        if (current_allocated_size > max_allocated_size) {
-          max_allocated_size = current_allocated_size;
-        }
-
-        return;
-      }
-    }
-
-    INVALID_CODE_PATH("Tried to update something that wasnt allocated");
-  }
-
-  //This is an unordered remove
-  void remove_single(Allocation* i) {
-    num_allocs--;
-    const auto end = allocs + num_allocs;
-
-    //Remove it by moving it to the end of the array
-    //then shortening the array
-
-    //Dont need to do anything if "i" is already at the end
-    if (i != end) {
-
-      //Swap "end" with "i"
-      std::swap(*i, *end);
-    }
-  }
-
-  template<typename T>
-  void remove(T* t) {
-    if (t == nullptr) {
-      null_remove_calls++;
-      return;
-    }
-
-    valid_remove_calls++;
-
-    const void* t_v = (void*)t;
-
-    auto i = allocs;
-    const auto end = allocs + num_allocs;
-
-    for (; i < end; i++) {
-      if (i->mem == t_v) {
-        free_heap_check(t, i->count * i->element_size);
-
-        current_allocated_size -= (i->count * i->element_size);
-        remove_single(i);
-        return;
-      }
-    }
-
-    INVALID_CODE_PATH("Freed something that wasnt allocated");
-  }
-
-
-  static ALLOC_COUNTER& allocated() {
-    static ALLOC_COUNTER allocated_s ={};
-
-    return allocated_s;
-  }
-};
-#endif
-
-template<typename T>
-T* allocate_default(const size_t num) {
-  T* t = (T*)std::malloc(sizeof(T) * num);
-
-  ASSERT(t != nullptr);
-
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().insert(t, num);
-#endif
-
-  default_init(t, num);
-  return t;
-}
-
-template<typename T>
-inline T* allocate_default() {
-  return allocate_default<T>(1);
-}
-
-template<typename T, typename ... U>
-T* allocate_single_constructed(U&& ... u) {
-  T* t = (T*)std::malloc(sizeof(T));
-
-  ASSERT(t != nullptr);
-
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().insert(t, 1);
-#endif
-
-  new(t) T(std::forward<U>(u)...);
-  return t;
-}
-
-template<typename T>
-T* reallocate_default(T* ptr, const size_t old_size, const size_t new_size) {
-  T* val = (T*)std::realloc((void*)ptr, sizeof(T) * new_size);
-  ASSERT(val != nullptr);
-
-  if (old_size < new_size) {
-    default_init(val + old_size, new_size - old_size);
-  }
-
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().update(ptr, val, new_size);
-#endif
-
-  return val;
-}
-
-template<typename T>
-void free_destruct_single(T* ptr) {
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().remove(ptr);
-#endif
-
-  if (ptr == nullptr) return;
-
-  ptr->~T();
-  std::free((void*)ptr);
-}
-
-template<typename T>
-void free_destruct_n(T* ptr, size_t num) {
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().remove(ptr);
-#endif
-
-  if (ptr == nullptr) return;
-
-  for (size_t i = 0; i < num; i++) {
-    ptr[i].~T();
-  }
-
-  std::free((void*)ptr);
-}
-
-template<typename T>
-void free_no_destruct(T* ptr) {
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().remove(ptr);
-#endif
-
-  if (ptr == nullptr) return;
-
-  std::free((void*)ptr);
-}
-
-constexpr size_t strlen_ts(const char* c) {
-  const char* const base = c;
-  while (*c != '\0') { c++; }
-
-  return c - base;
-}
-
-#define TODO() static_assert(false, "Code is broken")
 
 template<typename T>
 struct ViewArr {
@@ -408,6 +156,161 @@ constexpr ViewArr<const char> lit_view_arr(const char(&arr)[N]) {
   };
 }
 
+template<typename T>
+struct Viewable {
+  template<typename U>
+  struct TemplateFalse {
+    constexpr static bool VAL = false;
+  };
+
+  static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized viewable");
+};
+
+template<typename T>
+struct Viewable<ViewArr<T>> {
+  using ViewT = T;
+
+  template<typename U>
+  static constexpr ViewArr<U> view(const ViewArr<T>& v) {
+    return v;
+  }
+};
+
+template<typename T, size_t N>
+struct Viewable<T[N]> {
+  using ViewT = T;
+
+  template<typename U>
+  static constexpr ViewArr<U> view(T(&arr)[N]) {
+    return {arr, N};
+  }
+};
+
+
+
+namespace ViewTemplates {
+  template<typename T, bool c_view>
+  struct MaybeConst {
+    using Type = T;
+  };
+
+  template<typename T>
+  struct MaybeConst<T, true> {
+    using Type = const T;
+  };
+
+
+  template<typename T, typename U>
+  struct PickNonVoid {
+    using Type = T;
+  };
+
+  template<typename U>
+  struct PickNonVoid<void, U> {
+    using Type = U;
+  };
+
+  template<>
+  struct PickNonVoid<void, void>;
+
+  template<typename T, typename VT, bool c_view>
+  struct Dispatch {
+    template<typename U>
+    struct TemplateFalse {
+      constexpr static bool VAL = false;
+    };
+
+    static_assert(TemplateFalse<T>::VAL, "Invalid use of Dispatch, expected a reference");
+
+  };
+
+  template<typename T, typename VT, bool c_view>
+  struct Dispatch<const T&, VT, c_view> {
+    using VTo = typename MaybeConst<typename PickNonVoid<
+      VT, 
+      typename Viewable<T>::ViewT
+    >::Type, c_view>::Type;
+
+    using Ret = ViewArr<VTo>;
+    constexpr static ViewArr<VTo> view(const T& t) {
+      return Viewable<T>::template view<VTo>(t);
+    }
+  };
+
+  template<typename T, size_t N, typename VT, bool c_view>
+  struct Dispatch<T(&)[N], VT, c_view> {
+    using VTo = typename MaybeConst<typename PickNonVoid<
+      VT, 
+    typename Viewable<T[N]>::ViewT
+  >::Type, c_view>::Type;
+
+  using Ret = ViewArr<VTo>;
+  constexpr static ViewArr<VTo> view(T(&t)[N]) {
+    return Viewable<T[N]>::template view<VTo>(t);
+  }
+};
+
+template<typename T, size_t N, typename VT, bool c_view>
+struct Dispatch<const T(&)[N], VT, c_view> {
+  using VTo = typename MaybeConst<typename PickNonVoid<
+    VT, 
+    typename Viewable<const T[N]>::ViewT
+  >::Type, c_view>::Type;
+
+  using Ret = ViewArr<VTo>;
+  constexpr static ViewArr<VTo> view(const T(&t)[N]) {
+    return Viewable<const T[N]>::template view<VTo>(t);
+  }
+};
+}
+
+template<
+  typename T, 
+  typename VT = void
+>
+constexpr auto view_arr(const T& t) 
+-> typename ViewTemplates::Dispatch<decltype(t), VT, false>::Ret {
+  return ViewTemplates::Dispatch<decltype(t), VT, false>::view(t);
+}
+
+template<
+  typename T, 
+  typename VT = void
+>
+constexpr auto view_arr(const T& t, usize start, usize count) 
+  -> typename ViewTemplates::Dispatch<decltype(t), VT, false>::Ret
+{
+  const auto arr = ViewTemplates::Dispatch<decltype(t), VT, false>::view(t);
+  ASSERT(arr.size >= start + count);
+  return {
+    arr.data + start,
+    count,
+  };
+}
+
+template<
+  typename T, 
+  typename VT = void
+>
+constexpr auto const_view_arr(const T& t)
+  -> typename ViewTemplates::Dispatch<decltype(t), VT, true>::Ret {
+  return ViewTemplates::Dispatch<decltype(t), VT, true>::view(t);
+}
+
+template<
+  typename T, 
+  typename VT = void
+>
+constexpr auto const_view_arr(const T& t, usize start, usize count) 
+  -> typename ViewTemplates::Dispatch<decltype(t), VT, true>::Ret
+{
+  const auto arr = ViewTemplates::Dispatch<decltype(t), VT, true>::view(t);
+  ASSERT(arr.size >= start + count);
+  return {
+    arr.data + start,
+    count,
+  };
+}
 
 template<typename T, size_t size>
 struct ConstArray {
@@ -417,13 +320,22 @@ struct ConstArray {
   constexpr static auto create(U&& ... u) {
     static_assert(sizeof...(U) == size, "Must be fully filled");
 
-    return { {std::forward<U>(u)...} };
+    return ConstArray{ {std::forward<U>(u)...} };
   }
 
   constexpr const T* begin() const { return data; }
   constexpr const T* end() const { return data + size; }
 };
 
+template<typename T, size_t size>
+struct Viewable<ConstArray<T, size>> {
+  using ViewT = T;
+
+  template<typename U>
+  static constexpr ViewArr<T> view(const ConstArray<T, size>& v) {
+    return {v.data, size};
+  }
+};
 
 #define FOR(name, it) \
 for(auto it = (name).begin(), JOIN(__end, __LINE__) = (name).end(); \

@@ -2,7 +2,10 @@
 #define AXLEUTIL_FORMATTABLE_H_
 
 #include <AxleUtil/safe_lib.h>
+
+#ifdef AXLE_TRACE
 #include <Tracer/trace.h>
+#endif
 
 //For printing character as it appears in code
 struct DisplayChar {
@@ -54,7 +57,7 @@ namespace Format {
 
   template<typename T>
   struct FormatArg {
-    template<typename T>
+    template<typename U>
     struct TemplateFalse {
       constexpr static bool VAL = false;
     };
@@ -467,7 +470,9 @@ namespace Format {
   //Doesnt null terminate!
   template<Formatter F, typename ... T>
   constexpr void format_to_formatter(F& result, FormatString format, const T& ... ts) {
+  #ifdef AXLE_TRACING
     TRACING_FUNCTION();
+  #endif
 
     if constexpr (sizeof...(T) > 0) {
       FormatDispatch<F> f = { format, result };

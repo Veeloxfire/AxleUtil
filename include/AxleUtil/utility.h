@@ -7,6 +7,7 @@
 #include <AxleUtil/safe_lib.h>
 #include <AxleUtil/threading.h>
 #include <AxleUtil/formattable.h>
+#include <AxleUtil/memory.h>
 
 constexpr inline u64 MAX_DECIMAL_U64_DIGITS = sizeof("18446744073709551615") - 1;
 
@@ -700,6 +701,16 @@ namespace Format {
 }
 
 template<typename T>
+struct Viewable<Array<T>> {
+  using ViewT = T;
+
+  template<typename U>
+  static constexpr ViewArr<U> view(const Array<T>& t) {
+    return {t.data, t.size};
+  }
+};
+
+template<typename T>
 void copy_array(const Array<T>& from, Array<T>& to) noexcept {
   to.clear();
   to.reserve_total(from.size);
@@ -755,241 +766,6 @@ void reverse_array(Array<T>& arr) noexcept {
     i_back--;
   }
 }
-
-template<typename T>
-struct SparseHash;
-
-template<typename K, typename V, typename HASH = SparseHash<K>>
-struct SparseHashSet {
-  enum struct ENTRY_TYPE : u8 {
-    FILLED, EMPTY, TOMBSTONE
-  };
-
-  using Key = K;
-  using Value = V;
-
-  struct KeyEntry {
-    ENTRY_TYPE type;
-    Key key;
-  };
-
-  constexpr static float LOAD_FACTOR = 0.75;
-
-  uint8_t* data = nullptr;// ptr to data in the array
-  size_t el_capacity = 0;//number of elements
-  size_t used = 0;
-
-  constexpr bool needs_resize(size_t extra) const {
-    return (el_capacity * LOAD_FACTOR) <= (used + extra);
-  }
-
-  constexpr const KeyEntry* key_entry_arr() const {
-    return (const KeyEntry*)data;
-  }
-
-  constexpr Value* val_arr() const {
-    return (Value*)(data + (el_capacity * sizeof(KeyEntry)));
-  }
-
-  ~SparseHashSet() {
-    {
-      const KeyEntry* keys = key_entry_arr();
-      Value* vals = val_arr();
-
-      for (size_t i = 0; i < el_capacity; i++) {
-        if (keys[i].type == ENTRY_TYPE::FILLED) {
-          vals[i].~Value();
-        }
-      }
-    }
-
-    free_no_destruct(data);
-
-    data = nullptr;
-    el_capacity = 0;
-    used = 0;
-  }
-
-  bool contains(const Key* key) const {
-    if (el_capacity == 0) return false;
-
-    const KeyEntry* keys = key_entry_arr();
-
-    const auto hash_val = HASH::hash(key);
-
-    size_t index = hash_val % el_capacity;
-
-    const KeyEntry* test_key = keys + index;
-    while (true) {
-      if (test_key->type != ENTRY_TYPE::FILLED) {
-        return false;
-      }
-
-      if (test_key->key == *key) {
-        return true;
-      }
-
-      index++;
-      index %= el_capacity;
-      test_key = keys + index;
-    }
-  }
-
-  size_t get_soa_index(const Key* key) const {
-    const KeyEntry* hash_arr = key_entry_arr();
-
-    bool found_tombstone = false;
-    size_t tombstone_index = 0;
-
-    const auto hash_val = HASH::hash(key);
-    size_t index = hash_val % el_capacity;
-
-    const KeyEntry* test_key = hash_arr + index;
-    while (test_key->type != ENTRY_TYPE::EMPTY) {
-      if (test_key->type == ENTRY_TYPE::FILLED && test_key->key == *key) {
-        return index;
-      }
-      else if (test_key->type == ENTRY_TYPE::TOMBSTONE && !found_tombstone) {
-        found_tombstone = true;
-        tombstone_index = index;
-      }
-
-      index++;
-      index %= el_capacity;
-      test_key = hash_arr[index];
-    }
-
-    if (found_tombstone) {
-      return tombstone_index;
-    }
-    else {
-      return index;
-    }
-  }
-
-  void try_extend(size_t num) {
-    if (needs_resize(num)) {
-      uint8_t* old_data = data;
-      const size_t old_el_cap = el_capacity;
-
-      do {
-        el_capacity <<= 1;
-      } while (needs_resize(num));
-
-      const size_t required_alloc_bytes = el_capacity
-        * (sizeof(KeyEntry) + sizeof(Value));
-
-      data = allocate_default<uint8_t>(required_alloc_bytes);
-
-      const KeyEntry* hash_arr = (const KeyEntry*)data;
-      Value* val_arr = (Value*)(data + el_capacity * sizeof(KeyEntry));
-
-      const KeyEntry* old_hash_arr = (const KeyEntry*)old_data;
-      Value* old_val_arr = (Value*)(old_data + old_el_cap * sizeof(KeyEntry));
-
-      for (size_t i = 0; i < old_el_cap; i++) {
-        const KeyEntry* key = old_hash_arr + i;
-
-        if (key->type == ENTRY_TYPE::FILLED) {
-          const size_t new_index = get_soa_index(key);
-
-          hash_arr[new_index] = key;
-          val_arr[new_index] = std::move(old_val_arr[i]);
-        }
-      }
-
-
-      //Dont need to destruct old values as they've been moved
-      free_no_destruct(old_data);
-    }
-  }
-
-  Value* get_val(const Key* const key) const {
-    if (el_capacity == 0) return nullptr;
-
-    const size_t soa_index = get_soa_index(key);
-
-    {
-      const KeyEntry* test_key = key_entry_arr() + soa_index;
-
-      if (test_key->type != ENTRY_TYPE::FILLED) {
-        return nullptr;
-      }
-    }
-
-    return val_arr() + soa_index;
-  }
-
-  void insert(const Key* const key, Value&& val) {
-    if (el_capacity == 0) {
-      el_capacity = 8;
-      data = allocate_default<uint8_t>(8 * (sizeof(KeyEntry) + sizeof(Value)));
-
-      size_t soa_index = get_soa_index(key);
-
-      const KeyEntry* const keys = key_entry_arr();
-      Value* const vals = val_arr();
-
-      used++;
-      keys[soa_index] = key;
-      vals[soa_index] = std::move(val);
-    }
-    else {
-      size_t soa_index = get_soa_index(key);
-
-      {
-        const KeyEntry* test_key = key_entry_arr() + soa_index;
-
-        if (test_key->type != ENTRY_TYPE::FILLED && needs_resize(1)) {
-          //need to resize
-          try_extend(1);
-          //need to reset the key
-          soa_index = get_soa_index(key);
-        }
-      }
-
-      const KeyEntry* const keys = key_entry_arr();
-      Value* const vals = val_arr();
-
-      used++;
-      keys[soa_index] = key;
-      vals[soa_index] = std::move(val);
-    }
-  }
-
-  Value* insert(const Key* const key) {
-    if (el_capacity == 0) {
-      el_capacity = 8;
-      data = allocate_default<uint8_t>(8 * (sizeof(KeyEntry) + sizeof(Value)));
-
-      size_t soa_index = get_soa_index(key);
-
-      const KeyEntry* const keys = key_entry_arr();
-
-      used++;
-      keys[soa_index] = *key;
-    }
-    else {
-      size_t soa_index = get_soa_index(key);
-
-      {
-        const KeyEntry* test_key = key_entry_arr() + soa_index;
-
-        if (test_key->type != ENTRY_TYPE::FILLED && needs_resize(1)) {
-          //need to resize
-          try_extend(1);
-          //need to reset the key
-          soa_index = get_soa_index(key);
-        }
-      }
-
-      const KeyEntry* const keys = key_entry_arr();
-
-      used++;
-      keys[soa_index] = *key;
-    }
-  }
-};
 
 template<typename T>
 struct BucketArray {
@@ -1112,72 +888,6 @@ struct BucketArray {
 
     return last->data + last->filled - 1;
   }
-};
-
-#define ARENA_ALLOCATOR_DEBUG
-
-struct ArenaAllocator {
-  static_assert(sizeof(void*) == sizeof(uint64_t), "Must be 8 bytes");
-
-  struct Block {
-    constexpr static size_t BLOCK_SIZE = 128;
-    uint64_t data[BLOCK_SIZE] = {};
-
-    Block* next = nullptr;
-
-    Block() = default;
-    ~Block();
-  };
-
-  struct FreeList {
-    uint64_t qwords_available = 0;
-    FreeList* next = nullptr;
-  };
-
-#ifdef ARENA_ALLOCATOR_DEBUG
-  Array<void*> allocated;
-#else
-  Block* base = nullptr;
-  FreeList* free_list = nullptr;
-#endif
-
-  ArenaAllocator() = default;
-  ~ArenaAllocator();
-
-  bool _debug_freelist_loops() const;
-  bool _debug_valid_pointer(void* ptr) const;
-  bool _debug_is_allocated_data(uint64_t* ptr, usize len) const;
-
-  void new_block();
-  void add_to_free_list(FreeList* fl);
-
-  uint8_t* alloc_no_construct(size_t bytes);
-  void free_no_destruct(void* val);
-
-  template<typename T>
-  inline T* alloc_no_construct() {
-    return (T*)alloc_no_construct(sizeof(T));
-  }
-};
-
-struct BumpAllocator {
-  struct BLOCK {
-    constexpr static size_t BLOCK_SIZE = 1024;
-
-    size_t filled = 0;
-    BLOCK* prev = nullptr;
-
-    uint8_t data[BLOCK_SIZE] = {};
-  };
-
-  BLOCK* top = nullptr;
-
-  BumpAllocator();
-
-  ~BumpAllocator();
-
-  void new_block();
-  uint8_t* allocate_no_construct(size_t bytes);
 };
 
 template<typename T>
@@ -1757,6 +1467,16 @@ namespace Format {
 }
 
 template<typename T>
+struct Viewable<OwnedArr<T>> {
+  using ViewT = T;
+
+  template<typename U>
+  static constexpr ViewArr<U> view(const OwnedArr<T>& t) {
+    return {t.data, t.size};
+  }
+};
+
+template<typename T>
 OwnedArr<T> new_arr(usize size) {
   T* arr = allocate_default<T>(size);
   return OwnedArr(arr, size);
@@ -1804,100 +1524,6 @@ OwnedArr<const T> bake_const_arr(Array<T>&& arr) {
   return OwnedArr<const T>(d, s);
 }
 
-template<typename T>
-constexpr ViewArr<T> view_arr(const OwnedArr<T>& arr, usize start, usize count) {
-  ASSERT(arr.size >= start + count);
-  return {
-    arr.data + start,
-    count,
-  };
-}
-
-template<typename T>
-constexpr ViewArr<T> view_arr(const Array<T>& arr, usize start, usize count) {
-  ASSERT(arr.size >= start + count);
-  return {
-    arr.data + start,
-    count,
-  };
-}
-
-template<typename T>
-constexpr ViewArr<T> view_arr(const ViewArr<T>& arr, usize start, usize count) {
-  ASSERT(arr.size >= start + count);
-  return {
-    arr.data + start,
-    count,
-  };
-}
-
-template<typename T>
-constexpr ViewArr<const T> const_view_arr(const OwnedArr<T>& arr, usize start, usize count) {
-  ASSERT(arr.size >= start + count);
-  return {
-    arr.data + start,
-    count,
-  };
-}
-
-
-template<typename T>
-constexpr ViewArr<const T> const_view_arr(const Array<T>& arr, usize start, usize count) {
-  ASSERT(arr.size >= start + count);
-  return {
-    arr.data + start,
-    count,
-  };
-}
-
-template<typename T>
-constexpr ViewArr<T> view_arr(const OwnedArr<T>& arr) {
-  return {
-    arr.data,
-    arr.size,
-  };
-}
-
-template<typename T>
-constexpr ViewArr<T> view_arr(const Array<T>& arr) {
-  return {
-    arr.data,
-    arr.size,
-  };
-}
-
-template<typename T>
-constexpr ViewArr<const T> const_view_arr(const OwnedArr<T>& arr) {
-  return {
-    arr.data,
-    arr.size,
-  };
-}
-
-template<typename T>
-constexpr ViewArr<const T> const_view_arr(const Array<T>& arr) {
-  return {
-    arr.data,
-    arr.size,
-  };
-}
-
-template<typename T, usize N>
-constexpr ViewArr<T> view_arr(T (&arr)[N]) {
-  return {
-    arr,
-    N,
-  };
-}
-
-template<typename T, usize N>
-constexpr ViewArr<T> view_arr(T(&arr)[N], usize start, usize count) {
-  ASSERT(N >= start + count);
-  return {
-    arr + start,
-    count,
-  };
-}
 
 template<typename T>
 void serialise_to_array(Array<uint8_t>& bytes, const T& t) {
@@ -2085,17 +1711,6 @@ struct IS_SAME_TYPE_IMPL<T, T> {
 
 template<typename T, typename U>
 inline constexpr bool IS_SAME_TYPE = IS_SAME_TYPE_IMPL<T, U>::test;
-
-constexpr bool slow_string_eq(const char* str1, const char* str2) {
-  while (str1[0] != '\0' && str2[0] != '\0') {
-    if (str1[0] != str2[0]) { return false; }
-
-    str1++;
-    str2++;
-  }
-
-  return str1[0] == str2[0];//both are '\0'
-}
 
 #ifdef NDEBUG
 #define assert_if(cond, expr) ((void)0)

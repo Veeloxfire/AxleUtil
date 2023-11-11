@@ -1,12 +1,26 @@
 #include <AxleUtil/strings.h>
 #include <AxleUtil/safe_lib.h>
 
+#ifdef AXLE_TRACING
 #include <Tracer/trace.h>
+#endif
 
-constexpr char TOMBSTONE_DATA[sizeof(InternString)] ={};
-const InternString* TOMBSTONE = (const InternString*)TOMBSTONE_DATA;
+bool Intern::is_alphabetical_order(const InternString* l, const InternString* r) {
+  size_t min_size = l->len < r->len ? l->len : r->len;
 
+  for (size_t i = 0; i < min_size; i++) {
+    char cl = l->string[i];
+    char cr = r->string[i];
 
+    if (cl == cr) {
+      continue;
+    }
+
+    return cl < cr;
+  }
+
+  return l->len <= r->len;
+}
 
 Table::Table() : data(allocate_default<const InternString*>(8)), size(8) {}
 
@@ -26,7 +40,7 @@ const InternString** Table::find(const char* str, size_t len, uint64_t hash) con
   const InternString* el = data[test_index];
   while (el != nullptr) {
 
-    if (el == TOMBSTONE && first_tombstone == nullptr) {
+    if (el == Intern::TOMBSTONE && first_tombstone == nullptr) {
       //Tombstone space
       first_tombstone =  data + test_index;
     }
@@ -56,7 +70,7 @@ const InternString** Table::find_empty(uint64_t hash) const {
   const InternString* el = data[test_index];
   while (true) {
 
-    if (el == nullptr || el == TOMBSTONE) {
+    if (el == nullptr || el == Intern::TOMBSTONE) {
       //Empty space
       return data + test_index;
     }
@@ -84,7 +98,7 @@ void Table::try_resize() {
       for (; i < end; i++) {
         const InternString* i_str = *i;
 
-        if (i_str != nullptr && i_str != TOMBSTONE) {
+        if (i_str != nullptr && i_str != Intern::TOMBSTONE) {
           auto** place = find_empty(i_str->hash);
           *place = i_str;
         }
@@ -96,7 +110,9 @@ void Table::try_resize() {
 }
 
 const InternString* StringInterner::intern(const char* string, const size_t length) {
+#ifdef AXLE_TRACING
   TRACING_FUNCTION();
+#endif
   ASSERT(string != nullptr);
   ASSERT(length > 0);
 
@@ -105,7 +121,7 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
   const InternString** const place = table.find(string, length, hash);
 
   const InternString* el = *place;
-  if (el == nullptr || el == TOMBSTONE) {
+  if (el == nullptr || el == Intern::TOMBSTONE) {
     InternString* new_el = (InternString*)allocs.allocate_no_construct(InternString::alloc_size(length));
     new_el->hash = hash;
     new_el->len = length;
@@ -133,7 +149,7 @@ InternStringSet::~InternStringSet() {
 }
 
 bool InternStringSet::contains(const InternString* key) const {
-  ASSERT(key != nullptr && key != TOMBSTONE);
+  ASSERT(key != nullptr && key != Intern::TOMBSTONE);
   if(el_capacity == 0) return false;
 
   size_t index = key->hash % el_capacity;
@@ -143,7 +159,7 @@ bool InternStringSet::contains(const InternString* key) const {
     if (test_key == key) {
       return true;
     }
-    else if (test_key == nullptr || test_key == TOMBSTONE) {
+    else if (test_key == nullptr || test_key == Intern::TOMBSTONE) {
       return false;
     }
 
@@ -164,7 +180,7 @@ const InternString** InternStringSet::get(const InternString* key) const {
     if (key == test_key) {
       return data + index;
     }
-    else if (test_key == TOMBSTONE && !found_tombstone) {
+    else if (test_key == Intern::TOMBSTONE && !found_tombstone) {
       found_tombstone = true;
       tombstone_index = index;
     }
@@ -196,7 +212,7 @@ void InternStringSet::try_extend(size_t num) {
     for (size_t i = 0; i < old_el_cap; i++) {
       const InternString* key = old_data[i];
 
-      if (key != nullptr && key != TOMBSTONE) {
+      if (key != nullptr && key != Intern::TOMBSTONE) {
         const InternString** loc = get(key);
         *loc = key;
       }
@@ -207,7 +223,7 @@ void InternStringSet::try_extend(size_t num) {
 }
 
 void InternStringSet::insert(const InternString* const key) {
-  ASSERT(key != nullptr && key != TOMBSTONE);
+  ASSERT(key != nullptr && key != Intern::TOMBSTONE);
 
   if (el_capacity == 0) {
     ASSERT(used == 0);
@@ -224,7 +240,7 @@ void InternStringSet::insert(const InternString* const key) {
     const InternString* test_key = *loc;
     if (test_key == key) return;//already contained
 
-    ASSERT(test_key == nullptr || test_key == TOMBSTONE);
+    ASSERT(test_key == nullptr || test_key == Intern::TOMBSTONE);
 
     *loc = key;
     used += 1;
@@ -234,19 +250,3 @@ void InternStringSet::insert(const InternString* const key) {
   }
 }
 
-bool is_alphabetical_order(const InternString* l, const InternString* r) {
-  size_t min_size = l->len < r->len ? l->len : r->len;
-
-  for (size_t i = 0; i < min_size; i++) {
-    char cl = l->string[i];
-    char cr = r->string[i];
-
-    if (cl == cr) {
-      continue;
-    }
-
-    return cl < cr;
-  }
-
-  return l->len <= r->len;
-}
