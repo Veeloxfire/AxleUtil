@@ -141,8 +141,8 @@ namespace UNIT_TESTS {
                    const ViewArr<const char>& expected_str, const L& expected,
                    const ViewArr<const char>& actual_str, const R& actual) {
     return test_eq_str_impl(errors, line,
-                            expected_str, view_arr<L, const char>(expected),
-                            actual_str, view_arr<R, const char>(actual));
+                            expected_str, view_arr<const char>(expected),
+                            actual_str, view_arr<const char>(actual));
   }
 }
 

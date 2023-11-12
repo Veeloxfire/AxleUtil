@@ -166,6 +166,18 @@ struct Viewable {
   static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized viewable");
 };
 
+//Default implementation for a type which
+//should do the same for `const` and non-`const`
+template<typename T>
+struct Viewable<const T> {
+  using ViewT = typename Viewable<T>::ViewT;
+
+  template<typename U>
+  static constexpr ViewArr<U> view(const T& v) {
+    return Viewable<T>::template view<U>(v);
+  }
+};
+
 template<typename T>
 struct Viewable<ViewArr<T>> {
   using ViewT = T;
@@ -186,11 +198,22 @@ struct Viewable<T[N]> {
   }
 };
 
+template<typename T, size_t N>
+struct Viewable<const T[N]> {
+  using ViewT = const T;
 
+  template<typename U>
+  static constexpr ViewArr<U> view(const T(&arr)[N]) {
+    return {arr, N};
+  }
+};
 
 namespace ViewTemplates {
   template<typename T, bool c_view>
-  struct MaybeConst {
+  struct MaybeConst; 
+
+  template<typename T>
+  struct MaybeConst<T, false> {
     using Type = T;
   };
 
@@ -198,7 +221,6 @@ namespace ViewTemplates {
   struct MaybeConst<T, true> {
     using Type = const T;
   };
-
 
   template<typename T, typename U>
   struct PickNonVoid {
@@ -214,73 +236,26 @@ namespace ViewTemplates {
   struct PickNonVoid<void, void>;
 
   template<typename T, typename VT, bool c_view>
-  struct Dispatch {
-    template<typename U>
-    struct TemplateFalse {
-      constexpr static bool VAL = false;
-    };
-
-    static_assert(TemplateFalse<T>::VAL, "Invalid use of Dispatch, expected a reference");
-
-  };
-
-  template<typename T, typename VT, bool c_view>
-  struct Dispatch<const T&, VT, c_view> {
-    using VTo = typename MaybeConst<typename PickNonVoid<
+  using ViewType = typename MaybeConst<typename PickNonVoid<
       VT, 
       typename Viewable<T>::ViewT
-    >::Type, c_view>::Type;
-
-    using Ret = ViewArr<VTo>;
-    constexpr static ViewArr<VTo> view(const T& t) {
-      return Viewable<T>::template view<VTo>(t);
-    }
-  };
-
-  template<typename T, size_t N, typename VT, bool c_view>
-  struct Dispatch<T(&)[N], VT, c_view> {
-    using VTo = typename MaybeConst<typename PickNonVoid<
-      VT, 
-    typename Viewable<T[N]>::ViewT
   >::Type, c_view>::Type;
-
-  using Ret = ViewArr<VTo>;
-  constexpr static ViewArr<VTo> view(T(&t)[N]) {
-    return Viewable<T[N]>::template view<VTo>(t);
-  }
-};
-
-template<typename T, size_t N, typename VT, bool c_view>
-struct Dispatch<const T(&)[N], VT, c_view> {
-  using VTo = typename MaybeConst<typename PickNonVoid<
-    VT, 
-    typename Viewable<const T[N]>::ViewT
-  >::Type, c_view>::Type;
-
-  using Ret = ViewArr<VTo>;
-  constexpr static ViewArr<VTo> view(const T(&t)[N]) {
-    return Viewable<const T[N]>::template view<VTo>(t);
-  }
-};
 }
 
 template<
-  typename T, 
-  typename VT = void
+  typename VT = void,
+  typename T
 >
-constexpr auto view_arr(const T& t) 
--> typename ViewTemplates::Dispatch<decltype(t), VT, false>::Ret {
-  return ViewTemplates::Dispatch<decltype(t), VT, false>::view(t);
+constexpr ViewArr<ViewTemplates::ViewType<T, VT, false>> view_arr(T& t) {
+  return Viewable<T>::template view<ViewTemplates::ViewType<T, VT, false>>(t);
 }
 
 template<
-  typename T, 
-  typename VT = void
+  typename VT = void,
+  typename T
 >
-constexpr auto view_arr(const T& t, usize start, usize count) 
-  -> typename ViewTemplates::Dispatch<decltype(t), VT, false>::Ret
-{
-  const auto arr = ViewTemplates::Dispatch<decltype(t), VT, false>::view(t);
+constexpr ViewArr<ViewTemplates::ViewType<T, VT, false>> view_arr(T& t, usize start, usize count) {
+  const auto arr = Viewable<T>::template view<ViewTemplates::ViewType<T, VT, false>>(t);
   ASSERT(arr.size >= start + count);
   return {
     arr.data + start,
@@ -289,22 +264,19 @@ constexpr auto view_arr(const T& t, usize start, usize count)
 }
 
 template<
-  typename T, 
-  typename VT = void
+  typename VT = void,
+  typename T
 >
-constexpr auto const_view_arr(const T& t)
-  -> typename ViewTemplates::Dispatch<decltype(t), VT, true>::Ret {
-  return ViewTemplates::Dispatch<decltype(t), VT, true>::view(t);
+constexpr ViewArr<ViewTemplates::ViewType<T, VT, true>> const_view_arr(T& t) {
+  return Viewable<T>::template view<ViewTemplates::ViewType<T, VT, true>>(t);
 }
 
 template<
-  typename T, 
-  typename VT = void
+  typename VT = void,
+  typename T
 >
-constexpr auto const_view_arr(const T& t, usize start, usize count) 
-  -> typename ViewTemplates::Dispatch<decltype(t), VT, true>::Ret
-{
-  const auto arr = ViewTemplates::Dispatch<decltype(t), VT, true>::view(t);
+constexpr ViewArr<ViewTemplates::ViewType<T, VT, true>> const_view_arr(T& t, usize start, usize count) {
+  const auto arr = Viewable<T>::template view<ViewTemplates::ViewType<T, VT, true>>(t);
   ASSERT(arr.size >= start + count);
   return {
     arr.data + start,
