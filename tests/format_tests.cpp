@@ -194,3 +194,29 @@ TEST_FUNCTION(ArrayFormat, ints) {
     if (test_errors->is_panic()) return;
   }
 }
+
+TEST_FUNCTION(ArrayFormat, HexInt) {
+  {
+    const ViewArr<const char> expected = lit_view_arr("0xAB");
+    OwnedArr<const char> actual = format("{}", Format::Hex<u8>{0xab});
+    TEST_STR_EQ(expected, actual);
+  }
+
+  {
+    const ViewArr<const char> expected = lit_view_arr("0xAB03");
+    OwnedArr<const char> actual = format("{}", Format::Hex<u16>{0xab03});
+    TEST_STR_EQ(expected, actual);
+  }
+
+  {
+    const ViewArr<const char> expected = lit_view_arr("0xF05E9A32");
+    OwnedArr<const char> actual = format("{}", Format::Hex<u32>{0xf05e9a32});
+    TEST_STR_EQ(expected, actual);
+  }
+
+  {
+    const ViewArr<const char> expected = lit_view_arr("0xABAB03CDF05E9A32");
+    OwnedArr<const char> actual = format("{}", Format::Hex<u64>{0xabab03cdf05e9a32llu});
+    TEST_STR_EQ(expected, actual);
+  }
+}

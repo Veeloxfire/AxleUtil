@@ -17,10 +17,6 @@ struct DisplayString {
   usize size;
 };
 
-struct PrintHexByte {
-  u8 c;
-};
-
 struct PrintPtr {
   const void* ptr;
 };
@@ -50,6 +46,14 @@ struct PrintListCF {
 
 
 namespace Format {
+  template<typename T>  
+  struct Hex {
+    const T& t;
+  };
+
+  template<typename T>
+  Hex(const T& t) -> Hex<T>;
+
   template<typename F>
   concept Formatter = requires(F & f, char c, const char* ptr, usize n,
                                const char(&arr1)[1], const char(&arr2)[10], const char(&arr3)[100])
@@ -200,29 +204,35 @@ namespace Format {
   }
 
   template<Formatter F>
-  constexpr static void load_unsigned_hex(F& res, uint64_t u) {
-    constexpr size_t LEN = 16;
+  constexpr static void load_unsigned_hex(F& res,
+                                          uint64_t u,
+                                          const usize bytes) {
+    constexpr size_t MAX_LEN = 16;
+    ASSERT(bytes * 2 <= MAX_LEN);
+    ASSERT(bytes >= 1);
 
-    char string_res[2 + LEN] = {
+    char string_res[2 + MAX_LEN] = {
       '0', 'x',
       '0', '0', '0', '0', '0', '0', '0', '0',
       '0', '0', '0', '0', '0', '0', '0', '0'
     };
 
-    for (u32 i = 0; i < LEN; i++) {
+    usize end_len = 2 + (bytes * 2);
+
+    for (u32 i = 0; i < (end_len - 2); i++) {
       u8 digit = u & 0xF;
       u >>= 4;
 
       if (digit >= 10) {
         ASSERT(digit < 16);
-        string_res[((LEN - 1) - i) + 2] = ('A' + (digit - 10));
+        string_res[(end_len - 1) - i] = 'A' + (digit - 10);
       }
       else {
-        string_res[((LEN - 1) - i) + 2] = ('0' + digit);
+        string_res[(end_len - 1) - i] = '0' + digit;
       }
     }
 
-    res.load_string_exact(string_res);
+    res.load_string(string_res, end_len);
   }
 
   template<>
@@ -233,7 +243,7 @@ namespace Format {
         return res.load_string_lit("nullptr");
       }
       else {
-        return load_unsigned_hex(res, (uintptr_t)ptr.ptr);
+        return load_unsigned_hex(res, (uintptr_t)ptr.ptr, 8);
       }
     }
   };
@@ -340,40 +350,36 @@ namespace Format {
   };
 
   template<>
-  struct FormatArg<PrintHexByte> {
+  struct FormatArg<Hex<u8>> {
     template<Formatter F>
-    constexpr static void load_string(F& res, PrintHexByte hb) {
-      char str[2] = { '0', '0' };
-      {
-        u8 digit = hb.c & 0xF;
-        hb.c >>= 4;
-
-        if (digit >= 10) {
-          ASSERT(digit < 16);
-          str[1] = ('A' + (digit - 10));
-        }
-        else {
-          str[1] = ('0' + digit);
-        }
-      }
-
-      {
-        u8 digit = hb.c & 0xF;
-        hb.c >>= 4;
-
-        if (digit >= 10) {
-          ASSERT(digit < 16);
-          str[0] = ('A' + (digit - 10));
-        }
-        else {
-          str[0] = ('0' + digit);
-        }
-      }
-
-      return res.load_string_exact(str);
+    constexpr static void load_string(F& res, Hex<u8> hu8) {
+      return load_unsigned_hex(res, hu8.t, 1);  
     }
   };
 
+  template<>
+  struct FormatArg<Hex<u16>> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, Hex<u16> hu16) { 
+      return load_unsigned_hex(res, hu16.t, 2);
+    }
+  };
+
+  template<>
+  struct FormatArg<Hex<u32>> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, Hex<u32> hu32) { 
+      return load_unsigned_hex(res, hu32.t, 4);
+    }
+  };
+
+  template<>
+  struct FormatArg<Hex<u64>> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, Hex<u64> hu64) { 
+      return load_unsigned_hex(res, hu64.t, 8);
+    }
+  };
 
   template<>
   struct FormatArg<ByteArray> {

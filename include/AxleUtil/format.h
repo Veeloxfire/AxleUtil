@@ -7,12 +7,12 @@
 namespace Format {
   struct ArrayFormatter {
     struct HeapArr {
-      bool heap;
+      bool is_heap;
       Array<char> arr;
     };
 
     struct LocalArr {
-      bool heap = false;
+      bool is_heap = false;
       u8 size = 0;
       char arr[sizeof(HeapArr) - 2] = {};
 
@@ -25,13 +25,14 @@ namespace Format {
     static_assert(sizeof(LocalArr) < UINT8_MAX);//uses a u8 to determine size
 
     union {
+      bool is_heap;
       LocalArr local_arr = {};
       HeapArr heap_arr;
     };
 
     ArrayFormatter() : local_arr() {};
     ~ArrayFormatter() {
-      if (local_arr.heap) {
+      if (is_heap) {
         heap_arr.~HeapArr();
       }
       else {
@@ -39,19 +40,38 @@ namespace Format {
       }
     }
 
+    void reserve_extra(usize n) {
+      if(!is_heap) {
+        if(local_arr.size + n <= LOCAL_ARR_SIZE) return;
+        Array<char> arr = {};
+        arr.reserve_total(local_arr.size + n);
+        arr.concat(local_arr.arr, local_arr.size);
+
+        local_arr.~LocalArr();
+
+        new (&heap_arr) HeapArr{
+          true,
+          std::move(arr),
+        };
+      }
+      else {
+        heap_arr.arr.reserve_extra(n);
+      } 
+    }
+
     OwnedArr<char> take() {
-      if (local_arr.heap) {
+      if (is_heap) {
         return bake_arr(std::move(heap_arr.arr));
       }
       else {
         return copy_arr(local_arr.arr, static_cast<usize>(local_arr.size));
       }
-    } 
+    }
 
     inline void load_string(const char* str, usize N) {
       ASSERT(N > 0);
 
-      if (local_arr.heap) {
+      if (is_heap) {
         heap_arr.arr.concat(str, N);
       }
       else {
@@ -93,7 +113,7 @@ namespace Format {
 
     inline void load_char(char c) {
       ASSERT(c != '\0');
-      if (local_arr.heap) {
+      if (is_heap) {
         heap_arr.arr.insert(c);
       }
       else {
@@ -104,7 +124,9 @@ namespace Format {
           arr.concat(local_arr.arr, local_arr.size);
           arr.insert(c);
 
-          heap_arr = {
+          local_arr.~LocalArr();
+
+          new (&heap_arr) HeapArr{
             true,
             std::move(arr),
           };
@@ -124,7 +146,7 @@ struct Viewable<Format::ArrayFormatter> {
 
   template<typename U>
   static constexpr ViewArr<U> view(const Format::ArrayFormatter& f) {
-    if (f.local_arr.heap) {
+    if (f.is_heap) {
       return view_arr(f.heap_arr.arr);
     }
     else {
