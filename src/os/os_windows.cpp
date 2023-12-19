@@ -3,6 +3,7 @@
 
 #include <Windows.h>
 
+namespace Axle {
 Windows::NativePath Windows::get_current_directory() {
   NativePath str = {};
   memset(str.path, 0, MAX_PATH + 1);
@@ -16,4 +17,5 @@ void Windows::set_current_directory(const ViewArr<const char>& path) {
   NativePath str = path;
 
   SetCurrentDirectoryA(str.c_str());
+}
 }

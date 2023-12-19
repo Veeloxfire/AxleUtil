@@ -4,6 +4,7 @@
 #include <AxleUtil/safe_lib.h>
 #include <AxleUtil/formattable.h>
 
+namespace Axle {
 namespace IO_Single {
   void print(const char* string, usize N);
   void print(const ViewArr<char>& string);
@@ -159,5 +160,6 @@ namespace IO {
 
     Format::format_to_formatter(result, format, ts...);
   }
+}
 }
 #endif

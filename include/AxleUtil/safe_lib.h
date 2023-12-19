@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+namespace Axle {
+namespace Primitives {
 using u8 = uint8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;
@@ -16,6 +18,13 @@ using i16 = int16_t;
 using i32 = int32_t;
 using i64 = int64_t;
 using usize = size_t;
+using f32 = float;
+static_assert(sizeof(f32) == 4);
+using f64 = double;
+static_assert(sizeof(f64) == 8);
+}
+
+using namespace Primitives;
 
 #define STR_REPLAC2(a) #a
 #define STR_REPLACE(a) STR_REPLAC2(a)
@@ -31,20 +40,28 @@ void abort_assertion(const char* message);
 
 #ifdef ASSERT_EXCEPTIONS
 #define ASSERT(expr) do { if(!(expr))\
-throw_testing_assertion("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " __FILE__ ":\n" #expr); } while(false)
+Axle::throw_testing_assertion("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " __FILE__ ":\n" #expr); } while(false)
 
-#define INVALID_CODE_PATH(reason) throw_testing_assertion("Invalid Code path \"" reason "\"")
+#define INVALID_CODE_PATH(reason) Axle::throw_testing_assertion("Invalid Code path \"" reason "\"")
 #else
 #define ASSERT(expr) assert(expr)
 
 #ifdef NDEBUG
-#define INVALID_CODE_PATH(reason) abort_assertion("Invalid Code path \"" reason "\"")
+#define INVALID_CODE_PATH(reason) Axle::abort_assertion("Invalid Code path \"" reason "\"")
 #else
 #define INVALID_CODE_PATH(reason) assert(((reason), false));
 #endif
 #endif
 
 //#define COUNT_ALLOC
+
+template<typename T>
+struct TypeIdentity {
+  using Type = T;
+};
+
+template<typename T>
+using Self = typename TypeIdentity<T>::Type;
 
 template<typename T>
 constexpr inline void memcpy_ts(T* dest, size_t dest_size, const T* source, size_t src_size) {
@@ -83,31 +100,45 @@ constexpr size_t strlen_ts(const char* c) {
 }
 
 template<typename T>
-constexpr inline void default_init(T* const dest, const size_t dest_size) {
+constexpr inline void default_init(Self<T>* const dest, const size_t dest_size) {
   for (size_t i = 0; i < dest_size; i++) {
     new(dest + i) T();
   }
 }
 
 template<typename T>
-constexpr inline void default_init(T* const dest) {
+constexpr inline void default_init(Self<T>* const dest) {
   new(dest) T();
 }
 
 template<typename T>
-constexpr inline void destruct_arr(T* const ptr, const size_t num) {
+constexpr inline void destruct_arr(Self<T>* const ptr, const size_t num) {
   for (size_t i = 0; i < num; i++) {
     ptr[i].~T();
   }
 }
 
 template<typename T>
-constexpr inline void destruct_single(T* const ptr) {
+constexpr inline void destruct_arr_void(void* const ptr_v, const size_t num) {
+  T* ptr = std::launder(reinterpret_cast<T*>(ptr_v));
+
+  for (size_t i = 0; i < num; i++) {
+    ptr[i].~T();
+  }
+}
+
+template<typename T>
+constexpr inline void destruct_single(Self<T>* const ptr) {
   ptr->~T();
 }
 
 template<typename T>
-constexpr void reset_type(T* t) noexcept {
+constexpr inline void destruct_single_void(void* const ptr) {
+  std::launder(reinterpret_cast<T*>(ptr))->~T();
+}
+
+template<typename T>
+constexpr void reset_type(Self<T>* t) noexcept {
   t->~T();
   new(t) T();
 }
@@ -398,5 +429,5 @@ template<typename T, usize N>
 struct ArraySize<T[N]> {
   constexpr static usize VAL = N;
 };
-
+}
 #endif

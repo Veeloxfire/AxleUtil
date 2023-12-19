@@ -7,6 +7,7 @@
 #include <Tracer/trace.h>
 #endif
 
+namespace Axle {
 //For printing character as it appears in code
 struct DisplayChar {
   char c;
@@ -349,6 +350,38 @@ namespace Format {
     }
   };
 
+  struct FloatStr {
+    static constexpr usize MAX = 15;
+    char str[MAX];
+    usize count;
+  };
+  FloatStr format_float(float f);
+
+  template<>
+  struct FormatArg<float> {
+    template<Formatter F>
+    static void load_string(F& res, float f) {
+      FloatStr fstr = format_float(f);
+      res.load_string(fstr.str, fstr.count);
+    }
+  };
+
+  struct DoubleStr {
+    static constexpr usize MAX = 24;
+    char str[MAX];
+    usize count;
+  };
+  DoubleStr format_double(double f);
+
+  template<>
+  struct FormatArg<double> {
+    template<Formatter F>
+    static void load_string(F& res, double f) {
+      DoubleStr fstr = format_double(f);
+      res.load_string(fstr.str, fstr.count);
+    }
+  };
+
   template<>
   struct FormatArg<Hex<u8>> {
     template<Formatter F>
@@ -477,23 +510,53 @@ namespace Format {
 
   template<Formatter F, typename T>
   constexpr FormatDispatch<F>& operator<<(FormatDispatch<F>& f, const T& t) {
-    const char* const string = f.format_string.arr;
+    const char* string = f.format_string.arr;
 
     while (true) {
       if (f.format_string.len == 0 || f.format_string.arr[0] == '\0') {
         INVALID_CODE_PATH("Found too many arguments in format");
       }
-      else if (f.format_string.arr[0] == '{' && f.format_string.arr[1] == '}') {
-        const size_t num_chars = f.format_string.arr - string;
-        if (num_chars > 0) {
-          f.result.load_string(string, num_chars);
+      else if (f.format_string.arr[0] == '{') {
+        if(f.format_string.arr[1] == '{') {
+          const size_t num_chars = f.format_string.arr - string;
+          if(num_chars > 0) {
+            f.result.load_string(string, num_chars);
+          }
+
+          f.format_string.arr += 1;
+          f.format_string.len -= 1;
+          string = f.format_string.arr;
         }
+        else if(f.format_string.arr[1] == '}') {
+          const size_t num_chars = f.format_string.arr - string;
+          if (num_chars > 0) {
+            f.result.load_string(string, num_chars);
+          }
 
-        FormatArg<T>::load_string(f.result, t);
+          FormatArg<T>::load_string(f.result, t);
 
-        f.format_string.arr += 2;
-        f.format_string.len -= 2;
-        return f;
+          f.format_string.arr += 2;
+          f.format_string.len -= 2;
+          return f;
+        }
+        else {
+          INVALID_CODE_PATH("Invalid format string: '{' not followed by '{' or '}'");
+        }
+      }
+      else if(f.format_string.arr[0] == '}') {
+        if(f.format_string.arr[1] == '}') {
+          const size_t num_chars = f.format_string.arr - string;
+          if(num_chars > 0) {
+            f.result.load_string(string, num_chars);
+          }
+
+          f.format_string.arr += 1;
+          f.format_string.len -= 1;
+          string = f.format_string.arr;
+        }
+        else {
+          INVALID_CODE_PATH("Invalid format string: '}' not followed by '}'");
+        }
       }
 
       f.format_string.arr += 1;
@@ -515,19 +578,49 @@ namespace Format {
       format = f.format_string;
     }
 
-    const char* const string = format.arr;
+    const char* string = format.arr;
 
     while (true) {
-      if (format.arr[0] == '{' && format.arr[1] == '}') {
-        INVALID_CODE_PATH("Expected extra arguments in format");
-        break;
-      }
-      else if (format.len == 0 || format.arr[0] == '\0') {
+      if (format.len == 0 || format.arr[0] == '\0') {
         const size_t num_chars = format.arr - string;
         if (num_chars > 0) {
           result.load_string(string, num_chars);
         }
         return;
+      }
+      else if (format.arr[0] == '{') {
+        if(format.arr[1] == '{') {
+          const size_t num_chars = format.arr - string;
+          if(num_chars > 0) {
+            result.load_string(string, num_chars);
+          }
+
+          format.arr += 1;
+          format.len -= 1;
+          string = format.arr;
+        }
+        else if(format.arr[1] == '}') {
+          INVALID_CODE_PATH("Expected extra arguments in format");
+          break;
+        }
+        else {
+          INVALID_CODE_PATH("Invalid format string: '{' not followed by '{' or '}'");
+        }
+      }
+      else if(format.arr[0] == '}') {
+        if(format.arr[1] == '}') {
+          const size_t num_chars = format.arr - string;
+          if(num_chars > 0) {
+            result.load_string(string, num_chars);
+          }
+
+          format.arr += 1;
+          format.len -= 1;
+          string = format.arr;
+        }
+        else {
+          INVALID_CODE_PATH("Invalid format string: '}' not followed by '}'");
+        }
       }
 
       format.arr += 1;
@@ -535,5 +628,5 @@ namespace Format {
     }
   }
 }
-
+}
 #endif

@@ -1,5 +1,24 @@
 #include <AxleUtil/format.h>
 
+#include <charconv>
+
+namespace Axle {
+Format::FloatStr Format::format_float(float f) {
+  FloatStr dstr = {};
+  std::to_chars_result fcr = std::to_chars(dstr.str, dstr.str + dstr.MAX, f);
+  ASSERT(fcr.ec == std::errc{});
+  dstr.count = fcr.ptr - dstr.str;
+  return dstr;
+}
+
+Format::DoubleStr Format::format_double(double f) {
+  DoubleStr dstr = {};
+  std::to_chars_result fcr = std::to_chars(dstr.str, dstr.str + dstr.MAX, f);
+  ASSERT(fcr.ec == std::errc{});
+  dstr.count = fcr.ptr - dstr.str;
+  return dstr;
+}
+
 OwnedArr<char> format_type_set(const ViewArr<const char>& format_in, const size_t prepend_spaces, const size_t max_width) {
   Array<char> result = {};
   result.reserve_extra(format_in.size);
@@ -52,4 +71,5 @@ OwnedArr<char> format_type_set(const ViewArr<const char>& format_in, const size_
     format_i++;
     curr_length++;
   }
+}
 }

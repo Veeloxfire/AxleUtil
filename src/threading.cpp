@@ -9,6 +9,7 @@
 #include <Tracer/trace.h>
 #endif
 
+namespace Axle {
 bool SpinLockMutex::acquire_if_free() {
   return _InterlockedCompareExchange8(&held, '\1', '\0') == '\0';
 }
@@ -54,7 +55,7 @@ DWORD WINAPI generic_thread_proc(
 
   info->proc(info->handle, info->data);
 
-  free_destruct_single(info);
+  free_destruct_single<ThreadingInfo>(info);
   return 0;
 }
 
@@ -71,5 +72,6 @@ const ThreadHandle* start_thread(THREAD_PROC thread_proc, void* data) {
 void wait_for_thread_end(const ThreadHandle* thread) {
   WaitForSingleObject(thread->handle, INFINITE);
   
-  free_destruct_single(thread);
+  free_destruct_single<const ThreadHandle>(thread);
+}
 }

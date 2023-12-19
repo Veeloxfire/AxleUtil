@@ -3,7 +3,7 @@
 
 #include <AxleUtil/utility.h>
 #include <AxleUtil/formattable.h>
-
+namespace Axle {
 namespace FILES {
 #define FILE_ERROR_CODES_X \
 modify(OK)\
@@ -143,5 +143,5 @@ FileLocation parse_file_location(const ViewArr<const char>& path,
 
 FileLocation parse_file_location(const AllocFilePath& path,
                                  StringInterner* strings);
-
+}
 #endif

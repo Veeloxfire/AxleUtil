@@ -6,7 +6,7 @@
 #endif
 
 #include <cstdio>
-
+namespace Axle {
 static SpinLockMutex io_mutex = {};
 
 void IO_Single::lock() {
@@ -77,4 +77,5 @@ void IO_Single::err_print(const char c) {
   TRACING_FUNCTION();
 #endif
   fputc(c, stderr);
+}
 }

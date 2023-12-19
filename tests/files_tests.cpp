@@ -2,6 +2,8 @@
 #include <AxleUtil/files.h>
 #include <AxleUtil/strings.h>
 
+using namespace Axle;
+
 TEST_FUNCTION(Files, normalise_paths) {
   {
     constexpr ViewArr<const char> ARR = lit_view_arr("C:\\hello\\thing2\\thing3");

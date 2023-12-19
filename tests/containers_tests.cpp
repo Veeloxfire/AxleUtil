@@ -1,6 +1,8 @@
 #include "AxleUtil/utility.h"
 #include <AxleTest/unit_tests.h>
 
+using namespace Axle;
+
 static constexpr int RANDOM_ARR[] = {
   65, 55, 71, 23, 92,
   57, 51, 84, 86, 30,
@@ -82,6 +84,52 @@ TEST_FUNCTION(Util_Array, Insert_Remove) {
 
   TEST_EQ((usize)0, a.size);
 }
+
+TEST_FUNCTION(Util_ArrayMax, Insert_Remove) {
+  ArrayMax<usize> a = new_arr_max<usize>(1000);
+
+  for (usize i = 0; i < 1000; i++) {
+    a.insert(i ^ (i + 1));
+  }
+
+  TEST_EQ((usize)1000, a.size);
+  TEST_EQ((usize)(999 ^ 1000), *a.back());
+
+  for (usize i = 0; i < 1000; i++) {
+    TEST_EQ((i ^ (i + 1)), a.data[i]);
+  }
+
+  {
+    auto b = a.begin();
+    const auto end = a.end();
+    for (usize i = 0; i < 1000; i++) {
+      TEST_EQ((i ^ (i + 1)), *b);
+      b++;
+    }
+
+    TEST_EQ(b, end);
+
+    b = a.mut_begin();
+
+    for (usize i = 0; i < 1000; i++) {
+      TEST_EQ((i ^ (i + 1)), *b);
+      b++;
+    }
+
+    TEST_EQ(end, b);
+  }
+
+  for (usize i = 0; i < 1000; i++) {
+    TEST_EQ((i ^ (i + 1)), a.data[i]);
+  }
+
+  for (usize i = 0; i < 1000; i++) {
+    a.pop();
+  }
+
+  TEST_EQ((usize)0, a.size);
+}
+
 
 TEST_FUNCTION(Util_Queue, Insert_Remove) {
   Queue<usize> a = {};

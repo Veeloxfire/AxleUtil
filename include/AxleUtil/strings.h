@@ -1,13 +1,13 @@
 #ifndef AXLEUTIL_STRINGS_H_
 #define AXLEUTIL_STRINGS_H_
 
-#include <AxleUtil/safe_lib.h>
+#include <AxleUtil/memory.h>
 #include <AxleUtil/format.h>
-
+namespace Axle {
 struct InternString {
   uint64_t hash;
   size_t len;
-  char string[1];//placeholder for any length array
+  char* string;
 
   constexpr bool operator==(const InternString& i)const {
     return i.hash == hash && i.len == len
@@ -16,10 +16,6 @@ struct InternString {
 
   constexpr bool operator!=(const InternString& i)const {
     return !operator==(i);
-  }
-
-  constexpr static size_t alloc_size(size_t string_len) {
-    return sizeof(InternString) + string_len + 1 /* for null byte */;
   }
 };
 
@@ -52,7 +48,7 @@ namespace Format {
 }
 
 namespace Intern {
-  inline constexpr InternString TOMBSTONE_STR = {0,0,{'\0'}};
+  inline constexpr InternString TOMBSTONE_STR = {0,0, nullptr};
   inline constexpr const InternString* TOMBSTONE = &TOMBSTONE_STR;
 
   bool is_alphabetical_order(const InternString* l, const InternString* r);
@@ -75,10 +71,20 @@ struct Table {
 };
 
 struct StringInterner {
-  BumpAllocator allocs = {};
+  constexpr static usize ALLOC_BLOCK_SIZE = 2048;
+  GrowingMemoryPool<ALLOC_BLOCK_SIZE> allocs = {};
   Table table = {};
 
+  const InternString* find(const char* string, size_t len) const;
   const InternString* intern(const char* string, size_t len);
+
+  inline const InternString* find(const ViewArr<const char>& arr) const {
+    return find(arr.data, arr.size);
+  }
+
+  inline const InternString* find(const OwnedArr<const char>& arr) const {
+    return find(arr.data, arr.size);
+  }
 
   inline const InternString* intern(const ViewArr<const char>& arr) {
     return intern(arr.data, arr.size);
@@ -197,7 +203,7 @@ struct InternHashTable {
       }
     }
 
-    free_no_destruct(data);
+    free_no_destruct<u8>(data);
 
     data = nullptr;
     el_capacity = 0;
@@ -292,10 +298,10 @@ struct InternHashTable {
 
       //Destruct and free
       {
-        destruct_arr(old_hash_arr, el_capacity);
+        destruct_arr<const InternString*>(old_hash_arr, el_capacity);
         //Dont need to free old values as they've been moved
 
-        free_no_destruct(old_data);
+        free_no_destruct<u8>(old_data);
       }
     }
   }
@@ -396,5 +402,6 @@ struct InternHashTable {
     }
   }
 };
+}
 #endif
 

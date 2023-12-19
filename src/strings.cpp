@@ -5,6 +5,7 @@
 #include <Tracer/trace.h>
 #endif
 
+namespace Axle {
 bool Intern::is_alphabetical_order(const InternString* l, const InternString* r) {
   size_t min_size = l->len < r->len ? l->len : r->len;
 
@@ -26,7 +27,7 @@ Table::Table() : data(allocate_default<const InternString*>(8)), size(8) {}
 
 
 Table::~Table() {
-  free_destruct_n(data, size);
+  free_destruct_n<const InternString*>(data, size);
   data = nullptr;
   size = 0;
   num_full = 0;
@@ -105,7 +106,33 @@ void Table::try_resize() {
       }
     }
 
-    free_no_destruct(old_data);
+    free_no_destruct<const InternString*>(old_data);
+  }
+}
+
+static void destory_is(void* is) {
+  InternString* i = reinterpret_cast<InternString*>(is);
+  destruct_arr<char>(i->string, i->len + 1);
+  destruct_single<InternString>(i);
+}
+
+const InternString* StringInterner::find(const char* string, const size_t length) const {
+#ifdef AXLE_TRACING
+  TRACING_FUNCTION();
+#endif
+  ASSERT(string != nullptr);
+  ASSERT(length > 0);
+
+  const uint64_t hash = fnv1a_hash(string, length);
+
+  const InternString** const place = table.find(string, length, hash);
+
+  const InternString* el = *place;
+  if (el == nullptr || el == Intern::TOMBSTONE) {
+    return nullptr;
+  }
+  else {
+    return el;
   }
 }
 
@@ -122,14 +149,28 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
 
   const InternString* el = *place;
   if (el == nullptr || el == Intern::TOMBSTONE) {
-    InternString* new_el = (InternString*)allocs.allocate_no_construct(InternString::alloc_size(length));
+    InternString* new_el; 
+    {
+      auto* dl = allocs.alloc_destruct_element();
+      dl->deleter = &destory_is;
+
+      void* mem = allocs.alloc_raw(sizeof(InternString) + length + 1, alignof(InternString));
+      mem = std::assume_aligned<alignof(InternString)>(mem);
+      
+      new_el = new(mem) InternString();
+
+      new_el->string = new(reinterpret_cast<u8*>(mem) + sizeof(InternString)) char[length + 1];
+
+      dl->data = new_el;
+    }
+
     new_el->hash = hash;
     new_el->len = length;
 
     memcpy_ts(new_el->string, length + 1, string, length);
     *place = new_el;
 
-    new_el->string[length + 1] = '\0';
+    new_el->string[length] = '\0';
 
     table.num_full++;
     table.try_resize();
@@ -141,7 +182,7 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
 }
 
 InternStringSet::~InternStringSet() {
-  free_no_destruct(data);
+  free_no_destruct<const InternString*>(data);
 
   data = nullptr;
   el_capacity = 0;
@@ -218,7 +259,7 @@ void InternStringSet::try_extend(size_t num) {
       }
     }
 
-    free_no_destruct(old_data);
+    free_no_destruct<const InternString*>(old_data);
   }
 }
 
@@ -249,4 +290,4 @@ void InternStringSet::insert(const InternString* const key) {
     }
   }
 }
-
+}

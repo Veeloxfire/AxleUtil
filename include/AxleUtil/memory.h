@@ -2,7 +2,9 @@
 #define AXLEUTIL_MEMORY_H_
 
 #include <AxleUtil/safe_lib.h>
+#include <memory>
 
+namespace Axle {
 #ifdef COUNT_ALLOC
 template<typename T>
 void free_heap_check(T* ptr, size_t num_bytes) {
@@ -185,7 +187,7 @@ T* allocate_default(const size_t num) {
   ALLOC_COUNTER::allocated().insert(t, num);
 #endif
 
-  default_init(t, num);
+  default_init<T>(t, num);
   return t;
 }
 
@@ -209,12 +211,12 @@ T* allocate_single_constructed(U&& ... u) {
 }
 
 template<typename T>
-T* reallocate_default(T* ptr, const size_t old_size, const size_t new_size) {
+T* reallocate_default(Self<T>* ptr, const size_t old_size, const size_t new_size) {
   T* val = (T*)std::realloc((void*)ptr, sizeof(T) * new_size);
   ASSERT(val != nullptr);
 
   if (old_size < new_size) {
-    default_init(val + old_size, new_size - old_size);
+    default_init<T>(val + old_size, new_size - old_size);
   }
 
 #ifdef COUNT_ALLOC
@@ -225,7 +227,7 @@ T* reallocate_default(T* ptr, const size_t old_size, const size_t new_size) {
 }
 
 template<typename T>
-void free_destruct_single(T* ptr) {
+void free_destruct_single(Self<T>* ptr) {
 #ifdef COUNT_ALLOC
   ALLOC_COUNTER::allocated().remove(ptr);
 #endif
@@ -237,7 +239,7 @@ void free_destruct_single(T* ptr) {
 }
 
 template<typename T>
-void free_destruct_n(T* ptr, size_t num) {
+void free_destruct_n(Self<T>* ptr, size_t num) {
 #ifdef COUNT_ALLOC
   ALLOC_COUNTER::allocated().remove(ptr);
 #endif
@@ -252,7 +254,7 @@ void free_destruct_n(T* ptr, size_t num) {
 }
 
 template<typename T>
-void free_no_destruct(T* ptr) {
+void free_no_destruct(Self<T>* ptr) {
 #ifdef COUNT_ALLOC
   ALLOC_COUNTER::allocated().remove(ptr);
 #endif
@@ -261,7 +263,6 @@ void free_no_destruct(T* ptr) {
 
   std::free((void*)ptr);
 }
-
 
 //TODO: Anything allocated via this memory will not be destroyed
 struct MemoryPool {
@@ -273,52 +274,203 @@ struct MemoryPool {
 
   template<typename T>
   T* push() {
-    T* ast = (T*)push_alloc_bytes(sizeof(T), alignof(T));
-    new (ast) T();
-    return ast;
+    static_assert(std::is_trivial_v<T>);
+    u8* ast = push_alloc_bytes(sizeof(T), alignof(T));
+    return new (ast) T();
   }
 
   template<typename T>
   T* push_n(usize n) {
-    T* ast = (T*)push_alloc_bytes(sizeof(T) * n, alignof(T));
+    static_assert(std::is_trivial_v<T>);
+    u8* ast = push_alloc_bytes(sizeof(T) * n, alignof(T));
 
     for (usize i = 0; i < n; i++) {
-      new (ast + i) T();
+      u8* d = ast + (i * sizeof(T));
+      new (d) T();
     }
-
-    return ast;
+    //Does this work? Is this required?
+    return std::launder<T>(reinterpret_cast<T*>(ast));
   }
 };
 
 template<usize BLOCK_SIZE> 
 struct GrowingMemoryPool {
+  using DeleterS = void(*)(void*);
+  struct Destructlist {
+    Destructlist* prev;
+    void* data;
+    DeleterS deleter;
+  };
+  
+  using DeleterN = void(*)(void*, usize);
+  struct DestructlistN {
+    DestructlistN* prev;
+    void* data;
+    usize n;
+    DeleterN deleter;
+  };
+
   struct Block {
     Block* prev = nullptr;
-    usize top = 0;
     u8 mem[BLOCK_SIZE];
   };
 
-  Block* curr = nullptr;
+  template<typename T>
+  static void delete_big_alloc(void* data) {
+    T* t = std::launder(static_cast<T*>(data));
+    free_destruct_single<T>(t);
+  }
 
-  u8* push_unaligned_bytes(usize size) {
+  template<typename T>
+  static void delete_big_alloc_arr(void* data, usize n) {
+    T* t = std::launder(static_cast<T*>(data));
+    free_destruct_n<T>(t, n);
+  }
+
+  static_assert(BLOCK_SIZE >= sizeof(Destructlist));
+  static_assert(BLOCK_SIZE >= sizeof(DestructlistN));
+
+  usize curr_top = 0;
+  Block* curr = nullptr;
+  Block* curr_big = nullptr;
+  Destructlist* dl_top = nullptr;
+  DestructlistN* dln_top = nullptr;
+
+  void new_block() {
+    Block* old = curr;
+    curr = new Block();
+    curr->prev = old;
+
+    curr_top = 0;
+  }
+ 
+  void* alloc_internal(usize size, usize align) {
     ASSERT(size <= BLOCK_SIZE);
 
-    if (curr == nullptr || (curr->top + size > BLOCK_SIZE)) {
-      Block* old = curr;
-      curr = new Block();
-      curr->prev = old;
+    ASSERT(curr_top <= BLOCK_SIZE);
+    if(curr == nullptr) {
+      new_block();
+    }
+    
+    void* top_p = curr->mem + curr_top;
+    usize remaining = BLOCK_SIZE - curr_top;
+
+    if(std::align(align, size, top_p, remaining) == nullptr) {
+      //Failed - need a new block
+      new_block();
+
+      top_p = curr->mem + curr_top;
+      remaining = BLOCK_SIZE - curr_top;
+
+      if(std::align(align, size, top_p, remaining) == nullptr) {
+        INVALID_CODE_PATH("Could not allocate object in empty block");
+      }
     }
 
-    u8* ptr = curr->mem + curr->top;
-    curr->top += size;
+    ASSERT(remaining <= (BLOCK_SIZE - curr_top));
+    curr_top = (BLOCK_SIZE - remaining) + size;
+    ASSERT(curr_top <= BLOCK_SIZE);
 
-    return ptr;
+    return top_p;
+  }
+
+  void* alloc_raw(usize size, usize align) {
+    if(size <= BLOCK_SIZE) {
+      return alloc_internal(size, align);
+    }
+    else {
+      assert(align <= 8);
+      return Axle::allocate_default<u8>(size);
+    }
+  }
+
+  Destructlist* alloc_destruct_element() {
+    void* dl_space = alloc_internal(sizeof(Destructlist), alignof(Destructlist));
+    Destructlist* dl = new(dl_space) Destructlist();
+    dl->prev = dl_top;
+    dl->data = nullptr;
+    dl->deleter = nullptr;
+    dl_top = dl;
+    return dl;
+  }
+
+  DestructlistN* alloc_destruct_element_N() {
+    void* dl_space = alloc_internal(sizeof(DestructlistN), alignof(DestructlistN));
+    DestructlistN* dl = new(dl_space) DestructlistN();
+    dl->prev = dln_top;
+    dl->data = nullptr;
+    dl->deleter = nullptr;
+    dln_top = dl;
+    return dl;
+  }
+
+  template<typename T>
+  T* allocate() {
+    Destructlist* dl = alloc_destruct_element();
+
+    if constexpr(sizeof(T) <= BLOCK_SIZE) {
+      void* t_space = alloc_internal(sizeof(T), alignof(T));
+      dl->deleter = &destruct_single_void<T>;
+
+      T* t = new (t_space) T();
+      dl->data = t;
+      return t;
+    }
+    else {
+      T* t = Axle::allocate_default<T>();
+      dl->deleter = &delete_big_alloc<T>;
+      dl->data = t;
+      return t;
+    }
+  }
+
+  template<typename T>
+  T* allocate_n(usize n) {
+    ASSERT(n > 0);
+    DestructlistN* dl = alloc_destruct_element_N();
+
+    if (sizeof(T) * n <= BLOCK_SIZE) {
+      void* t_space = alloc_internal(sizeof(T) * n, alignof(T));
+      dl->deleter = &destruct_arr_void<T>;
+      dl->n = n;
+
+      T* t = new(t_space)T[n];
+
+      dl->data = t;
+      return t;
+    }
+    else {
+      T* t = Axle::allocate_default<T>(n);
+      dl->deleter = &delete_big_alloc_arr<T>;
+      dl->n = n;
+      dl->data = t;
+      return t;
+    }
   }
 
   GrowingMemoryPool() = default;
   GrowingMemoryPool(const GrowingMemoryPool&) = delete;
   GrowingMemoryPool(GrowingMemoryPool&&) = delete;
   ~GrowingMemoryPool() {
+    while(dl_top != nullptr) {
+      ASSERT(dl_top->deleter != nullptr);
+      ASSERT(dl_top->data != nullptr);
+      dl_top->deleter(dl_top->data);
+      Destructlist* p = dl_top->prev;
+      destruct_single<Destructlist>(dl_top);
+      dl_top = p;
+    }
+    
+    while(dln_top != nullptr) {
+      ASSERT(dln_top->deleter != nullptr);
+      ASSERT(dln_top->data != nullptr);
+      ASSERT(dln_top->n > 0);
+      dln_top->deleter(dln_top->data, dln_top->n);
+      DestructlistN* p = dln_top->prev;
+      destruct_single<DestructlistN>(dln_top);
+      dln_top = p;
+    }
+
     while (curr != nullptr) {
       Block* save = curr->prev;
 
@@ -368,25 +520,6 @@ struct ArenaAllocator {
     return (T*)alloc_no_construct(sizeof(T));
   }
 };
-
-struct BumpAllocator {
-  struct BLOCK {
-    constexpr static size_t BLOCK_SIZE = 1024;
-
-    size_t filled = 0;
-    BLOCK* prev = nullptr;
-
-    uint8_t data[BLOCK_SIZE] = {};
-  };
-
-  BLOCK* top = nullptr;
-
-  BumpAllocator();
-
-  ~BumpAllocator();
-
-  void new_block();
-  uint8_t* allocate_no_construct(size_t bytes);
-};
+}
 
 #endif

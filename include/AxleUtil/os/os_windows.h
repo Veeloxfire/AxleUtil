@@ -4,7 +4,7 @@
 #include <Windows.h>
 
 #include <AxleUtil/safe_lib.h>
-
+namespace Axle {
 namespace Windows {
   template<typename T> 
   struct VirtualPtr {
@@ -21,7 +21,7 @@ namespace Windows {
     template<typename U>
     U call() {
       using PTR = U(*)();
-      return ((U)(ptr + entry))();
+      return ((PTR)(ptr + entry))();
     }
   };
 
@@ -62,6 +62,7 @@ namespace Windows {
 
   NativePath get_current_directory();
   void set_current_directory(const ViewArr<const char>& str);
+}
 }
 
 #endif

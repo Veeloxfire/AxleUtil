@@ -2,6 +2,8 @@
 
 #include <AxleUtil/strings.h>
 
+using namespace Axle;
+
 TEST_FUNCTION(Interned_Strings, creation) {
   StringInterner interner = {};
 
@@ -69,6 +71,61 @@ TEST_FUNCTION(Interned_Strings, creation) {
 
   TEST_ARR_EQ("hello", (usize)5, str7->string, str7->len);
   TEST_EQ(hash, str7->hash);
+}
+
+TEST_FUNCTION(Interned_Strings, find) {
+  StringInterner interner = {};
+
+  const InternString* str1 = interner.intern("hello", 5);
+  const u64 hash = fnv1a_hash("hello", 5);
+
+  TEST_ARR_EQ("hello", (usize)6, str1->string, str1->len + 1);//actually adds a null byte on
+  TEST_EQ(hash, str1->hash);
+
+  const InternString* str2 = interner.find("hello", 5);
+  TEST_EQ(str1, str2);
+  TEST_EQ(*str1, *str2);
+
+  TEST_ARR_EQ("hello", (usize)5, str2->string, str2->len);
+  TEST_EQ(hash, str2->hash);
+
+  {
+    const InternString* str_no = interner.find("helloo", 6);
+    TEST_EQ(static_cast<const InternString*>(nullptr), str_no);
+  }
+
+  const InternString* str3 = interner.find(copy_arr("hello", 5));
+  TEST_EQ(str1, str3);
+  TEST_EQ(str2, str3);
+
+  TEST_ARR_EQ("hello", (usize)5, str3->string, str3->len);
+  TEST_EQ(hash, str3->hash);
+
+  const InternString* str4 = interner.find(lit_view_arr("hello"));
+  TEST_EQ(str1, str4);
+  TEST_EQ(str2, str4);
+  TEST_EQ(str3, str4);
+
+  TEST_ARR_EQ("hello", (usize)5, str4->string, str4->len);
+  TEST_EQ(hash, str4->hash);
+}
+
+
+TEST_FUNCTION(Interned_Strings, big_creation) {
+  constexpr usize SIZE = StringInterner::ALLOC_BLOCK_SIZE * 2;
+  OwnedArr<char> str = new_arr<char>(SIZE);
+  
+  const char options[] = {'a', 'b','c','d','e','f','g'};
+  for(usize i = 0; i < SIZE; ++i) {
+    str[i] = options[i % array_size(options)];
+  }
+
+  StringInterner strings = {};
+  
+  const InternString* s = strings.intern(view_arr(str));
+
+  TEST_NEQ((const InternString*)nullptr, s);
+  TEST_STR_EQ(str, s); 
 }
 
 TEST_FUNCTION(Interned_Strings, order) {

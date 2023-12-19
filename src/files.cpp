@@ -6,6 +6,7 @@
 #include <Tracer/trace.h>
 #endif
 
+namespace Axle {
 static constexpr usize BUFFER_SIZE = 1024;
 
 namespace FILES {
@@ -183,7 +184,7 @@ void FILES::close(FileData* file) {
   TRACING_FUNCTION();
 #endif
 
-  free_destruct_single(file);
+  free_destruct_single<FileData>(file);
 }
 
 static void real_seek(FILES::FileData* file, usize ptr) {
@@ -829,4 +830,5 @@ FileLocation parse_file_location(const ViewArr<const char>& path_str_in,
                                  const ViewArr<const char>& file_str_in,
                                  StringInterner* const strings) {
   return parse_file_location(format_file_path(path_str_in, file_str_in, {}), strings);
+}
 }

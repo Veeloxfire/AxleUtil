@@ -9,6 +9,8 @@
 #include <AxleUtil/formattable.h>
 #include <AxleUtil/memory.h>
 
+namespace Axle {
+
 constexpr inline u64 MAX_DECIMAL_U64_DIGITS = sizeof("18446744073709551615") - 1;
 
 constexpr u64 greatest_common_divisor(u64 v1, u64 v2) {
@@ -426,7 +428,7 @@ struct Array {
   }
 
   void free() {
-    ::free_destruct_n<T>(data, size);
+    free_destruct_n<T>(data, size);
     data = nullptr;
     size = 0;
     capacity = 0;
@@ -602,20 +604,14 @@ struct Array {
     (data + size)->~T();
   }
 
-  void pop_n(usize n) noexcept {
-    ASSERT(n <= size);
-    for (usize i = 0; i < n; ++i) {
-      pop();
-    }
-  }
-
   T take() noexcept {
     const T t = std::move(data[size - 1]);
     pop();
     return t;
   }
 
-  void pop(size_t num) noexcept {
+  void pop_n(size_t num) noexcept {
+    ASSERT(num <= size);
     const auto* old_end = data + size;
 
     if (num > size) {
@@ -970,7 +966,7 @@ struct FreelistBlockAllocator {
   }
 
   void new_block() {
-    BLOCK* const new_b = ::allocate_default<BLOCK>();
+    BLOCK* const new_b = allocate_default<BLOCK>();
 
     new_b->prev = top;
     top = new_b;
@@ -1045,7 +1041,7 @@ struct FreelistBlockAllocator {
   void free(const T* t) {
     ASSERT(_debug_valid_free_ptr(t));
 
-    destruct_single(t);
+    destruct_single<const T>(t);
 
     Element* new_e = const_cast<Element*>(reinterpret_cast<const Element*>(t));
     new_e->next = alloc_list;
@@ -1152,7 +1148,7 @@ struct Queue {
       destruct_arr<T>(holder + start, size);
     }
 
-    ::free_no_destruct(holder);
+    free_no_destruct<T>(holder);
     holder = nullptr;
     start = 0;
     size = 0;
@@ -1242,7 +1238,7 @@ struct Queue {
       new_holder[i] = std::move(holder[_ptr_index(i)]);
     }
 
-    free_no_destruct(holder);
+    free_no_destruct<T>(holder);
     holder = new_holder;
     capacity = new_cap;
 
@@ -1311,7 +1307,7 @@ struct AtomicQueue {
       destruct_arr<T>(holder + start, size);
     }
 
-    ::free_no_destruct(holder);
+    free_no_destruct<T>(holder);
     holder = nullptr;
     start = 0;
     size = 0;
@@ -1399,7 +1395,7 @@ struct OwnedArr {
   OwnedArr& operator=(const OwnedArr& arr) = delete;
 
   void free() {
-    free_destruct_n(data, size);
+    free_destruct_n<T>(data, size);
     data = nullptr;
     size = 0;
   }
@@ -1449,7 +1445,7 @@ struct OwnedArr<const T> {
   OwnedArr& operator=(const OwnedArr& arr) = delete;
 
   void free() {
-    free_destruct_n(data, size);
+    free_destruct_n<const T>(data, size);
     data = nullptr;
     size = 0;
   }
@@ -1484,6 +1480,7 @@ struct OwnedArr<const T> {
   constexpr const T* begin() const { return data; }
   constexpr const T* end() const { return data + size; }
 };
+
 
 namespace Format {
   template<>
@@ -1579,6 +1576,166 @@ OwnedArr<T> cast_arr(OwnedArr<U>&& arr) {
            std::exchange(arr.size, 0) / sizeof(U) };
 }
 
+
+template<typename T>
+struct ArrayMax {
+  T* data;
+  usize size;
+  usize capacity;
+
+  constexpr ArrayMax() = default;
+  constexpr ArrayMax(T* data_, usize size_, usize capacity_) 
+    : data(data_), size(size_), capacity(capacity_)
+  {}
+  constexpr ArrayMax(ArrayMax&& arr) noexcept
+    : data(std::exchange(arr.data, nullptr)),
+    size(std::exchange(arr.size, 0)),
+    capacity(std::exchange(arr.capacity, 0))
+  {}
+
+  ArrayMax(const ArrayMax& arr) = delete;
+  ArrayMax& operator=(const ArrayMax& arr) = delete;
+
+  void free() {
+    free_destruct_n<T>(data, size);
+    data = nullptr;
+    size = 0;
+    capacity = 0;
+  }
+
+  ~ArrayMax() noexcept {
+    free();
+  }
+
+  constexpr ArrayMax& operator=(ArrayMax&& arr) noexcept {
+    free();
+
+    data = std::exchange(arr.data, nullptr);
+    size = std::exchange(arr.size, 0);
+    capacity = std::exchange(arr.capacity, 0);
+
+    return *this;
+  }
+
+  constexpr T& operator[](usize i) const {
+    ASSERT(i < size);
+    return data[i];
+  }
+
+  constexpr void insert(T&& t) noexcept {
+    ASSERT(size < capacity);
+
+    new(data + size) T(std::move(t));
+    size++;
+  }
+
+  constexpr void insert(const T& t) noexcept {
+    ASSERT(size < capacity);
+
+    new(data + size) T(t);
+    size++;
+  }
+
+  //TODO: rename intert_default
+  constexpr void insert_uninit(const size_t num = 1) noexcept {
+    if (num > 0) {
+      ASSERT(size + num <= capacity);
+
+      default_init<T>(data + size, num);
+      size += num;
+    }
+  }
+
+
+  constexpr void pop() noexcept {
+    ASSERT(size > 0);
+    size--;
+    (data + size)->~T();
+  }
+
+  constexpr void pop_n(size_t num) noexcept {
+    ASSERT(num <= size);
+    const T* old_end = data + size;
+
+    if (num > size) {
+      size = 0;
+    }
+    else {
+      size -= num;
+    }
+
+    T* i = data + size;
+
+    for (; i < old_end; i++) {
+      i->~T();
+    }
+  }
+
+  constexpr T take() noexcept {
+    T t = std::move(data[size - 1]);
+    pop();
+    return t;
+  }
+  
+  constexpr void clear() noexcept {
+    auto i = mut_begin();
+    auto end = mut_end();
+
+    for (; i < end; i++) {
+      i->~T();
+    }
+
+    size = 0;
+  }
+
+  constexpr const T* begin() const { return data; }
+  constexpr const T* end() const { return data + size; }
+  constexpr T* mut_begin() { return data; }
+  constexpr T* mut_end() { return data + size; }
+
+  constexpr T* back() const {
+    ASSERT(size > 0);
+    return data + (size - 1);
+  }
+
+  template<typename L>
+  constexpr void remove_if(L&& lambda) {
+    size_t num_removed = 0;
+
+    for (size_t i = 0; i < size; i++) {
+      if (lambda(data[i])) {
+        [[maybe_unused]]T removed = std::move(data[i]);
+        num_removed++;
+      }
+      else {
+        if (num_removed > 0) {
+          data[i - num_removed] = std::move(data[i]);
+        }
+      }
+    }
+    size -= num_removed;
+  }
+};
+
+template<typename T>
+ArrayMax<T> new_arr_max(usize capacity) {
+  return {
+    allocate_default<T>(capacity),
+    0,
+    capacity,
+  };
+}
+
+template<typename T>
+struct Viewable<ArrayMax<T>> {
+  using ViewT = T;
+
+  template<typename U>
+  static constexpr ViewArr<U> view(const ArrayMax<T>& t) {
+    return {t.data, t.size};
+  }
+};
+
 template<typename T>
 void serialise_to_array(Array<uint8_t>& bytes, const T& t) {
   bytes.reserve_extra(sizeof(T));
@@ -1624,7 +1781,7 @@ constexpr T combine_flag(const T full, const T mask, const bool set) {
   return (full & ~mask) | (mask * set);
 }
 
-#define COMBINE_FLAG(full, mask, set) (combine_flag(full, mask, set))
+#define COMBINE_FLAG(full, mask, set) (Axle::combine_flag(full, mask, set))
 #define SET_FLAG(full, mask, set) (full = COMBINE_FLAG(full, mask, set))
 
 union X64_UNION {
@@ -1749,7 +1906,7 @@ struct EXECUTE_AT_END {
 template<typename T>
 EXECUTE_AT_END(T&& t) -> EXECUTE_AT_END<T>;
 
-#define DEFER(...) EXECUTE_AT_END JOIN(defer, __LINE__) = [__VA_ARGS__]() mutable ->void 
+#define DEFER(...) Axle::EXECUTE_AT_END JOIN(defer, __LINE__) = [__VA_ARGS__]() mutable ->void 
 
 #define DO_NOTHING ((void)0)
 
@@ -1807,5 +1964,5 @@ constexpr bool A_can_cast_to_B = decltype(_iMPL_A_can_cast_to_B::test_overload<A
 
 template<typename T, typename ... Ops>
 concept OneOf = (IS_SAME_TYPE<T, Ops> || ...);
-
+}
 #endif

@@ -4,6 +4,9 @@
 #include <AxleUtil/safe_lib.h>
 
 namespace clArg {
+  using Axle::usize;
+  using Axle::ViewArr;
+
   struct ArgsList {
     usize argc;
     const char** args;
@@ -14,7 +17,7 @@ namespace clArg {
 
   template<typename T>
   struct Parser {
-    template<typename T>
+    template<typename>
     struct TemplateFalse {
       constexpr static bool VAL = false;
     };

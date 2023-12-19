@@ -1,6 +1,6 @@
 #ifndef AXLEUTIL_THREADING_H_
 #define AXLEUTIL_THREADING_H_
-
+namespace Axle {
 struct SpinLockMutex {
   volatile char held;
 
@@ -86,5 +86,5 @@ using THREAD_PROC = void(*)(const ThreadHandle*, void*);
 
 const ThreadHandle* start_thread(THREAD_PROC thread_proc, void* data);
 void wait_for_thread_end(const ThreadHandle* thread);
-
+}
 #endif

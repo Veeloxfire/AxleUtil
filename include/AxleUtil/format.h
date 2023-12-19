@@ -3,7 +3,7 @@
 
 #include <AxleUtil/formattable.h>
 #include <AxleUtil/utility.h>
-
+namespace Axle {
 namespace Format {
   struct ArrayFormatter {
     struct HeapArr {
@@ -167,4 +167,5 @@ OwnedArr<char> format(const Format::FormatString& format, const T& ... ts) {
 }
 
 OwnedArr<char> format_type_set(const ViewArr<const char>& format, size_t prepend_spaces, size_t max_width);
+}
 #endif
