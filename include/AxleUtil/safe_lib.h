@@ -188,6 +188,49 @@ constexpr ViewArr<const char> lit_view_arr(const char(&arr)[N]) {
 }
 
 template<typename T>
+constexpr inline void memcpy_ts(const ViewArr<T>& dest, const ViewArr<const T>& src) {
+  ASSERT(dest.size == src.size);
+
+  const size_t size = src.size;
+  for (size_t i = 0; i < size; ++i) {
+    dest.data[i] = src.data[i];
+  }
+}
+
+template<typename T>
+constexpr inline void memcpy_ts(const ViewArr<T>& dest, const ViewArr<T>& src) {
+  return memcpy_ts<T>(dest, ViewArr<const T>(src));
+}
+
+template<typename T>
+constexpr inline bool memeq_ts(const ViewArr<const T>& dest, const ViewArr<const T>& src) {
+  if (dest.size != src.size) return false;
+  if (dest.data == src.data) return true;
+
+  const size_t length = dest.size;
+  for (size_t i = 0; i < length; ++i) {
+    if (dest.data[i] != src.data[i]) return false;
+  }
+
+  return true;
+}
+
+template<typename T>
+constexpr inline bool memeq_ts(const ViewArr<T>& dest, const ViewArr<T>& src) {
+  return memeq_ts<T>(ViewArr<const T>(dest), ViewArr<const T>(src));
+}
+
+template<typename T>
+constexpr inline bool memeq_ts(const ViewArr<const T>& dest, const ViewArr<T>& src) {
+  return memeq_ts<T>(dest, ViewArr<const T>(src));
+}
+
+template<typename T>
+constexpr inline bool memeq_ts(const ViewArr<T>& dest, const ViewArr<const T>& src) {
+  return memeq_ts<T>(ViewArr<const T>(dest), src);
+}
+
+template<typename T>
 struct Viewable {
   template<typename U>
   struct TemplateFalse {

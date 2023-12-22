@@ -402,7 +402,31 @@ TEST_FUNCTION(Util_ViewArr, c_array_views) {
   }
 }
 
+TEST_FUNCTION(Util_ViewArr, memcpy_ViewArray) {
+  char dest[10];
+  const char src[10]= {'h','e','l','l','o','w','o','r','l','d'};
 
+  memcpy_ts(view_arr(dest), view_arr(src));
+
+  TEST_ARR_EQ(src, array_size(src), dest, array_size(dest));
+}
+
+TEST_FUNCTION(Util_ViewArr, memeq_ViewArray) {
+  char dest[10] = {'w','o','r','l','d','h','e','l','l','o'};
+  const char src[10]= {'h','e','l','l','o','w','o','r','l','d'};
+
+  TEST_EQ(false, memeq_ts(view_arr(dest), view_arr(src)));
+  TEST_EQ(true, memeq_ts(view_arr(dest, 5, 5), view_arr(src, 0, 5)));
+  TEST_EQ(true, memeq_ts(view_arr(dest, 0, 5), view_arr(src, 5, 5)));
+
+  TEST_EQ(true, memeq_ts(view_arr(dest), view_arr(dest)));
+  TEST_EQ(true, memeq_ts(view_arr(dest), const_view_arr(dest)));
+  TEST_EQ(true, memeq_ts(const_view_arr(dest), view_arr(dest)));
+  TEST_EQ(true, memeq_ts(const_view_arr(dest), const_view_arr(dest)));
+
+  TEST_EQ(false, memeq_ts(view_arr(dest), view_arr(dest, 1, 1)));
+  TEST_EQ(false, memeq_ts(view_arr(dest), view_arr(dest, 0, 1)));
+}
 
 TEST_FUNCTION(Util, freelist_block_allocator) {
 
