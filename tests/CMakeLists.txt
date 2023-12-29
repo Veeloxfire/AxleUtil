@@ -20,6 +20,7 @@ target_link_libraries(AxleUtilTests AxleUtil)
 set(CppFiles
   "${PROJECT_SOURCE_DIR}/containers_tests.cpp"
   "${PROJECT_SOURCE_DIR}/format_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/serialize_tests.cpp"
   "${PROJECT_SOURCE_DIR}/files_tests.cpp"
   "${PROJECT_SOURCE_DIR}/math_tests.cpp"
   "${PROJECT_SOURCE_DIR}/string_tests.cpp"

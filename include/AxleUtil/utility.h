@@ -8,6 +8,7 @@
 #include <AxleUtil/threading.h>
 #include <AxleUtil/formattable.h>
 #include <AxleUtil/memory.h>
+#include <AxleUtil/serialize.h>
 
 namespace Axle {
 
@@ -703,6 +704,20 @@ struct Viewable<Array<T>> {
   template<typename U>
   static constexpr ViewArr<U> view(const Array<T>& t) {
     return {t.data, t.size};
+  }
+};
+
+
+template<>
+struct Serializer<Array<u8>> {
+  Array<u8>& bytes;
+
+  constexpr Serializer(Array<u8>& arr) : bytes(arr) {}
+
+  ViewArr<u8> take_bytes(usize size) {
+    const usize start = bytes.size;
+    bytes.insert_uninit(size);
+    return view_arr(bytes, start, size);
   }
 };
 
@@ -1737,31 +1752,6 @@ struct Viewable<ArrayMax<T>> {
 };
 
 template<typename T>
-void serialise_to_array(Array<uint8_t>& bytes, const T& t) {
-  bytes.reserve_extra(sizeof(T));
-  memcpy_ts<uint8_t>(bytes.data + bytes.size, bytes.capacity - bytes.size,
-                     (const uint8_t*)&t, sizeof(T));
-  bytes.size += sizeof(T);
-}
-
-template<typename T>
-void load_to_bytes(uint8_t* bytes, size_t bytes_size, size_t offset, const T& t) {
-  memcpy_ts((T*)bytes + offset, bytes_size - offset, &t, 1);
-}
-
-void load_to_bytes(Array<uint8_t>& bytes,
-                   const size_t offset,
-                   const uint8_t* in_bytes,
-                   const size_t len);
-
-constexpr inline void load_to_bytes(uint8_t* bytes, size_t bytes_size,
-                                    const size_t offset,
-                                    const uint8_t* in_bytes,
-                                    const size_t len) {
-  memcpy_ts(bytes + offset, bytes_size - offset, in_bytes, len);
-}
-
-template<typename T>
 constexpr void set_mask(T& t, const T mask) {
   t |= mask;
 }
@@ -1783,95 +1773,6 @@ constexpr T combine_flag(const T full, const T mask, const bool set) {
 
 #define COMBINE_FLAG(full, mask, set) (Axle::combine_flag(full, mask, set))
 #define SET_FLAG(full, mask, set) (full = COMBINE_FLAG(full, mask, set))
-
-union X64_UNION {
-  uint64_t val = 0;
-  int64_t sig_val;
-  double flt;
-  void* vptr;
-
-  constexpr X64_UNION() = default;
-  constexpr X64_UNION(X64_UNION&& v) = default;
-  constexpr X64_UNION(const X64_UNION& v) = default;
-
-  constexpr X64_UNION& operator=(X64_UNION&& v) = default;
-  constexpr X64_UNION& operator=(const X64_UNION& v) = default;
-
-  constexpr X64_UNION(uint64_t v) : val(v) {}
-  constexpr X64_UNION(int64_t v) : sig_val(v) {}
-  constexpr X64_UNION(double v) : flt(v) {}
-
-  template<typename T>
-  constexpr X64_UNION(T* v) : vptr((void*)v) {}
-
-  inline constexpr operator uint64_t() const {
-    return val;
-  }
-
-  inline constexpr operator int64_t() const {
-    return sig_val;
-  }
-
-  inline constexpr operator double() const {
-    return flt;
-  }
-
-  template<typename T>
-  inline constexpr operator T* () const {
-    return (T*)vptr;
-  }
-};
-
-//TODO: Big endian??
-inline constexpr X64_UNION x64_from_bytes(const uint8_t* const bytes) noexcept {
-  X64_UNION val;
-  val.val = (static_cast<uint64_t>(bytes[7]) << 56)
-    | (static_cast<uint64_t>(bytes[6]) << 48)
-    | (static_cast<uint64_t>(bytes[5]) << 40)
-    | (static_cast<uint64_t>(bytes[4]) << 32)
-    | (static_cast<uint64_t>(bytes[3]) << 24)
-    | (static_cast<uint64_t>(bytes[2]) << 16)
-    | (static_cast<uint64_t>(bytes[1]) << 8)
-    | static_cast<uint64_t>(bytes[0]);
-
-  return val;
-}
-
-inline constexpr uint32_t x32_from_bytes(const uint8_t* const bytes) noexcept {
-  return (static_cast<uint32_t>(bytes[3]) << 24)
-    | (static_cast<uint32_t>(bytes[2]) << 16)
-    | (static_cast<uint32_t>(bytes[1]) << 8)
-    | static_cast<uint32_t>(bytes[0]);
-}
-
-inline constexpr uint16_t x16_from_bytes(const uint8_t* const bytes) noexcept {
-  return (static_cast<uint16_t>(bytes[1]) << 8)
-    | static_cast<uint16_t>(bytes[0]);
-}
-
-//TODO: Big endian??
-inline constexpr void x64_to_bytes(const X64_UNION uint, uint8_t* const bytes) noexcept {
-  bytes[7] = static_cast<uint8_t>(uint.val >> 56);
-  bytes[6] = static_cast<uint8_t>(uint.val >> 48);
-  bytes[5] = static_cast<uint8_t>(uint.val >> 40);
-  bytes[4] = static_cast<uint8_t>(uint.val >> 32);
-  bytes[3] = static_cast<uint8_t>(uint.val >> 24);
-  bytes[2] = static_cast<uint8_t>(uint.val >> 16);
-  bytes[1] = static_cast<uint8_t>(uint.val >> 8);
-  bytes[0] = static_cast<uint8_t>(uint.val);
-}
-
-inline constexpr void x32_to_bytes(const uint32_t uint, uint8_t* const bytes) noexcept {
-  bytes[3] = static_cast<uint8_t>(uint >> 24);
-  bytes[2] = static_cast<uint8_t>(uint >> 16);
-  bytes[1] = static_cast<uint8_t>(uint >> 8);
-  bytes[0] = static_cast<uint8_t>(uint);
-}
-
-inline constexpr void x16_to_bytes(const uint16_t uint, uint8_t* const bytes) noexcept {
-  bytes[1] = static_cast<uint8_t>(uint >> 8);
-  bytes[0] = static_cast<uint8_t>(uint);
-}
 
 template<typename RET, typename ... PARAMS>
 using FUNCTION_PTR = RET(*)(PARAMS...);
@@ -1928,19 +1829,6 @@ inline constexpr bool IS_SAME_TYPE = IS_SAME_TYPE_IMPL<T, U>::test;
 #else
 #define assert_if(cond, expression) if(cond) ASSERT(expression)
 #endif
-
-void serialize_bytes(Array<u8>& bytes, const u8* data, usize size, usize alignment);
-void serialize_zeros(Array<u8>& bytes, usize size, usize alignment);
-
-template<typename T>
-inline void serialize_structs(Array<u8>& bytes, const T* data, usize num) {
-  serialize_bytes(bytes, (u8*)data, sizeof(T) * num, alignof(T));
-}
-
-template<typename T>
-inline void serialize_struct(Array<u8>& bytes, const T* data) {
-  serialize_bytes(bytes, (u8*)data, sizeof(T), alignof(T));
-}
 
 namespace _iMPL_A_can_cast_to_B {
   template<typename T>

@@ -90,6 +90,7 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/io.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/memory.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/safe_lib.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/serialize.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/strings.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/threading.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/utility.h"
