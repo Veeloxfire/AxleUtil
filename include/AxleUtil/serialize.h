@@ -24,44 +24,46 @@ struct Serializer {
   static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized serializer");
 };
 
-template<typename S, typename T>
+template<typename T, typename S>
 constexpr void serialize_le(S& base, const T& val) {
   Serializer<S> ser = {base};
   Serializable<T>::serialize_le(ser, val);
 }
 
-template<typename S, typename T>
+template<typename T, typename S>
 constexpr void serialize_le(Serializer<S>& ser, const T& val) {
   Serializable<T>::serialize_le(ser, val);
 }
 
-template<typename S, typename T>
+template<typename T, typename S>
 constexpr void serialize_be(S& base, const T& val) {
   Serializer<S> ser = {base};
   Serializable<T>::serialize_be(ser, val);
 }
 
-template<typename S, typename T>
+template<typename T, typename S>
 constexpr void serialize_be(Serializer<S>& ser, const T& val) {
   Serializable<T>::serialize_be(ser, val);
 }
 
-template<typename S, typename T>
+template<typename T, typename S>
 constexpr T deserialize_le(S& base) {
-  return Serializable<T>::deserialize_le(base);
+  Serializer<S> ser = {base};
+  return Serializable<T>::deserialize_le(ser);
 }
 
-template<typename S, typename T>
+template<typename T, typename S>
 constexpr T deserialize_be(S& base) {
-  return Serializable<T>::deserialize_be(base);
+  Serializer<S> ser = {base};
+  return Serializable<T>::deserialize_be(ser);
 }
 
-template<typename S, typename T>
+template<typename T, typename S>
 constexpr T deserialize_le(Serializer<S>& base) {
   return Serializable<T>::deserialize_le(base);
 }
 
-template<typename S, typename T>
+template<typename T, typename S>
 constexpr T deserialize_be(Serializer<S>& base) {
   return Serializable<T>::deserialize_be(base);
 }
@@ -256,6 +258,97 @@ struct Serializable<u8> {
   }
 };
 
+template<>
+struct Serializable<i64> {
+  template<typename S>
+  static constexpr void serialize_le(Serializer<S>& ser, const i64 u) {
+    Serializable<u64>::serialize_le(ser, static_cast<u64>(u));
+  }
+
+  template<typename S>
+  static constexpr void serialize_be(Serializer<S>& ser, const i64 u) {
+    Serializable<u64>::serialize_be(ser, static_cast<u64>(u));
+  }
+  
+  template<typename S>
+  static constexpr i64 deserialize_le(Serializer<S>& ser) {
+    return static_cast<i64>(Serializable<u64>::deserialize_le(ser));
+  }
+ 
+  template<typename S>
+  static constexpr i64 deserialize_be(Serializer<S>& ser) {
+    return static_cast<i64>(Serializable<u64>::deserialize_be(ser));
+  }
+};
+
+template<>
+struct Serializable<i32> {
+  template<typename S>
+  static constexpr void serialize_le(Serializer<S>& ser, const i32 u) {
+    Serializable<u32>::serialize_le(ser, static_cast<u32>(u));
+  }
+
+  template<typename S>
+  static constexpr void serialize_be(Serializer<S>& ser, const i32 u) {
+    Serializable<u32>::serialize_be(ser, static_cast<u32>(u));
+  }
+  
+  template<typename S>
+  static constexpr i32 deserialize_le(Serializer<S>& ser) {
+    return static_cast<i32>(Serializable<u32>::deserialize_le(ser));
+  }
+ 
+  template<typename S>
+  static constexpr i32 deserialize_be(Serializer<S>& ser) {
+    return static_cast<i32>(Serializable<u32>::deserialize_be(ser));
+  }
+};
+
+template<>
+struct Serializable<i16> {
+  template<typename S>
+  static constexpr void serialize_le(Serializer<S>& ser, const i16 u) {
+    Serializable<u16>::serialize_le(ser, static_cast<u16>(u));
+  }
+
+  template<typename S>
+  static constexpr void serialize_be(Serializer<S>& ser, const i16 u) {
+    Serializable<u16>::serialize_be(ser, static_cast<u16>(u));
+  }
+  
+  template<typename S>
+  static constexpr i16 deserialize_le(Serializer<S>& ser) {
+    return static_cast<i16>(Serializable<u16>::deserialize_le(ser));
+  }
+ 
+  template<typename S>
+  static constexpr i16 deserialize_be(Serializer<S>& ser) {
+    return static_cast<i16>(Serializable<u16>::deserialize_be(ser));
+  }
+};
+
+template<>
+struct Serializable<i8> {
+  template<typename S>
+  static constexpr void serialize_le(Serializer<S>& ser, const i8 u) {
+    Serializable<u8>::serialize_le(ser, static_cast<u8>(u));
+  }
+
+  template<typename S>
+  static constexpr void serialize_be(Serializer<S>& ser, const i8 u) {
+    Serializable<u8>::serialize_be(ser, static_cast<u8>(u));
+  }
+  
+  template<typename S>
+  static constexpr i8 deserialize_le(Serializer<S>& ser) {
+    return static_cast<i8>(Serializable<u8>::deserialize_le(ser));
+  }
+ 
+  template<typename S>
+  static constexpr i8 deserialize_be(Serializer<S>& ser) {
+    return static_cast<i8>(Serializable<u8>::deserialize_be(ser));
+  }
+};
 
 template<>
 struct Serializer<ViewArr<u8>> {
@@ -273,6 +366,22 @@ struct Serializer<ViewArr<u8>> {
   }
 };
 
+template<>
+struct Serializer<ViewArr<const u8>> {
+  ViewArr<const u8> view;
+  
+  constexpr Serializer(const ViewArr<const u8>& arr)
+    : view(arr)
+  {}
+
+  constexpr ViewArr<const u8> take_bytes(usize size) {
+    ASSERT(view.size >= size);
+    const auto res = view_arr(view, 0, size);
+    view  = view_arr(view, size, view.size - size);
+    return res;
+  }
+};
+
 template<usize N>
 struct Serializer<u8[N]> {
   ViewArr<u8> view;
@@ -282,6 +391,22 @@ struct Serializer<u8[N]> {
   {}
 
   constexpr ViewArr<u8> take_bytes(usize size) {
+    ASSERT(view.size >= size);
+    const auto res = view_arr(view, 0, size);
+    view  = view_arr(view, size, view.size - size);
+    return res;
+  }
+};
+
+template<usize N>
+struct Serializer<const u8[N]> {
+  ViewArr<const u8> view;
+  
+  constexpr Serializer(const u8(&arr)[N])
+    : view(view_arr(arr))
+  {}
+
+  constexpr ViewArr<const u8> take_bytes(usize size) {
     ASSERT(view.size >= size);
     const auto res = view_arr(view, 0, size);
     view  = view_arr(view, size, view.size - size);
