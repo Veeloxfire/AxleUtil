@@ -24,9 +24,13 @@ struct Serializer {
   static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized serializer");
 };
 
+//default implementation copies non-const version
+template<typename T>
+struct Serializer<const T> : Serializer<T> {};
+
 template<typename T, typename S>
 constexpr void serialize_le(S& base, const T& val) {
-  Serializer<S> ser = {base};
+  Serializer<S> ser(base);
   Serializable<T>::serialize_le(ser, val);
 }
 
@@ -37,7 +41,7 @@ constexpr void serialize_le(Serializer<S>& ser, const T& val) {
 
 template<typename T, typename S>
 constexpr void serialize_be(S& base, const T& val) {
-  Serializer<S> ser = {base};
+  Serializer<S> ser(base);
   Serializable<T>::serialize_be(ser, val);
 }
 
@@ -47,14 +51,26 @@ constexpr void serialize_be(Serializer<S>& ser, const T& val) {
 }
 
 template<typename T, typename S>
+constexpr T deserialize_le(const S& base) {
+  Serializer<const S> ser(base);
+  return Serializable<T>::deserialize_le(ser);
+}
+
+template<typename T, typename S>
+constexpr T deserialize_be(const S& base) {
+  Serializer<const S> ser(base);
+  return Serializable<T>::deserialize_be(ser);
+}
+
+template<typename T, typename S>
 constexpr T deserialize_le(S& base) {
-  Serializer<S> ser = {base};
+  Serializer<S> ser(base);
   return Serializable<T>::deserialize_le(ser);
 }
 
 template<typename T, typename S>
 constexpr T deserialize_be(S& base) {
-  Serializer<S> ser = {base};
+  Serializer<S> ser(base);
   return Serializable<T>::deserialize_be(ser);
 }
 

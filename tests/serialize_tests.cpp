@@ -310,7 +310,18 @@ TEST_FUNCTION(Deserialize, ints) {
   }
 }
 
+TEST_FUNCTION(Deserialize, rvalues) {
+  //Should be able to deserialize from an r-value
 
+  const u8 bytes[4] {1, 2, 3, 4};
+  u32 u_le = deserialize_le<u32>(ViewArr<const u8>{bytes, 4});
+  const u32 expected_le = 0x04030201u;
+  TEST_EQ(expected_le, u_le);
+
+  u32 u_be = deserialize_be<u32>(ViewArr<const u8>{bytes, 4});
+  const u32 expected_be = 0x01020304u;
+  TEST_EQ(expected_be, u_be);
+}
 
 TEST_FUNCTION(Serialize, zeros) {
   {

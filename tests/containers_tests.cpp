@@ -402,6 +402,23 @@ TEST_FUNCTION(Util_ViewArr, c_array_views) {
   }
 }
 
+TEST_FUNCTION(Util_ViewArr, rvalues) {
+  //Should be able to view from an r-value
+
+  const u8 bytes[4] {1, 2, 3, 4};
+  const ViewArr<const u8> full_nc = view_arr(ViewArr<const u8>{bytes, 4});
+  TEST_ARR_EQ(bytes, array_size(bytes), full_nc.data, full_nc.size);
+
+  const ViewArr<const u8> middle_nc = view_arr(ViewArr<const u8>{bytes, 4}, 1, 2);
+  TEST_ARR_EQ(bytes + 1, static_cast<usize>(2), middle_nc.data, middle_nc.size);
+
+  const ViewArr<const u8> full_c = const_view_arr(ViewArr<const u8>{bytes, 4});
+  TEST_ARR_EQ(bytes, array_size(bytes), full_c.data, full_c.size);
+
+  const ViewArr<const u8> middle_c = const_view_arr(ViewArr<const u8>{bytes, 4}, 1, 2);
+  TEST_ARR_EQ(bytes + 1, static_cast<usize>(2), middle_c.data, middle_c.size);
+}
+
 TEST_FUNCTION(Util_ViewArr, memcpy_ViewArray) {
   char dest[10];
   const char src[10]= {'h','e','l','l','o','w','o','r','l','d'};

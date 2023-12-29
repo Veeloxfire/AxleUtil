@@ -358,6 +358,48 @@ constexpr ViewArr<ViewTemplates::ViewType<T, VT, true>> const_view_arr(T& t, usi
   };
 }
 
+template<
+  typename VT = void,
+  typename T
+>
+constexpr ViewArr<ViewTemplates::ViewType<const T, VT, false>> view_arr(const T& t) {
+  return Viewable<const T>::template view<ViewTemplates::ViewType<const T, VT, false>>(t);
+}
+
+template<
+  typename VT = void,
+  typename T
+>
+constexpr ViewArr<ViewTemplates::ViewType<const T, VT, false>> view_arr(const T& t, usize start, usize count) {
+  const auto arr = Viewable<const T>::template view<ViewTemplates::ViewType<const T, VT, false>>(t);
+  ASSERT(arr.size >= start + count);
+  return {
+    arr.data + start,
+    count,
+  };
+}
+
+template<
+  typename VT = void,
+  typename T
+>
+constexpr ViewArr<ViewTemplates::ViewType<const T, VT, true>> const_view_arr(const T& t) {
+  return Viewable<const T>::template view<ViewTemplates::ViewType<const T, VT, true>>(t);
+}
+
+template<
+  typename VT = void,
+  typename T
+>
+constexpr ViewArr<ViewTemplates::ViewType<const T, VT, true>> const_view_arr(const T& t, usize start, usize count) {
+  const auto arr = Viewable<const T>::template view<ViewTemplates::ViewType<const T, VT, true>>(t);
+  ASSERT(arr.size >= start + count);
+  return {
+    arr.data + start,
+    count,
+  };
+}
+
 template<typename T, typename U>
 ViewArr<T> cast_arr(const ViewArr<U>& arr) {
   static_assert(std::is_trivial_v<T> && std::is_trivial_v<U>);
