@@ -57,7 +57,15 @@ endif()
 
 option(AxleTHROWING_ASSERTS "Enable Throwing Asserts" OFF)
 if(AxleTHROWING_ASSERTS)
+  message("Enabled: Throwing assertions")
   target_compile_definitions(AxleUtil PUBLIC ASSERT_EXCEPTIONS)
+endif()
+
+
+option(AxleTestSANITY "Enable Sanity Tests" OFF)
+if(AxleTestSANITY)
+  message("Enabled: sanity checks")
+  target_compile_definitions(AxleUtil PUBLIC AXLE_TEST_SANITY)
 endif()
 
 set(CppFiles
@@ -100,5 +108,7 @@ target_sources(AxleUtil PRIVATE
 option(BUILD_TESTS "Build the tests" OFF)
 
 if(BUILD_TESTS)
+  message("Building tests")
   add_subdirectory("./tests")
 endif()
+

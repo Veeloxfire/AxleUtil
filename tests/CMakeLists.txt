@@ -15,10 +15,6 @@ if(AxleTHROWING_ASSERTS)
   target_compile_definitions(AxleUtilTests PUBLIC ASSERT_EXCEPTIONS)
 endif()
 
-if(AxleTestSANITY)
-  target_compile_definitions(AxleUtil PUBLIC AXLE_TEST_SANITY)
-endif()
-
 target_link_libraries(AxleUtilTests AxleUtil)
 
 set(CppFiles
