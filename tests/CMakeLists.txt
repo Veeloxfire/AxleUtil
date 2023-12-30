@@ -11,6 +11,12 @@ endif()
 add_executable(AxleUtilTests)
 set_target_properties(AxleUtilTests PROPERTIES OUTPUT_NAME "AxleUtilTests$<CONFIG>")
 
+if(MSVC)
+  target_compile_options(AxleUtilTests PRIVATE /W4 /WX)
+else()
+  target_compile_options(AxleUtilTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 target_link_libraries(AxleUtilTests AxleUtil)
 
 set(CppFiles

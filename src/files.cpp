@@ -72,6 +72,10 @@ FILES::OpenedFile FILES::open(const ViewArr<const char>& name,
         share = 0;
         break;
       }
+    default: {
+      INVALID_CODE_PATH("Invalid Open Mode");
+      return {};
+    }
   }
 
 
@@ -114,6 +118,10 @@ FILES::OpenedFile FILES::create(const ViewArr<const char>& name,
         share = 0;
         break;
       }
+    default: {
+      INVALID_CODE_PATH("Invalid Open Mode");
+      return {};
+    }
   }
 
 
@@ -156,6 +164,10 @@ FILES::OpenedFile FILES::replace(const ViewArr<const char>& name,
         share = 0;
         break;
       }
+    default: {
+      INVALID_CODE_PATH("Invalid Open Mode");
+      return {};
+    }
   }
 
   HANDLE h = CreateFileA(path.c_str(), access, share, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
@@ -310,35 +322,7 @@ static void generic_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8
   }
 }
 
-static void small_write_after_buffer(FILES::FileData* file, usize abstract_ptr, const uint8_t* bytes, size_t num_bytes) {
-  ASSERT(file->in_sync);
-  ASSERT(num_bytes < BUFFER_SIZE);
-  ASSERT(file->real_buffer_ptr + file->buffer_size == abstract_ptr);
-  ASSERT(file->real_file_ptr == file->real_buffer_ptr);
-
-  WriteFile(file->handle, bytes, (DWORD)num_bytes, NULL, NULL);
-  file->real_file_ptr += num_bytes;
-  if (file->real_file_ptr > file->real_file_size) {
-    file->real_file_size = file->real_file_ptr;
-  }
-
-  usize space_in_file = file->real_file_size - file->real_buffer_ptr;
-  usize can_read_size = BUFFER_SIZE > space_in_file ? space_in_file : BUFFER_SIZE;
-
-  ASSERT(num_bytes <= can_read_size);
-
-  usize can_reuse = can_read_size > file->buffer_size;
-  usize from_previous = (can_read_size - num_bytes);
-
-  memmove_s(file->buffer, from_previous, file->buffer + (num_bytes), from_previous);
-  memcpy_s(file->buffer + from_previous, num_bytes, bytes, num_bytes);
-
-
-  file->real_buffer_ptr = abstract_ptr - from_previous;
-  file->buffer_size = (u32)can_read_size;
-}
-
-static void write_new_buffer(FILES::FileData* file, usize abstract_ptr, const uint8_t* bytes, size_t num_bytes) {
+static void write_new_buffer(FILES::FileData* file, const uint8_t* bytes, size_t num_bytes) {
   BOOL wrote = WriteFile(file->handle, bytes, (DWORD)num_bytes, NULL, NULL);
   ASSERT(wrote);
 
@@ -446,7 +430,7 @@ FILES::ErrorCode FILES::write(FileData* file, const uint8_t* bytes, size_t num_b
     //lazy
     sync_buffer(file);
     seek_from_start(file, file->abstract_file_ptr);
-    write_new_buffer(file, file->abstract_file_ptr, bytes, num_bytes);
+    write_new_buffer(file, bytes, num_bytes);
   }
 
   file->abstract_file_ptr += num_bytes;

@@ -39,6 +39,12 @@ set_target_properties(AxleUtil PROPERTIES OUTPUT_NAME "AxleUtil$<CONFIG>")
 
 target_include_directories(AxleUtil PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
+if(MSVC)
+  target_compile_options(AxleUtil PRIVATE /W4 /WX)
+else()
+  target_compile_options(AxleUtil PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 option(AxleTRACING "Enable execution tracing" OFF)
 if(AxleTRACING)
   target_compile_definitions(AxleUtil PRIVATE TRACING_ENABLE AXLE_TRACING)
