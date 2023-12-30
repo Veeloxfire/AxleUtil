@@ -28,7 +28,7 @@ namespace clArg {
   template<>
   struct Parser<char> {
     template<typename E>
-    constexpr static bool try_parse(E&& err, const ViewArr<const char>& val,
+    constexpr static bool try_parse(E& err, const ViewArr<const char>& val,
                                     const ViewArr<const char>& name, char& c) {
       if (val.size == 0) {
         err.report_error("{}: Expected character. Was empty", name);
@@ -47,7 +47,7 @@ namespace clArg {
   template<>
   struct Parser<ViewArr<const char>> {
     template<typename E>
-    constexpr static bool try_parse(E&& err, const ViewArr<const char>& val,
+    constexpr static bool try_parse(E&, const ViewArr<const char>& val,
                                     const ViewArr<const char>&, ViewArr<const char>& out) {
       out = val;
       return true;
@@ -71,12 +71,12 @@ namespace clArg {
   }
 
   template<typename E, typename T>
-  bool parse_arg(E&& err, const ArgsList& args, const ViewArr<const char>& name, T& t) {
+  bool parse_arg(E& err, const ArgsList& args, const ViewArr<const char>& name, T& t) {
     FOR(args, it) {
       ViewArr<const char> v = arg_val(*it, name);
       if (v.data == nullptr) continue;
 
-      bool r = Parser<T>::try_parse(std::forward<E>(err), v, name, t);
+      bool r = Parser<T>::try_parse(err, v, name, t);
       if (r) return true;
     }
 

@@ -20,6 +20,7 @@ endif()
 target_link_libraries(AxleUtilTests AxleUtil)
 
 set(CppFiles
+  "${PROJECT_SOURCE_DIR}/args_tests.cpp"
   "${PROJECT_SOURCE_DIR}/containers_tests.cpp"
   "${PROJECT_SOURCE_DIR}/format_tests.cpp"
   "${PROJECT_SOURCE_DIR}/serialize_tests.cpp"
