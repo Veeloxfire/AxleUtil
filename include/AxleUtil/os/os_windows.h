@@ -1,7 +1,11 @@
 #ifndef AXLEUTIL_OS_WINDOWS_H_
 #define AXLEUTIL_OS_WINDOWS_H_
 
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#undef NOMINMAX
+#undef WIN32_LEAN_AND_MEAN
 
 #include <AxleUtil/safe_lib.h>
 namespace Axle {

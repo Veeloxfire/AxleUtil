@@ -1,31 +1,72 @@
 #include <AxleUtil/utility.h>
 #include <AxleUtil/strings.h>
 #include <AxleUtil/io.h>
+
+//Always enabled here
+#define STACKTRACE_ENABLE
 #include <AxleUtil/stacktrace.h>
 
+#include <AxleUtil/os/os_windows.h>
+#include <debugapi.h>
+
 namespace Axle {
+static OwnedArr<const char> create_exception_message(const char* message) noexcept {
+  Format::ArrayFormatter formatter = {};
+  formatter.load_string(message, strlen_ts(message));
+
+  using TraceNode = Axle::Stacktrace::TraceNode;
+  const TraceNode* tn = Axle::Stacktrace::EXECUTION_TRACE;
+  if(tn != nullptr) {
+    formatter.load_string_lit("\nStacktrace:\n");
+    Format::format_to_formatter(formatter, "- {}", tn->name);
+    tn = tn->prev;
+    while(tn != nullptr) {
+      Format::format_to_formatter(formatter, "\n- {}", tn->name);
+      tn = tn->prev;
+    }
+  }
+  formatter.null_terminate();
+  return formatter.take();
+}
+
+struct InternalException : std::exception {
+  OwnedArr<const char> message_string;
+
+  InternalException(OwnedArr<const char>&& data) : message_string(std::move(data)) {}
+  virtual ~InternalException() = default;
+
+  virtual const char* what() const noexcept override {
+    return message_string.data;
+  }
+};
+
 void throw_testing_assertion(const char* message) {
+  if(IsDebuggerPresent()) DebugBreak();
+  
   if (std::uncaught_exceptions() == 0) {
-    throw std::exception(message);
+    OwnedArr<const char> final_message = create_exception_message(message); 
+    throw InternalException(std::move(final_message));
   }
 }
 
-#define STACKTRACE_ENABLE
-
 void abort_assertion(const char* message) noexcept {
+  if(IsDebuggerPresent()) DebugBreak();
+
   const ViewArr<const char> msg_view = {message, strlen_ts(message) };
 
   IO::err_print(msg_view);
-#ifdef STACKTRACE_ENABLE
-  IO::err_print("Stacktrace:\n");
-  {
-    using TraceNode = Axle::Stacktrace::TraceNode;
-    const TraceNode* tn = Axle::Stacktrace::EXECUTION_TRACE;
+  
+  using TraceNode = Axle::Stacktrace::TraceNode;
+  const TraceNode* tn = Axle::Stacktrace::EXECUTION_TRACE;
+  if(tn != nullptr) {
+    IO::err_print("\nStacktrace:\n");
+    IO::err_format("- {}", tn->name);
+    tn = tn->prev;
     while(tn != nullptr) {
-      IO::err_format("- {}\n", tn->name);
+      IO::err_format("\n- {}", tn->name);
+      tn = tn->prev;
     }
   }
-#endif
 
   std::abort();
 }

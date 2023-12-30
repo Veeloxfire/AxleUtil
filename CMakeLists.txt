@@ -55,13 +55,6 @@ if(AxleTRACING)
   target_link_libraries(AxleUtil "${TracerBIN}/Tracer.lib")
 endif()
 
-option(AxleTHROWING_ASSERTS "Enable Throwing Asserts" OFF)
-if(AxleTHROWING_ASSERTS)
-  message("Enabled: Throwing assertions")
-  target_compile_definitions(AxleUtil PUBLIC ASSERT_EXCEPTIONS)
-endif()
-
-
 option(AxleTestSANITY "Enable Sanity Tests" OFF)
 if(AxleTestSANITY)
   message("Enabled: sanity checks")

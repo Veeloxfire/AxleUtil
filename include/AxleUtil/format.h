@@ -111,6 +111,32 @@ namespace Format {
       load_string(str, N);
     }
 
+    inline void null_terminate() {
+      if (is_heap) {
+        heap_arr.arr.insert('\0');
+      }
+      else {
+        if (LOCAL_ARR_SIZE - static_cast<usize>(local_arr.size) == 0) {
+          Array<char> arr = {};
+          arr.reserve_total(local_arr.size + 1);
+
+          arr.concat(local_arr.arr, local_arr.size);
+          arr.insert('\0');
+
+          local_arr.~LocalArr();
+
+          new (&heap_arr) HeapArr{
+            true,
+            std::move(arr),
+          };
+        }
+        else {
+          local_arr.arr[local_arr.size] = '\0';
+          local_arr.size += 1;
+        }
+      }
+    }
+
 
     inline void load_char(char c) {
       ASSERT(c != '\0');

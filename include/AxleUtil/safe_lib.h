@@ -38,20 +38,10 @@ using namespace Primitives;
 void throw_testing_assertion(const char* message);
 void abort_assertion(const char* message) noexcept;
 
-#ifdef ASSERT_EXCEPTIONS
 #define ASSERT(expr) do { if(!(expr))\
 Axle::throw_testing_assertion("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " __FILE__ ":\n" #expr); } while(false)
 
 #define INVALID_CODE_PATH(reason) Axle::throw_testing_assertion("Invalid Code path \"" reason "\"")
-#else
-#define ASSERT(expr) assert(expr)
-
-#ifdef NDEBUG
-#define INVALID_CODE_PATH(reason) Axle::abort_assertion("Invalid Code path \"" reason "\"")
-#else
-#define INVALID_CODE_PATH(reason) assert(((reason), false));
-#endif
-#endif
 
 //#define COUNT_ALLOC
 

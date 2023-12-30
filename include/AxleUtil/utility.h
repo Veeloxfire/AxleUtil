@@ -1399,8 +1399,8 @@ struct OwnedArr {
   T* data = nullptr;
   usize size = 0;
 
-  constexpr OwnedArr() = default;
-  constexpr OwnedArr(T* t, usize s) : data(t), size(s) {}
+  constexpr OwnedArr() noexcept = default;
+  constexpr OwnedArr(T* t, usize s) noexcept : data(t), size(s) {}
   constexpr OwnedArr(OwnedArr&& arr) noexcept
     : data(std::exchange(arr.data, nullptr)),
     size(std::exchange(arr.size, 0))
@@ -1433,10 +1433,10 @@ struct OwnedArr {
     return data[i];
   }
 
-  constexpr const T* begin() const { return data; }
-  constexpr const T* end() const { return data + size; }
-  constexpr T* mut_begin() { return data; }
-  constexpr T* mut_end() { return data + size; }
+  constexpr const T* begin() const noexcept { return data; }
+  constexpr const T* end() const noexcept { return data + size; }
+  constexpr T* mut_begin() noexcept { return data; }
+  constexpr T* mut_end() noexcept { return data + size; }
 };
 
 template<typename T>
@@ -1444,8 +1444,8 @@ struct OwnedArr<const T> {
   const T* data = nullptr;
   usize size = 0;
 
-  constexpr OwnedArr() = default;
-  constexpr OwnedArr(const T* t, usize s) : data(t), size(s) {}
+  constexpr OwnedArr() noexcept = default;
+  constexpr OwnedArr(const T* t, usize s) noexcept : data(t), size(s) {}
   constexpr OwnedArr(OwnedArr<const T>&& arr) noexcept
     : data(std::exchange(arr.data, nullptr)),
     size(std::exchange(arr.size, 0))
@@ -1492,8 +1492,8 @@ struct OwnedArr<const T> {
     return data[i];
   }
 
-  constexpr const T* begin() const { return data; }
-  constexpr const T* end() const { return data + size; }
+  constexpr const T* begin() const noexcept { return data; }
+  constexpr const T* end() const noexcept { return data + size; }
 };
 
 

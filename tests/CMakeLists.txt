@@ -11,10 +11,6 @@ endif()
 add_executable(AxleUtilTests)
 set_target_properties(AxleUtilTests PROPERTIES OUTPUT_NAME "AxleUtilTests$<CONFIG>")
 
-if(AxleTHROWING_ASSERTS)
-  target_compile_definitions(AxleUtilTests PUBLIC ASSERT_EXCEPTIONS)
-endif()
-
 target_link_libraries(AxleUtilTests AxleUtil)
 
 set(CppFiles
