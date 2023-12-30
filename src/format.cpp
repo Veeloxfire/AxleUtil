@@ -20,6 +20,11 @@ Format::DoubleStr Format::format_double(double f) {
 }
 
 OwnedArr<char> format_type_set(const ViewArr<const char>& format_in, const size_t prepend_spaces, const size_t max_width) {
+#ifdef AXLE_TRACING
+  TRACING_FUNCTION();
+#endif
+  STACKTRACE_FUNCTION();
+  
   Array<char> result = {};
   result.reserve_extra(format_in.size);
 

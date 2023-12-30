@@ -1,6 +1,7 @@
 #include <AxleUtil/utility.h>
 #include <AxleUtil/strings.h>
 #include <AxleUtil/io.h>
+#include <AxleUtil/stacktrace.h>
 
 namespace Axle {
 void throw_testing_assertion(const char* message) {
@@ -9,11 +10,24 @@ void throw_testing_assertion(const char* message) {
   }
 }
 
-void abort_assertion(const char* message) {
+#define STACKTRACE_ENABLE
+
+void abort_assertion(const char* message) noexcept {
   const ViewArr<const char> msg_view = {message, strlen_ts(message) };
 
   IO::err_print(msg_view);
-  abort();
+#ifdef STACKTRACE_ENABLE
+  IO::err_print("Stacktrace:\n");
+  {
+    using TraceNode = Axle::Stacktrace::TraceNode;
+    const TraceNode* tn = Axle::Stacktrace::EXECUTION_TRACE;
+    while(tn != nullptr) {
+      IO::err_format("- {}\n", tn->name);
+    }
+  }
+#endif
+
+  std::abort();
 }
 
 SquareBitMatrix::~SquareBitMatrix() {

@@ -36,7 +36,7 @@ using namespace Primitives;
 #define TODO() static_assert(false, "Code is broken")
 
 void throw_testing_assertion(const char* message);
-void abort_assertion(const char* message);
+void abort_assertion(const char* message) noexcept;
 
 #ifdef ASSERT_EXCEPTIONS
 #define ASSERT(expr) do { if(!(expr))\

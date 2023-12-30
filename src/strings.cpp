@@ -120,6 +120,8 @@ const InternString* StringInterner::find(const char* string, const size_t length
 #ifdef AXLE_TRACING
   TRACING_FUNCTION();
 #endif
+  STACKTRACE_FUNCTION();
+
   ASSERT(string != nullptr);
   ASSERT(length > 0);
 
@@ -140,6 +142,8 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
 #ifdef AXLE_TRACING
   TRACING_FUNCTION();
 #endif
+  STACKTRACE_FUNCTION();
+  
   ASSERT(string != nullptr);
   ASSERT(length > 0);
 

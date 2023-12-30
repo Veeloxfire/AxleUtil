@@ -2,6 +2,7 @@
 #define AXLEUTIL_FORMATTABLE_H_
 
 #include <AxleUtil/safe_lib.h>
+#include <AxleUtil/stacktrace.h>
 
 #ifdef AXLE_TRACE
 #include <Tracer/trace.h>
@@ -570,6 +571,7 @@ namespace Format {
   #ifdef AXLE_TRACING
     TRACING_FUNCTION();
   #endif
+    STACKTRACE_FUNCTION();
 
     if constexpr (sizeof...(T) > 0) {
       FormatDispatch<F> f = { format, result };

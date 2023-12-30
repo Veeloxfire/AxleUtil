@@ -3,6 +3,7 @@
 
 #include <AxleUtil/formattable.h>
 #include <AxleUtil/utility.h>
+#include <AxleUtil/stacktrace.h>
 namespace Axle {
 namespace Format {
   struct ArrayFormatter {
@@ -158,6 +159,7 @@ struct Viewable<Format::ArrayFormatter> {
 //Doesn't null terminate
 template<typename ... T>
 OwnedArr<char> format(const Format::FormatString& format, const T& ... ts) {
+  STACKTRACE_FUNCTION();
   Format::ArrayFormatter result = {};
   //result.arr.reserve_total(format.len);
 

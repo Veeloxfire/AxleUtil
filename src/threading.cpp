@@ -2,12 +2,13 @@
 #include <AxleUtil/threading.h>
 #include <AxleUtil/os/os_windows.h>
 #include <AxleUtil/memory.h>
-
-#include <intrin.h>
+#include <AxleUtil/stacktrace.h>
 
 #ifdef AXLE_TRACING
 #include <Tracer/trace.h>
 #endif
+
+#include <intrin.h>
 
 namespace Axle {
 bool SpinLockMutex::acquire_if_free() {
@@ -22,6 +23,7 @@ void SpinLockMutex::acquire() {
 }
 
 void SpinLockMutex::release() {
+  STACKTRACE_FUNCTION();
   char res = _InterlockedCompareExchange8(&held, '\0', '\1');
   ASSERT(res == '\1');
 }
@@ -51,6 +53,7 @@ struct ThreadHandle {
 DWORD WINAPI generic_thread_proc(
   _In_ LPVOID lpParameter
 ) {
+  STACKTRACE_FUNCTION();
   ThreadingInfo* info = (ThreadingInfo*)lpParameter;
 
   info->proc(info->handle, info->data);
@@ -60,6 +63,9 @@ DWORD WINAPI generic_thread_proc(
 }
 
 const ThreadHandle* start_thread(THREAD_PROC thread_proc, void* data) {
+#ifdef AXLE_TRACING
+  TRACING_FUNCTION();
+#endif
   ThreadHandle* handle = allocate_default<ThreadHandle>();
   ThreadingInfo* info = allocate_default<ThreadingInfo>();
   info->data = data;
@@ -70,6 +76,9 @@ const ThreadHandle* start_thread(THREAD_PROC thread_proc, void* data) {
 }
 
 void wait_for_thread_end(const ThreadHandle* thread) {
+#ifdef AXLE_TRACING
+  TRACING_FUNCTION();
+#endif
   WaitForSingleObject(thread->handle, INFINITE);
   
   free_destruct_single<const ThreadHandle>(thread);
