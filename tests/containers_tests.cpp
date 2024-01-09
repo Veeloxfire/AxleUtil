@@ -86,7 +86,7 @@ TEST_FUNCTION(Util_Array, Insert_Remove) {
 }
 
 TEST_FUNCTION(Util_ArrayMax, Insert_Remove) {
-  ArrayMax<usize> a = new_arr_max<usize>(1000);
+  ArrayMax<usize> a = new_arr_max<usize>(1001);
 
   for (usize i = 0; i < 1000; i++) {
     a.insert(i ^ (i + 1));
@@ -118,6 +118,27 @@ TEST_FUNCTION(Util_ArrayMax, Insert_Remove) {
 
     TEST_EQ(end, b);
   }
+
+
+  a.remove_at(500);
+
+  TEST_EQ((usize)999, a.size);
+  TEST_EQ((usize)(999 ^ 1000), a.data[998]);
+  TEST_EQ((usize)(499 ^ 500), a.data[499]);
+  TEST_EQ((usize)(501 ^ 502), a.data[500]);
+
+  a.insert_at(500, (500 ^ 501));
+
+  for (usize i = 0; i < 1000; i++) {
+    TEST_EQ((i ^ (i + 1)), a.data[i]);
+  }
+
+  a.insert_at(0, 0);
+  TEST_EQ((usize)0, a.data[0]);
+  a.remove_at(0);
+  a.insert_at(1000, 0);
+  TEST_EQ((usize)0, a.data[1000]);
+  a.remove_at(1000);
 
   for (usize i = 0; i < 1000; i++) {
     TEST_EQ((i ^ (i + 1)), a.data[i]);

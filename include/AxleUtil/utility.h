@@ -1673,6 +1673,18 @@ struct ArrayMax {
     data[index] = std::move(t);
   }
 
+  T remove_at(const size_t index) {
+    ASSERT(index < size);
+
+    T t = std::move(data[index]);
+
+    for (size_t i = index; i < size - 1; i++) {
+      data[i] = std::move(data[i + 1]);
+    }
+    size--;
+    return t;
+  }
+
   constexpr void pop() {
     ASSERT(size > 0);
     size--;
