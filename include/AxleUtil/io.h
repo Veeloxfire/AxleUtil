@@ -161,5 +161,37 @@ namespace IO {
     Format::format_to_formatter(result, format, ts...);
   }
 }
+
+namespace LOG {
+  template<typename ... T>
+  void debug(const Format::FormatString& format, const T& ... ts) {
+    IO_Single::ScopeLock lock;
+    Format::STErrPrintFormatter result;
+
+    result.load_string_lit("DEBUG | ");
+    Format::format_to_formatter(result, format, ts...);
+    result.load_char('\n');
+  }
+
+  template<typename ... T>
+  void warn(const Format::FormatString& format, const T& ... ts) {
+    IO_Single::ScopeLock lock;
+    Format::STErrPrintFormatter result;
+
+    result.load_string_lit("WARN  | ");
+    Format::format_to_formatter(result, format, ts...);
+    result.load_char('\n');
+  }
+
+  template<typename ... T>
+  void error(const Format::FormatString& format, const T& ... ts) {
+    IO_Single::ScopeLock lock;
+    Format::STErrPrintFormatter result;
+
+    result.load_string_lit("ERROR | ");
+    Format::format_to_formatter(result, format, ts...);
+    result.load_char('\n');
+  }
+}
 }
 #endif
