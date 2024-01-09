@@ -1599,7 +1599,7 @@ struct ArrayMax {
   usize capacity;
 
   constexpr ArrayMax() = default;
-  constexpr ArrayMax(T* data_, usize size_, usize capacity_) 
+  constexpr ArrayMax(T* data_, usize size_, usize capacity_) noexcept 
     : data(data_), size(size_), capacity(capacity_)
   {}
   constexpr ArrayMax(ArrayMax&& arr) noexcept
@@ -1637,14 +1637,14 @@ struct ArrayMax {
     return data[i];
   }
 
-  constexpr void insert(T&& t) noexcept {
+  constexpr void insert(T&& t) {
     ASSERT(size < capacity);
 
     new(data + size) T(std::move(t));
     size++;
   }
 
-  constexpr void insert(const T& t) noexcept {
+  constexpr void insert(const T& t) {
     ASSERT(size < capacity);
 
     new(data + size) T(t);
@@ -1652,7 +1652,7 @@ struct ArrayMax {
   }
 
   //TODO: rename intert_default
-  constexpr void insert_uninit(const size_t num = 1) noexcept {
+  constexpr void insert_uninit(const size_t num = 1) {
     if (num > 0) {
       ASSERT(size + num <= capacity);
 
@@ -1661,14 +1661,25 @@ struct ArrayMax {
     }
   }
 
+  void insert_at(const size_t index, T t) {
+    ASSERT(index <= size);
+    ASSERT(size < capacity);
 
-  constexpr void pop() noexcept {
+    size++;
+    for (size_t i = size - 1; i > index; i--) {
+      data[i] = std::move(data[i - 1]);
+    }
+
+    data[index] = std::move(t);
+  }
+
+  constexpr void pop() {
     ASSERT(size > 0);
     size--;
     (data + size)->~T();
   }
 
-  constexpr void pop_n(size_t num) noexcept {
+  constexpr void pop_n(size_t num) {
     ASSERT(num <= size);
     const T* old_end = data + size;
 
@@ -1686,7 +1697,7 @@ struct ArrayMax {
     }
   }
 
-  constexpr T take() noexcept {
+  constexpr T take() {
     T t = std::move(data[size - 1]);
     pop();
     return t;
