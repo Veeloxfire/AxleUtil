@@ -419,6 +419,7 @@ struct Array {
   //Array(size_t s) noexcept : data(allocate_default<T>(s)), size(s), capacity(s) {}
 
   Array& operator=(Array&& arr) noexcept {
+    if(&arr == this) return *this;
     free();
 
     data = std::exchange(arr.data, nullptr);
@@ -459,7 +460,7 @@ struct Array {
     return t;
   }
 
-  void insert_at(const size_t index, T&& t) {
+  void insert_at_internal(const size_t index, T t) {
     ASSERT(index <= size);
     reserve_extra(1);
 
@@ -469,6 +470,10 @@ struct Array {
     }
 
     data[index] = std::move(t);
+  }
+
+  void insert_at(const size_t index, T&& t) {
+    insert_at_internal(index, std::move(t));
   }
 
   template<typename L>
@@ -525,18 +530,21 @@ struct Array {
     }
   }
 
-  void insert(T&& t) noexcept {
+  void insert_internal(T t) noexcept {
     try_reserve_next(size + 1);
 
     new(data + size) T(std::move(t));
     size++;
   }
 
-  void insert(const T& t) noexcept {
-    try_reserve_next(size + 1);
+  void insert(T&& t) noexcept {
+    //need this to stop reallocations breaking things
+    insert_internal(std::move(t));
+  }
 
-    new(data + size) T(t);
-    size++;
+  void insert(const T& t) noexcept {
+    //need this to stop reallocations breaking things
+    insert_internal(t);
   }
 
   //TODO: rename intert_default
@@ -643,6 +651,7 @@ struct Array {
   }
 
   void concat_move(T* arr, const size_t N) noexcept {
+    ASSERT(!(data <= arr && arr < (data + capacity)));
     reserve_extra(N);
 
     T* start = data + size;
@@ -656,6 +665,7 @@ struct Array {
   }
 
   void concat(Array<T>&& arr) noexcept {
+    ASSERT(&arr != this);
     concat_move(arr.data, arr.size);
     arr.free();
   }
@@ -1143,6 +1153,7 @@ struct Queue {
   Queue() noexcept = default;
 
   Queue& operator=(Queue&& q) noexcept {
+    if(&q == this) return *this;
     free();
 
     holder = std::exchange(q.holder, nullptr);
@@ -1209,13 +1220,12 @@ struct Queue {
     return val;
   }
 
-  template<typename U>
-  void _internal_push_back(U&& u) {
+  void _internal_push_back(T u) {
     if (size == capacity) {
       extend();
     }
 
-    new(holder + _ptr_index(size)) T(std::forward<U>(u));
+    new(holder + _ptr_index(size)) T(std::move(u));
     size++;
   }
 
@@ -1420,6 +1430,7 @@ struct OwnedArr {
   }
 
   constexpr OwnedArr& operator=(OwnedArr&& arr) noexcept {
+    if(&arr == this) return *this;
     free();
 
     data = std::exchange(arr.data, nullptr);
@@ -1470,6 +1481,7 @@ struct OwnedArr<const T> {
   }
 
   constexpr OwnedArr<const T>& operator=(OwnedArr<const T>&& arr) noexcept {
+    if(&arr == this) return *this;
     free();
 
     data = std::exchange(arr.data, nullptr);
@@ -1479,6 +1491,7 @@ struct OwnedArr<const T> {
   }
 
   constexpr OwnedArr<const T>& operator=(OwnedArr<T>&& arr) noexcept {
+    ASSERT(arr.data != data);
     free();
 
     data = std::exchange(arr.data, nullptr);
@@ -1628,6 +1641,7 @@ struct ArrayMax {
   }
 
   constexpr ArrayMax& operator=(ArrayMax&& arr) noexcept {
+    if(&arr == this) return *this;
     free();
 
     data = std::exchange(arr.data, nullptr);
@@ -1642,7 +1656,7 @@ struct ArrayMax {
     return data[i];
   }
 
-  constexpr void insert(T&& t) {
+  constexpr void insert_internal(T t) {
     ASSERT(size < capacity);
 
     new(data + size) T(std::move(t));
@@ -1650,10 +1664,11 @@ struct ArrayMax {
   }
 
   constexpr void insert(const T& t) {
-    ASSERT(size < capacity);
+    insert_internal(t);
+  }
 
-    new(data + size) T(t);
-    size++;
+  constexpr void insert(T&& t) {
+    insert_internal(std::move(t));
   }
 
   //TODO: rename intert_default

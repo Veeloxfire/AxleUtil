@@ -190,20 +190,6 @@ TEST_FUNCTION(Util, sort) {
   TEST_ARR_EQ(SORTED_RANDOM_ARR, RANDOM_ARR_SIZE, ints.data, ints.size);
 }
 
-struct CheckDelete {
-  int* i;
-
-  CheckDelete() = default;
-  CheckDelete(int* o) : i(o) {}
-  CheckDelete(CheckDelete&& o) noexcept : i(std::exchange(o.i, nullptr)) {}
-
-  ~CheckDelete() {
-    if (i != nullptr) {
-      *i += 1;
-    }
-  }
-};
-
 TEST_FUNCTION(Util_OwnedArr, bake) {
   Array<int> ints = {};
 
@@ -290,6 +276,32 @@ TEST_FUNCTION(Util_OwnedArr, copy) {
 
   TEST_ARR_EQ(RANDOM_ARR, RANDOM_ARR_SIZE, arr4.data, arr4.size);
 }
+
+struct CheckDelete {
+  int* i;
+
+  constexpr CheckDelete() = default;
+  constexpr CheckDelete(int* o) : i(o) {}
+  constexpr CheckDelete(CheckDelete&& o) noexcept : i(std::exchange(o.i, nullptr)) {}
+  constexpr CheckDelete(const CheckDelete& o) noexcept : i(o.i) {}
+
+  constexpr CheckDelete& operator=(CheckDelete&& o) noexcept {
+    if(&o == this) return *this;
+    i = std::exchange(o.i, nullptr);
+    return *this;
+  }
+
+  constexpr CheckDelete& operator=(const CheckDelete& o) noexcept {
+    i = o.i;
+    return *this;
+  }
+
+  constexpr ~CheckDelete() {
+    if (i != nullptr) {
+      *i += 1;
+    }
+  }
+};
 
 TEST_FUNCTION(Util_OwnedArr, destruction) {
   {
@@ -753,4 +765,60 @@ TEST_FUNCTION(BucketArray, basic) {
 
   const int* first2 = arr.begin().get();
   TEST_EQ(first, first2);//should be stable iterators
+}
+
+TEST_FUNCTION(Containers, Self_move_assign) {
+  {
+    int i = 0;
+    Array<CheckDelete> arr = {};
+
+    arr.insert({&i});
+
+    arr = static_cast<Array<CheckDelete>&&>(arr);
+
+    TEST_EQ(0, i);
+
+    for(usize itr = 0; itr < 200; ++itr) {
+      arr.insert(arr[0]);
+    }
+    TEST_EQ(0, i);
+  }
+
+  {
+    int i = 0;
+    CheckDelete cd = {&i};
+
+    OwnedArr<CheckDelete> arr = copy_arr(&cd, 1);
+
+    arr = static_cast<OwnedArr<CheckDelete>&&>(arr);
+
+    TEST_EQ(0, i);
+  }
+
+  {
+    int i = 0;
+    CheckDelete cd = {&i};
+
+    OwnedArr<const CheckDelete> arr = copy_arr(&cd, 1);
+
+    arr = static_cast<OwnedArr<const CheckDelete>&&>(arr);
+
+    TEST_EQ(0, i);
+  }
+
+  {
+    int i = 0;
+    Queue<CheckDelete> arr = {};
+
+    arr.push_back({&i});
+    arr = static_cast<Queue<CheckDelete>&&>(arr);
+
+    TEST_EQ(0, i);
+
+    for(usize itr = 0; itr < 200; ++itr) {
+      arr.push_back(arr.holder[arr.start]);
+    }
+    
+    TEST_EQ(0, i);
+  }
 }
