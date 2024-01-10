@@ -1552,6 +1552,11 @@ OwnedArr<T> copy_arr(const T(&source)[N]) {
 }
 
 template<typename T>
+OwnedArr<T> copy_arr(const ViewArr<const T>& in_arr) {
+  return copy_arr(in_arr.data, in_arr.size);
+}
+
+template<typename T>
 OwnedArr<T> copy_arr(const OwnedArr<T>& in_arr) {
   return copy_arr(in_arr.data, in_arr.size);
 }

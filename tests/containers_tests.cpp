@@ -285,6 +285,10 @@ TEST_FUNCTION(Util_OwnedArr, copy) {
   OwnedArr<int> arr3 = copy_arr(RANDOM_ARR, RANDOM_ARR_SIZE);
 
   TEST_ARR_EQ(RANDOM_ARR, RANDOM_ARR_SIZE, arr3.data, arr3.size);
+
+  OwnedArr<int> arr4 = copy_arr(view_arr(RANDOM_ARR));
+
+  TEST_ARR_EQ(RANDOM_ARR, RANDOM_ARR_SIZE, arr4.data, arr4.size);
 }
 
 TEST_FUNCTION(Util_OwnedArr, destruction) {
