@@ -99,6 +99,49 @@ return lit_view_arr(ErrorCodeString :: NAME);
   ErrorCode write_str(FileHandle file, const char(&str)[N]) {
     return write(file, (const uint8_t*)str, N - 1);
   }
+
+  struct FileFormatter {
+    FileHandle handle;
+    ErrorCode errors = ErrorCode::OK;
+
+    constexpr bool is_ok() { return errors == ErrorCode::OK; }
+
+    template<usize N>
+    void load_string_lit(const char(&str)[N]) {
+      if(!is_ok()) return;
+      ASSERT(str[N] == '\0');
+      errors = write(handle, reinterpret_cast<const u8*>(str), N - 1);
+    }
+
+    template<usize N>
+    void load_string_exact(const char(&str)[N]) {
+      if(!is_ok()) return;
+      errors = write(handle, reinterpret_cast<const u8*>(str), N);
+    }
+
+    inline void load_string(const char* str, usize N) {
+      if(!is_ok()) return;
+      ASSERT(N > 0);
+      errors = write(handle, reinterpret_cast<const u8*>(str), N);
+    }
+
+    inline void load_char(char c) {
+      if(!is_ok()) return;
+      ASSERT(c != '\0');
+      errors = write(handle, reinterpret_cast<const u8*>(&c), 1);
+    }
+  };
+
+  template<typename ... T>
+  ErrorCode format_write(FileHandle handle, const Format::FormatString& format, const T& ... ts) {
+    FileFormatter result;
+    result.handle = handle;
+
+    Format::format_to(result, format, ts...);
+
+    return result.errors;
+  }
+
 }
 
 namespace Format {
