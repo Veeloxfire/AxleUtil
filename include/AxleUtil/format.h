@@ -207,8 +207,8 @@ namespace Format {
       const usize remaining = capacity - view.size;
       ASSERT(remaining >= 1);
 
-      view[view.size] = '\0';
       view.size += 1;
+      view[view.size - 1] = '\0';
     }
 
     constexpr void load_char(char c) {
@@ -217,8 +217,8 @@ namespace Format {
       const usize remaining = capacity - view.size;
       ASSERT(remaining >= 1);
 
-      view[view.size] = c;
       view.size += 1;
+      view[view.size - 1] = c;
     }
   };
 }

@@ -275,7 +275,7 @@ TEST_FUNCTION(FloatFormat, Double) {
 
 TEST_FUNCTION(Formatters, ArrayFormatter) {
   constexpr ViewArr<const char> expected_final 
-      = lit_view_arr("hello worldhello worldhello worldhello world");
+      = lit_view_arr("hello worldhello worldhello worldhello world\0");
 
   //This is required to make sure we actually stop using the local array
   static_assert(sizeof(Format::ArrayFormatter::LocalArr::arr) < expected_final.size);
@@ -297,9 +297,9 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
   Format::format_to(arrfm, "hello world");
   Format::format_to(arrfm, "hello world");
 
+  arrfm.null_terminate();
 
-   {
-    
+  {
     const auto actual_v = arrfm.view();
     TEST_STR_EQ(expected_final, actual_v);
 
@@ -310,7 +310,7 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
 
 TEST_FUNCTION(Formatters, ViewFormatter) {
   constexpr ViewArr<const char> expected_final
-      = lit_view_arr("hello worldhello worldhello worldhello world");
+      = lit_view_arr("hello worldhello worldhello worldhello world\0");
 
   char array[expected_final.size];
 
@@ -330,6 +330,7 @@ TEST_FUNCTION(Formatters, ViewFormatter) {
   Format::format_to(arrfm, "hello world");
   Format::format_to(arrfm, "hello world");
   Format::format_to(arrfm, "hello world");
+  arrfm.null_terminate();
 
   TEST_EQ(expected_final.size, arrfm.view.size);
   TEST_STR_EQ(expected_final, arrfm.view);
