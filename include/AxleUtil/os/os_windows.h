@@ -145,7 +145,7 @@ namespace Windows {
     constexpr NativePath() = default;
     constexpr NativePath(const ViewArr<const char>& vr) {
       usize len = vr.size > MAX_PATH ? MAX_PATH : vr.size;
-      memcpy_ts(view_arr(path), view_arr(vr, 0, len)); 
+      memcpy_ts(view_arr(path, 0, len), view_arr(vr, 0, len)); 
     }
 
     constexpr const char* c_str() const {
