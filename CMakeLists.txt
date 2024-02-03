@@ -77,6 +77,7 @@ set(CppFiles
   "${PROJECT_SOURCE_DIR}/src/utility.cpp"
 
   "${PROJECT_SOURCE_DIR}/src/os/os_windows.cpp"
+  "${PROJECT_SOURCE_DIR}/src/os/os_windows_files.cpp"
 
   "${PROJECT_SOURCE_DIR}/src/unit_tests.cpp"
 )
@@ -94,7 +95,9 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/strings.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/threading.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/utility.h"
+
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/os/os_windows.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/os/os_windows_files.h"
 
   "${PROJECT_SOURCE_DIR}/include/AxleTest/unit_tests.h"
 )

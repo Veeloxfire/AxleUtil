@@ -1,34 +1,12 @@
 #include <AxleUtil/files.h>
 #include <AxleUtil/strings.h>
-#include <AxleUtil/os/os_windows.h>
+#include <AxleUtil/os/os_windows_files.h>
 
 #ifdef AXLE_TRACING
 #include <Tracer/trace.h>
 #endif
 
 namespace Axle {
-static constexpr usize BUFFER_SIZE = 1024;
-
-namespace FILES {
-  struct FileData {
-    HANDLE handle;
-    usize real_file_ptr;
-    usize real_file_size;
-
-    usize abstract_file_ptr;
-    usize abstract_file_size;
-
-    usize real_buffer_ptr;
-
-    bool in_sync;
-    u32 buffer_size;
-    u8 buffer[BUFFER_SIZE];
-
-    FileData(HANDLE h);
-    ~FileData() noexcept(false);
-  };
-}
-
 FILES::FileData::FileData(HANDLE h) : handle(h) {
   LARGE_INTEGER li = { {0} };
   GetFileSizeEx(h, &li);
@@ -50,94 +28,22 @@ FILES::FileData::FileData(HANDLE h) : handle(h) {
 
 FILES::OpenedFile FILES::open(const ViewArr<const char>& name,
                               OPEN_MODE open_mode) {
-#ifdef AXLE_TRACING
+ #ifdef AXLE_TRACING
   TRACING_FUNCTION();
 #endif
 
-  Windows::NativePath path = name;
-
-  OpenedFile opened_file = {};
-
-  DWORD access;
-  DWORD share;
-
-  switch (open_mode) {
-    case OPEN_MODE::READ: {
-        access = GENERIC_READ;
-        share = FILE_SHARE_READ;
-        break;
-      }
-    case OPEN_MODE::WRITE: {
-        access = GENERIC_WRITE;
-        share = 0;
-        break;
-      }
-    default: {
-      INVALID_CODE_PATH("Invalid Open Mode");
-      return {};
-    }
-  }
-
-
-  HANDLE h = CreateFileA(path.c_str(), access, share, 0, OPEN_EXISTING, 0, 0);
-  if (h == INVALID_HANDLE_VALUE) {
-    opened_file.error_code = ErrorCode::COULD_NOT_OPEN_FILE;
-    opened_file.file = nullptr;
-    return opened_file;
-  }
-  else {
-    FileData* file = allocate_single_constructed<FileData>(h);
-
-    opened_file.error_code = ErrorCode::OK;
-    opened_file.file = file;
-    return opened_file;
-  }
+ Windows::NativePath path = name;
+  return Windows::FILES::open(path, open_mode);
 }
 
 FILES::OpenedFile FILES::create(const ViewArr<const char>& name,
                                 OPEN_MODE open_mode) {
-#ifdef AXLE_TRACING
+ #ifdef AXLE_TRACING
   TRACING_FUNCTION();
 #endif
 
-  Windows::NativePath path = name;
-
-  OpenedFile opened_file = {};
-
-  DWORD access;
-  DWORD share;
-
-  switch (open_mode) {
-    case OPEN_MODE::READ: {
-        access = GENERIC_READ;
-        share = FILE_SHARE_READ;
-        break;
-      }
-    case OPEN_MODE::WRITE: {
-        access = GENERIC_WRITE;
-        share = 0;
-        break;
-      }
-    default: {
-      INVALID_CODE_PATH("Invalid Open Mode");
-      return {};
-    }
-  }
-
-
-  HANDLE h = CreateFileA(path.c_str(), access, share, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
-  if (h == INVALID_HANDLE_VALUE) {
-    opened_file.error_code = ErrorCode::COULD_NOT_OPEN_FILE;
-    opened_file.file = nullptr;
-    return opened_file;
-  }
-  else {
-    FileData* file = allocate_single_constructed<FileData>(h);
-
-    opened_file.error_code = ErrorCode::OK;
-    opened_file.file = file;
-    return opened_file;
-  }
+ Windows::NativePath path = name;
+  return Windows::FILES::create(path, open_mode);
 }
 
 FILES::OpenedFile FILES::replace(const ViewArr<const char>& name,
@@ -147,56 +53,29 @@ FILES::OpenedFile FILES::replace(const ViewArr<const char>& name,
 #endif
 
   Windows::NativePath path = name;
-
-  OpenedFile opened_file = {};
-
-  DWORD access;
-  DWORD share;
-
-  switch (open_mode) {
-    case OPEN_MODE::READ: {
-        access = GENERIC_READ;
-        share = FILE_SHARE_READ;
-        break;
-      }
-    case OPEN_MODE::WRITE: {
-        access = GENERIC_WRITE;
-        share = 0;
-        break;
-      }
-    default: {
-      INVALID_CODE_PATH("Invalid Open Mode");
-      return {};
-    }
-  }
-
-  HANDLE h = CreateFileA(path.c_str(), access, share, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-  if (h == INVALID_HANDLE_VALUE) {
-    opened_file.error_code = ErrorCode::COULD_NOT_OPEN_FILE;
-    opened_file.file = nullptr;
-    return opened_file;
-  }
-  else {
-    FileData* file = allocate_single_constructed<FileData>(h);
-
-    opened_file.error_code = ErrorCode::OK;
-    opened_file.file = file;
-    return opened_file;
-  }
+  return Windows::FILES::replace(path, open_mode);
 }
 
-bool FILES::exist(const ViewArr<const char>& name) {
-  Windows::NativePath path = name;
-
-  return GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES;
-}
-
-void FILES::close(FileData* file) {
+FILES::ErrorCode FILES::create_empty_directory(const ViewArr<const char>& name) {
 #ifdef AXLE_TRACING
   TRACING_FUNCTION();
 #endif
 
-  free_destruct_single<FileData>(file);
+  Windows::NativePath path = name;
+  return Windows::FILES::create_empty_directory(path);  
+}
+
+bool FILES::exist(const ViewArr<const char>& name) {
+  Windows::NativePath path = name;
+  return Windows::FILES::exist(path);
+}
+
+void FILES::close(FileHandle file) {
+#ifdef AXLE_TRACING
+  TRACING_FUNCTION();
+#endif
+
+  free_destruct_single<FileData>(file.data);
 }
 
 static void real_seek(FILES::FileData* file, usize ptr) {
@@ -283,10 +162,10 @@ static BufferRange get_loaded_range(FILES::FileData* file, usize ptr, usize num_
 }
 
 
-static void small_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
-  ASSERT(num_bytes <= BUFFER_SIZE);
+static void small_buffer_read(FILES::FileData* const file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
+  ASSERT(num_bytes <= FILES::FileData::BUFFER_SIZE);
   usize space_in_file = file->real_file_size - file->real_buffer_ptr;
-  usize can_read_size = BUFFER_SIZE > space_in_file ? space_in_file : BUFFER_SIZE;
+  usize can_read_size = FILES::FileData::BUFFER_SIZE > space_in_file ? space_in_file : FILES::FileData::BUFFER_SIZE;
 
   ASSERT(num_bytes <= can_read_size);
 
@@ -299,8 +178,8 @@ static void small_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t
   memcpy_s(bytes, num_bytes, file->buffer, num_bytes);
 }
 
-static void big_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
-  ASSERT(num_bytes > BUFFER_SIZE);
+static void big_buffer_read(FILES::FileData* const file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
+  ASSERT(num_bytes > FILES::FileData::BUFFER_SIZE);
   ASSERT(num_bytes <= file->real_file_size - file->real_buffer_ptr);
 
   BOOL read = ReadFile(file->handle, bytes, (DWORD)num_bytes, NULL, NULL);
@@ -308,13 +187,13 @@ static void big_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t* 
   file->real_file_ptr += num_bytes;
 
   //Take the back bits
-  file->real_buffer_ptr = abstract_ptr + (num_bytes - BUFFER_SIZE);
-  memcpy_s(file->buffer, BUFFER_SIZE, bytes + (num_bytes - BUFFER_SIZE), BUFFER_SIZE);
-  file->buffer_size = BUFFER_SIZE;
+  file->real_buffer_ptr = abstract_ptr + (num_bytes - FILES::FileData::BUFFER_SIZE);
+  memcpy_s(file->buffer, FILES::FileData::BUFFER_SIZE, bytes + (num_bytes - FILES::FileData::BUFFER_SIZE), FILES::FileData::BUFFER_SIZE);
+  file->buffer_size = FILES::FileData::BUFFER_SIZE;
 }
 
-static void generic_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
-  if (num_bytes <= BUFFER_SIZE) {
+static void generic_buffer_read(FILES::FileData* const file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
+  if (num_bytes <= FILES::FileData::BUFFER_SIZE) {
     small_buffer_read(file, abstract_ptr, bytes, num_bytes);
   }
   else {
@@ -322,7 +201,7 @@ static void generic_buffer_read(FILES::FileData* file, usize abstract_ptr, uint8
   }
 }
 
-static void write_new_buffer(FILES::FileData* file, const uint8_t* bytes, size_t num_bytes) {
+static void write_new_buffer(FILES::FileData* const file, const uint8_t* bytes, size_t num_bytes) {
   BOOL wrote = WriteFile(file->handle, bytes, (DWORD)num_bytes, NULL, NULL);
   ASSERT(wrote);
 
@@ -331,7 +210,7 @@ static void write_new_buffer(FILES::FileData* file, const uint8_t* bytes, size_t
     file->real_file_size = file->real_file_ptr;
   }
 
-  usize size = num_bytes > BUFFER_SIZE ? BUFFER_SIZE : num_bytes;
+  usize size = num_bytes > FILES::FileData::BUFFER_SIZE ? FILES::FileData::BUFFER_SIZE : num_bytes;
 
   file->real_buffer_ptr = file->abstract_file_ptr + (num_bytes - size);
   file->in_sync = true;
@@ -339,8 +218,15 @@ static void write_new_buffer(FILES::FileData* file, const uint8_t* bytes, size_t
   memcpy_s(file->buffer, size, bytes + (num_bytes - size), size);
 }
 
-FILES::ErrorCode FILES::read_to_bytes(FileData* file, uint8_t* bytes, size_t num_bytes) {
+static void seek_from_start_internal(FILES::FileData* file, size_t location) {
+  ASSERT(location <= file->abstract_file_size);
+  file->abstract_file_ptr = location;
+}
+
+FILES::ErrorCode FILES::read_to_bytes(FileHandle file_h, uint8_t* bytes, size_t num_bytes) {
   ASSERT(num_bytes <= ULONG_MAX);
+
+  FileData* const file = file_h.data;
 
   BufferRange range = get_loaded_range(file, file->abstract_file_ptr, num_bytes);
 
@@ -350,7 +236,7 @@ FILES::ErrorCode FILES::read_to_bytes(FileData* file, uint8_t* bytes, size_t num
     bool at_buffer_start = range.ptr_start == 0;
     bool at_buffer_end = range.ptr_start + range.size == num_bytes;
 
-    bool straddles = range.size == BUFFER_SIZE && (!at_buffer_start || !at_buffer_end);
+    bool straddles = range.size == FileData::BUFFER_SIZE && (!at_buffer_start || !at_buffer_end);
 
     if (straddles) {
       //straddles the buffer
@@ -382,14 +268,14 @@ FILES::ErrorCode FILES::read_to_bytes(FileData* file, uint8_t* bytes, size_t num
   return ErrorCode::OK;
 }
 
-uint8_t FILES::read_byte(FileData* file) {
+uint8_t FILES::read_byte(FileHandle file) {
   u8 byte = 0;
   read_to_bytes(file, &byte, 1);
   return byte;
 }
 
-size_t FILES::size_of_file(FileData* file) {
-  return file->abstract_file_size;
+size_t FILES::size_of_file(FileHandle file) {
+  return file.data->abstract_file_size;
 }
 
 OwnedArr<u8> FILES::read_full_file(const ViewArr<const char>& file_name) {
@@ -398,23 +284,14 @@ OwnedArr<u8> FILES::read_full_file(const ViewArr<const char>& file_name) {
 #endif
 
   Windows::NativePath path = file_name;
-  HANDLE h = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-  if (h == INVALID_HANDLE_VALUE) return {};
-  DEFER(h) { CloseHandle(h); };
-
-  LARGE_INTEGER li = {};
-  GetFileSizeEx(h, &li);
-
-  u8* data = allocate_default<u8>(li.QuadPart);
-  BOOL read = ReadFile(h, data, (DWORD)li.QuadPart, NULL, NULL);
-  ASSERT(read);
-
-  return { data, static_cast<usize>(li.QuadPart) };
+  return Windows::FILES::read_full_file(path);
 }
 
-FILES::ErrorCode FILES::write(FileData* file, const uint8_t* bytes, size_t num_bytes) {
+FILES::ErrorCode FILES::write(FileHandle file_h, const uint8_t* bytes, size_t num_bytes) {
+  FileData* const file = file_h.data;
+
   usize end = file->abstract_file_ptr + num_bytes;
-  usize max_buffer_end = file->real_buffer_ptr + BUFFER_SIZE;
+  usize max_buffer_end = file->real_buffer_ptr + FileData::BUFFER_SIZE;
 
   if (file->real_buffer_ptr <= file->abstract_file_ptr && end <= max_buffer_end) {
     usize start = (file->abstract_file_ptr - file->real_buffer_ptr);
@@ -429,7 +306,7 @@ FILES::ErrorCode FILES::write(FileData* file, const uint8_t* bytes, size_t num_b
   else {
     //lazy
     sync_buffer(file);
-    seek_from_start(file, file->abstract_file_ptr);
+    seek_from_start_internal(file, file->abstract_file_ptr);
     write_new_buffer(file, bytes, num_bytes);
   }
 
@@ -441,21 +318,22 @@ FILES::ErrorCode FILES::write(FileData* file, const uint8_t* bytes, size_t num_b
   return ErrorCode::OK;
 }
 
-FILES::ErrorCode FILES::write_padding_bytes(FileData* file, uint8_t byte, size_t num) {
+FILES::ErrorCode FILES::write_padding_bytes(FileHandle file_h, uint8_t byte, size_t num) {
   //TODO: actual buffered io
+  FileData* const file = file_h.data;
 
   sync_buffer(file);
-  seek_from_start(file, file->abstract_file_ptr);
+  seek_from_start_internal(file, file->abstract_file_ptr);
 
   usize remaining = num;
 
-  while (remaining > BUFFER_SIZE) {
-    memset(file->buffer, byte, BUFFER_SIZE);
-    file->buffer_size = BUFFER_SIZE;
+  while (remaining > FileData::BUFFER_SIZE) {
+    memset(file->buffer, byte, FileData::BUFFER_SIZE);
+    file->buffer_size = FileData::BUFFER_SIZE;
     file->real_buffer_ptr = file->abstract_file_ptr;
     force_sync_buffer(file);
 
-    remaining -= BUFFER_SIZE;
+    remaining -= FileData::BUFFER_SIZE;
   }
 
   if (num > 0) {
@@ -470,7 +348,7 @@ FILES::ErrorCode FILES::write_padding_bytes(FileData* file, uint8_t byte, size_t
   return ErrorCode::OK;
 }
 
-FILES::ErrorCode FILES::write_aligned_array(FileData* file, const uint8_t* arr, const size_t size, const size_t align) {
+FILES::ErrorCode FILES::write_aligned_array(FileHandle file, const uint8_t* arr, const size_t size, const size_t align) {
   //Write the data
   write(file, arr, size);
 
@@ -486,18 +364,17 @@ FILES::ErrorCode FILES::write_aligned_array(FileData* file, const uint8_t* arr, 
   }
 }
 
-FILES::ErrorCode FILES::write_aligned_array(FileData* file, const Array<uint8_t>& arr, const size_t align) {
+FILES::ErrorCode FILES::write_aligned_array(FileHandle file, const Array<uint8_t>& arr, const size_t align) {
   return write_aligned_array(file, arr.data, arr.size, align);
 }
 
-void FILES::seek_from_start(FileData* file, size_t location) {
-  ASSERT(location <= file->abstract_file_size);
-  file->abstract_file_ptr = location;
+void FILES::seek_from_start(FileHandle file, size_t location) {
+  return seek_from_start_internal(file.data, location);
 }
 
-size_t FILES::get_current_pos(FileData* file) {
+size_t FILES::get_current_pos(FileHandle file) {
   LARGE_INTEGER li = {};
-  SetFilePointerEx(file, {}, &li, FILE_CURRENT);
+  SetFilePointerEx(file.data->handle, {}, &li, FILE_CURRENT);
 
   return (size_t)li.QuadPart;
 }

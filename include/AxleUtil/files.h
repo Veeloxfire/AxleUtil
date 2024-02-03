@@ -42,8 +42,20 @@ return lit_view_arr(ErrorCodeString :: NAME);
 
   struct FileData;
 
+  struct FileHandle {
+    FileData* data;
+  };
+
+  void close(FileHandle file);
+
+  struct ScopedFile : FileHandle {
+    constexpr ~ScopedFile() {
+      if(data != nullptr) { close({data}); }
+    }
+  };
+
   struct OpenedFile {
-    FileData* file;
+    ScopedFile file;
     ErrorCode error_code;
   };
 
@@ -54,37 +66,37 @@ return lit_view_arr(ErrorCodeString :: NAME);
   OpenedFile replace(const ViewArr<const char>& name,
                      OPEN_MODE open_mode);
 
+  ErrorCode create_empty_directory(const ViewArr<const char>& name);
+
   bool exist(const ViewArr<const char>& name);
 
-  void close(FileData* file);
-
-  ErrorCode read_to_bytes(FileData* file, uint8_t* bytes, size_t num_bytes);
-  uint8_t read_byte(FileData* file);
+  ErrorCode read_to_bytes(FileHandle file, uint8_t* bytes, size_t num_bytes);
+  uint8_t read_byte(FileHandle file);
 
   template<typename T>
-  ErrorCode read(FileData* file, T* ptr, size_t num) {
+  ErrorCode read(FileHandle file, T* ptr, size_t num) {
     return read_to_bytes(file, (uint8_t*)ptr, sizeof(T) * num);
   }
 
-  size_t size_of_file(FileData* file);
-  void seek_from_start(FileData* file, size_t offset);
-  size_t get_current_pos(FileData* file);
+  size_t size_of_file(FileHandle file);
+  void seek_from_start(FileHandle file, size_t offset);
+  size_t get_current_pos(FileHandle file);
 
   OwnedArr<u8> read_full_file(const ViewArr<const char>& file_name);
 
-  ErrorCode write(FileData* file, const uint8_t* arr, size_t length);
-  ErrorCode write_padding_bytes(FileData* file, uint8_t byte, size_t num);
+  ErrorCode write(FileHandle file, const uint8_t* arr, size_t length);
+  ErrorCode write_padding_bytes(FileHandle file, uint8_t byte, size_t num);
 
-  ErrorCode write_aligned_array(FileData* file, const uint8_t* arr, const size_t size, const size_t align);
-  ErrorCode write_aligned_array(FileData* file, const Array<uint8_t>& arr, const size_t align);
+  ErrorCode write_aligned_array(FileHandle file, const uint8_t* arr, const size_t size, const size_t align);
+  ErrorCode write_aligned_array(FileHandle file, const Array<uint8_t>& arr, const size_t align);
 
   template<typename T>
-  ErrorCode write_obj(FileData* file, const T& t) {
+  ErrorCode write_obj(FileHandle file, const T& t) {
     return write(file, (const uint8_t*)&t, sizeof(T));
   }
 
   template<usize N>
-  ErrorCode write_str(FileData* file, const char(&str)[N]) {
+  ErrorCode write_str(FileHandle file, const char(&str)[N]) {
     return write(file, (const uint8_t*)str, N - 1);
   }
 }

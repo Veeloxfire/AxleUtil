@@ -145,16 +145,14 @@ namespace Windows {
     constexpr NativePath() = default;
     constexpr NativePath(const ViewArr<const char>& vr) {
       usize len = vr.size > MAX_PATH ? MAX_PATH : vr.size;
-      for (usize i = 0; i < len; ++i) {
-        path[i] = vr[i];
-      }
+      memcpy_ts(view_arr(path), view_arr(vr, 0, len)); 
     }
 
-    const char* c_str() const {
+    constexpr const char* c_str() const {
       return path;
     }
 
-    ViewArr<const char> view() const {
+    constexpr ViewArr<const char> view() const {
       return { path, strlen_ts(path) };
     }
   };
@@ -162,6 +160,9 @@ namespace Windows {
 
   NativePath get_current_directory();
   void set_current_directory(const ViewArr<const char>& str);
+
+  namespace FILES {
+  }
 }
 }
 
