@@ -60,6 +60,16 @@ namespace Format {
       } 
     }
 
+    ViewArr<const char> view() const {
+      if (is_heap) {
+        return const_view_arr(heap_arr.arr);
+      }
+      else {
+        return ViewArr<const char>{local_arr.arr, static_cast<usize>(local_arr.size)};
+      }
+
+    }
+
     OwnedArr<char> take() {
       if (is_heap) {
         return bake_arr(std::move(heap_arr.arr));
@@ -163,6 +173,52 @@ namespace Format {
           local_arr.size += 1;
         }
       }
+    }
+  };
+
+  struct ViewFormatter {
+    ViewArr<char> view;
+    usize capacity;
+
+    constexpr ViewFormatter(const ViewArr<char>& view)
+      : view{view.data, 0}, capacity{view.size} {}
+
+    constexpr void load_string(const char* str, usize N) {
+      ASSERT(N > 0);
+      const usize remaining = capacity - view.size;
+      ASSERT(N <= remaining);
+
+      memcpy_ts(view.mut_end(), remaining, str, N);
+      view.size += N;
+    }
+
+    template<usize N>
+    constexpr void load_string_lit(const char(&str)[N]) {
+      ASSERT(str[N - 1] == '\0');
+      load_string(str, N - 1);
+    }
+
+    template<usize N>
+    constexpr void load_string_exact(const char(&str)[N]) {
+      load_string(str, N);
+    }
+
+    constexpr void null_terminate() {
+      const usize remaining = capacity - view.size;
+      ASSERT(remaining >= 1);
+
+      view[view.size] = '\0';
+      view.size += 1;
+    }
+
+    constexpr void load_char(char c) {
+      ASSERT(c != '\0');
+      
+      const usize remaining = capacity - view.size;
+      ASSERT(remaining >= 1);
+
+      view[view.size] = c;
+      view.size += 1;
     }
   };
 }

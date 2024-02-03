@@ -242,7 +242,7 @@ TEST_FUNCTION(FloatFormat, Floats) {
   {
     float f = -1.23456735e-36f;
     const ViewArr<const char> expected = lit_view_arr("-1.23456735e-36");
-    
+      
     OwnedArr<const char> actual = format("{}", f);
     TEST_STR_EQ(expected, actual);
   }
@@ -271,4 +271,66 @@ TEST_FUNCTION(FloatFormat, Double) {
     OwnedArr<const char> actual = format("{}", d);
     TEST_STR_EQ(expected, actual);
   }
+}
+
+TEST_FUNCTION(Formatters, ArrayFormatter) {
+  constexpr ViewArr<const char> expected_final 
+      = lit_view_arr("hello worldhello worldhello worldhello world");
+
+  //This is required to make sure we actually stop using the local array
+  static_assert(sizeof(Format::ArrayFormatter::LocalArr::arr) < expected_final.size);
+  Format::ArrayFormatter arrfm = {};
+
+  Format::format_to_formatter(arrfm, "hello world");
+
+  {
+    const ViewArr<const char> expected = lit_view_arr("hello world");
+    
+    const auto actual_v = arrfm.view();
+    TEST_STR_EQ(expected, actual_v);
+
+    const auto actual_o = arrfm.take();
+    TEST_STR_EQ(expected, actual_o);
+  }
+
+  Format::format_to_formatter(arrfm, "hello world");
+  Format::format_to_formatter(arrfm, "hello world");
+  Format::format_to_formatter(arrfm, "hello world");
+
+
+   {
+    
+    const auto actual_v = arrfm.view();
+    TEST_STR_EQ(expected_final, actual_v);
+
+    const auto actual_o = arrfm.take();
+    TEST_STR_EQ(expected_final, actual_o);
+  }
+}
+
+TEST_FUNCTION(Formatters, ViewFormatter) {
+  constexpr ViewArr<const char> expected_final
+      = lit_view_arr("hello worldhello worldhello worldhello world");
+
+  char array[expected_final.size];
+
+  Format::ViewFormatter arrfm = {view_arr(array)};
+  TEST_EQ(static_cast<usize>(0), arrfm.view.size);
+  TEST_EQ(static_cast<char*>(array), arrfm.view.data);
+  TEST_EQ(expected_final.size, arrfm.capacity);
+
+  Format::format_to_formatter(arrfm, "hello world");
+
+  {
+    const ViewArr<const char> expected = lit_view_arr("hello world");
+    
+    TEST_STR_EQ(expected, arrfm.view);
+  }
+
+  Format::format_to_formatter(arrfm, "hello world");
+  Format::format_to_formatter(arrfm, "hello world");
+  Format::format_to_formatter(arrfm, "hello world");
+
+  TEST_EQ(expected_final.size, arrfm.view.size);
+  TEST_STR_EQ(expected_final, arrfm.view);
 }
