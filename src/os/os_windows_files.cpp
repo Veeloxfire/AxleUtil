@@ -124,9 +124,7 @@ FILES::OpenedFile replace(const NativePath& name,
 }
 
 FILES::ErrorCode create_empty_directory(const NativePath& name) {
-    Windows::NativePath path = name;
-
-    BOOL res = CreateDirectoryA(path.c_str(), NULL);
+    BOOL res = CreateDirectoryA(name.c_str(), NULL);
     if(res != 0) return ErrorCode::OK;
     else {
       // Some error - for now just assume okay

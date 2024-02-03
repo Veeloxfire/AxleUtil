@@ -10,6 +10,7 @@ modify(OK)\
 modify(COULD_NOT_CREATE_FILE)\
 modify(COULD_NOT_OPEN_FILE)\
 modify(COULD_NOT_CLOSE_FILE)\
+modify(COULD_NOT_DELETE_FILE)\
 
   enum struct ErrorCode : uint8_t {
   #define modify(NAME) NAME,
@@ -67,6 +68,7 @@ return lit_view_arr(ErrorCodeString :: NAME);
                      OPEN_MODE open_mode);
 
   ErrorCode create_empty_directory(const ViewArr<const char>& name);
+  ErrorCode delete_full_directory(const ViewArr<const char>& name);
 
   bool exist(const ViewArr<const char>& name);
 

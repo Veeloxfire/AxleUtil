@@ -2,6 +2,8 @@
 #include <AxleUtil/strings.h>
 #include <AxleUtil/os/os_windows_files.h>
 
+#include <shellapi.h>
+
 #ifdef AXLE_TRACING
 #include <Tracer/trace.h>
 #endif
@@ -63,6 +65,36 @@ FILES::ErrorCode FILES::create_empty_directory(const ViewArr<const char>& name) 
 
   Windows::NativePath path = name;
   return Windows::FILES::create_empty_directory(path);  
+}
+
+FILES::ErrorCode FILES::delete_full_directory(const ViewArr<const char>& name) {
+  char pFrom[MAX_PATH + 2] = {};
+  {
+    //double null terminated for some reason
+    ASSERT(name.size <= MAX_PATH);
+    
+    usize i = 0;
+    for(; i < name.size; ++i) {
+      pFrom[i] = name[i];
+    }
+
+    pFrom[name.size] = '\0';
+    pFrom[name.size + 1] = '\0';
+  }
+
+  SHFILEOPSTRUCTA op = {
+    NULL,
+    FO_DELETE,
+    pFrom, NULL,
+    FOF_NO_UI,
+    0,
+    NULL,
+    NULL
+  };
+
+  int res = SHFileOperationA(&op);
+  if(res == 0) return ErrorCode::OK;
+  else return ErrorCode::COULD_NOT_DELETE_FILE;
 }
 
 bool FILES::exist(const ViewArr<const char>& name) {
