@@ -567,7 +567,7 @@ namespace Format {
 
   //Doesnt null terminate!
   template<Formatter F, typename ... T>
-  constexpr void format_to_formatter(F& result, FormatString format, const T& ... ts) {
+  constexpr void format_to(F& result, FormatString format, const T& ... ts) {
   #ifdef AXLE_TRACING
     TRACING_FUNCTION();
   #endif

@@ -245,7 +245,7 @@ OwnedArr<char> format(const Format::FormatString& format, const T& ... ts) {
   Format::ArrayFormatter result = {};
   //result.arr.reserve_total(format.len);
 
-  Format::format_to_formatter(result, format, ts...);
+  Format::format_to(result, format, ts...);
 
   return result.take();
 }

@@ -18,10 +18,10 @@ static OwnedArr<const char> create_exception_message(const char* message) noexce
   const TraceNode* tn = Axle::Stacktrace::EXECUTION_TRACE;
   if(tn != nullptr) {
     formatter.load_string_lit("\nStacktrace:\n");
-    Format::format_to_formatter(formatter, "- {}", tn->name);
+    Format::format_to(formatter, "- {}", tn->name);
     tn = tn->prev;
     while(tn != nullptr) {
-      Format::format_to_formatter(formatter, "\n- {}", tn->name);
+      Format::format_to(formatter, "\n- {}", tn->name);
       tn = tn->prev;
     }
   }

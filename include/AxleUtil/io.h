@@ -94,7 +94,7 @@ namespace IO_Single {
   void format(const Format::FormatString& format, const T& ... ts) {
     Format::STPrintFormatter result = {};
 
-    Format::format_to_formatter(result, format, ts...);
+    Format::format_to(result, format, ts...);
   }
 }
 
@@ -150,7 +150,7 @@ namespace IO {
     IO_Single::ScopeLock lock;
     Format::STPrintFormatter result;
 
-    Format::format_to_formatter(result, format, ts...);
+    Format::format_to(result, format, ts...);
   }
 
   template<typename ... T>
@@ -158,7 +158,7 @@ namespace IO {
     IO_Single::ScopeLock lock;
     Format::STErrPrintFormatter result;
 
-    Format::format_to_formatter(result, format, ts...);
+    Format::format_to(result, format, ts...);
   }
 }
 
@@ -169,7 +169,7 @@ namespace LOG {
     Format::STErrPrintFormatter result;
 
     result.load_string_lit("DEBUG | ");
-    Format::format_to_formatter(result, format, ts...);
+    Format::format_to(result, format, ts...);
     result.load_char('\n');
   }
 
@@ -179,7 +179,7 @@ namespace LOG {
     Format::STErrPrintFormatter result;
 
     result.load_string_lit("WARN  | ");
-    Format::format_to_formatter(result, format, ts...);
+    Format::format_to(result, format, ts...);
     result.load_char('\n');
   }
 
@@ -189,7 +189,7 @@ namespace LOG {
     Format::STErrPrintFormatter result;
 
     result.load_string_lit("ERROR | ");
-    Format::format_to_formatter(result, format, ts...);
+    Format::format_to(result, format, ts...);
     result.load_char('\n');
   }
 }

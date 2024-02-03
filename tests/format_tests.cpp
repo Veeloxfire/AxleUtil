@@ -281,7 +281,7 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
   static_assert(sizeof(Format::ArrayFormatter::LocalArr::arr) < expected_final.size);
   Format::ArrayFormatter arrfm = {};
 
-  Format::format_to_formatter(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
 
   {
     const ViewArr<const char> expected = lit_view_arr("hello world");
@@ -293,9 +293,9 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
     TEST_STR_EQ(expected, actual_o);
   }
 
-  Format::format_to_formatter(arrfm, "hello world");
-  Format::format_to_formatter(arrfm, "hello world");
-  Format::format_to_formatter(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
 
 
    {
@@ -319,7 +319,7 @@ TEST_FUNCTION(Formatters, ViewFormatter) {
   TEST_EQ(static_cast<char*>(array), arrfm.view.data);
   TEST_EQ(expected_final.size, arrfm.capacity);
 
-  Format::format_to_formatter(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
 
   {
     const ViewArr<const char> expected = lit_view_arr("hello world");
@@ -327,9 +327,9 @@ TEST_FUNCTION(Formatters, ViewFormatter) {
     TEST_STR_EQ(expected, arrfm.view);
   }
 
-  Format::format_to_formatter(arrfm, "hello world");
-  Format::format_to_formatter(arrfm, "hello world");
-  Format::format_to_formatter(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
 
   TEST_EQ(expected_final.size, arrfm.view.size);
   TEST_STR_EQ(expected_final, arrfm.view);

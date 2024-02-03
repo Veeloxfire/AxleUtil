@@ -98,7 +98,7 @@ struct StringInterner {
   inline const InternString* format_intern(const Format::FormatString& fmt, const T& ... ts) {
     Format::ArrayFormatter formatter = {};
 
-    Format::format_to_formatter(formatter, fmt, ts...);
+    Format::format_to(formatter, fmt, ts...);
 
     return intern(view_arr(formatter));
   }
