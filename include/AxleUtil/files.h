@@ -133,7 +133,7 @@ return lit_view_arr(ErrorCodeString :: NAME);
     template<usize N>
     void load_string_lit(const char(&str)[N]) {
       if(!is_ok()) return;
-      ASSERT(str[N] == '\0');
+      ASSERT(str[N - 1] == '\0');
       errors = write(handle, reinterpret_cast<const u8*>(str), N - 1);
     }
 
