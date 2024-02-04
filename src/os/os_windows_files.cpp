@@ -6,8 +6,6 @@ using Axle::FILES::FileHandle;
 
 FILES::OpenedFile FILES::open(const NativePath& name,
                               OPEN_MODE open_mode) {
-  OpenedFile opened_file = {};
-
   DWORD access;
   DWORD share;
 
@@ -31,23 +29,17 @@ FILES::OpenedFile FILES::open(const NativePath& name,
 
   HANDLE h = CreateFileA(name.c_str(), access, share, 0, OPEN_EXISTING, 0, 0);
   if (h == INVALID_HANDLE_VALUE) {
-    opened_file.error_code = ErrorCode::COULD_NOT_OPEN_FILE;
-    opened_file.file = { nullptr };
-    return opened_file;
+    return { {nullptr}, ErrorCode::COULD_NOT_OPEN_FILE};
   }
   else {
     FileData* file = allocate_single_constructed<FileData>(h);
 
-    opened_file.error_code = ErrorCode::OK;
-    opened_file.file = { file };
-    return opened_file;
+    return { {file}, ErrorCode::OK};
   }
 }
 
 FILES::OpenedFile create(const NativePath& name,
                                 OPEN_MODE open_mode) {
-  OpenedFile opened_file = {};
-
   DWORD access;
   DWORD share;
 
@@ -71,23 +63,17 @@ FILES::OpenedFile create(const NativePath& name,
 
   HANDLE h = CreateFileA(name.c_str(), access, share, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
   if (h == INVALID_HANDLE_VALUE) {
-    opened_file.error_code = ErrorCode::COULD_NOT_OPEN_FILE;
-    opened_file.file = { nullptr };
-    return opened_file;
+    return { {nullptr}, ErrorCode::COULD_NOT_OPEN_FILE};
   }
   else {
     FileData* file = allocate_single_constructed<FileData>(h);
 
-    opened_file.error_code = ErrorCode::OK;
-    opened_file.file = { file };
-    return opened_file;
+    return { {file}, ErrorCode::OK};
   }
 }
 
 FILES::OpenedFile replace(const NativePath& name,
                                  OPEN_MODE open_mode) {
-  OpenedFile opened_file = {};
-
   DWORD access;
   DWORD share;
 
@@ -110,16 +96,12 @@ FILES::OpenedFile replace(const NativePath& name,
 
   HANDLE h = CreateFileA(name.c_str(), access, share, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
   if (h == INVALID_HANDLE_VALUE) {
-    opened_file.error_code = ErrorCode::COULD_NOT_OPEN_FILE;
-    opened_file.file = { nullptr };
-    return opened_file;
+    return { {nullptr}, ErrorCode::COULD_NOT_OPEN_FILE};
   }
   else {
     FileData* file = allocate_single_constructed<FileData>(h);
 
-    opened_file.error_code = ErrorCode::OK;
-    opened_file.file = { file };
-    return opened_file;
+    return { {file}, ErrorCode::OK};
   }
 }
 

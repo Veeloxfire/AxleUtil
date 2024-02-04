@@ -50,8 +50,30 @@ return lit_view_arr(ErrorCodeString :: NAME);
   void close(FileHandle file);
 
   struct ScopedFile : FileHandle {
+    constexpr ScopedFile() = default;
+    constexpr ScopedFile(const ScopedFile&) = delete;
+    constexpr ScopedFile& operator=(const ScopedFile&) = delete;
+    
+    constexpr void close_this() {
+      if(data != nullptr) { close(*this); } 
+    }
+
+    constexpr ScopedFile(FileData* d) : FileHandle{d} {}
+    constexpr ScopedFile(FileHandle h) : FileHandle(h) {}
+    constexpr ScopedFile(ScopedFile&& sp) 
+      : FileHandle{std::exchange(sp.data, nullptr)} 
+    {}
+
+    constexpr ScopedFile& operator=(ScopedFile&& sp) {
+        if(this == &sp) return *this;
+
+        close_this();
+        data = std::exchange(sp.data, nullptr);
+        return *this;
+    }
+
     constexpr ~ScopedFile() {
-      if(data != nullptr) { close({data}); }
+      close_this(); 
     }
   };
 
