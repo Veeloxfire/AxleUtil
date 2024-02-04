@@ -29,7 +29,7 @@ static OwnedArr<const char> create_exception_message(const char* message) noexce
   return formatter.take();
 }
 
-struct InternalException : std::exception {
+struct InternalException final : std::exception {
   OwnedArr<const char> message_string;
 
   InternalException(OwnedArr<const char>&& data) : message_string(std::move(data)) {}
@@ -44,7 +44,7 @@ void throw_testing_assertion(const char* message) {
   if(IsDebuggerPresent()) DebugBreak();
   
   if (std::uncaught_exceptions() == 0) {
-    OwnedArr<const char> final_message = create_exception_message(message); 
+    OwnedArr<const char> final_message = create_exception_message(message);
     throw InternalException(std::move(final_message));
   }
 }
