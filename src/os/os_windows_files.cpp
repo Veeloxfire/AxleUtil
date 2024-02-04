@@ -2,9 +2,8 @@
 
 namespace Axle::Windows::FILES {
 using Axle::FILES::FileData;
-using Axle::FILES::FileHandle;
 
-FILES::OpenedFile FILES::open(const NativePath& name,
+FILES::OpenedFile open(const NativePath& name,
                               OPEN_MODE open_mode) {
   DWORD access;
   DWORD share;

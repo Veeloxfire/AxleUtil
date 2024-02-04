@@ -44,7 +44,7 @@ return lit_view_arr(ErrorCodeString :: NAME);
   struct FileData;
 
   struct FileHandle {
-    FileData* data;
+    FileData* data = nullptr;
   };
 
   void close(FileHandle file);
