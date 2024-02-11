@@ -9,6 +9,8 @@
 #include <AxleUtil/os/os_windows.h>
 #include <debugapi.h>
 
+#include <bit>
+
 namespace Axle {
 static OwnedArr<const char> create_exception_message(const char* message) noexcept {
   Format::ArrayFormatter formatter = {};
@@ -183,6 +185,8 @@ BitArray::BitArray(BitArray&& b) noexcept
     length(std::exchange(b.length, 0)), highest_set(std::exchange(b.highest_set, 0)) {}
 
 BitArray& BitArray::operator=(BitArray&& b) noexcept {
+  if(this == &b) return *this;
+
   data = std::exchange(b.data, nullptr);
   length = std::exchange(b.length, 0);
   highest_set = std::exchange(b.highest_set, 0);
@@ -202,13 +206,17 @@ void BitArray::set(size_t a) {
   if (a > highest_set) highest_set = a;
 }
 
+constexpr bool test_bit(const u8* data, usize big, usize small) {
+  return (data[big] & (1 << small)) > 0;
+}
+
 bool BitArray::test(size_t a) const {
   ASSERT(a < length);
 
   size_t index = a / 8;
   size_t offset = a % 8;
 
-  return (data[index] & (1 << offset)) > 0;
+  return test_bit(data, index, offset);
 }
 
 bool BitArray::intersects(const BitArray& other) const {
@@ -226,7 +234,7 @@ bool BitArray::test_all() const {
   if (length == 0) return true;
   if (highest_set != length - 1) return false;
 
-  size_t full_blocks = length / 8;
+  size_t full_blocks = ceil_div(length, 8) - 1;
   for (size_t i = 0; i < full_blocks; ++i) {
     if (data[i] != 0xff) return false;//wasn't filled
   }
@@ -239,12 +247,95 @@ bool BitArray::test_all() const {
 }
 
 void BitArray::clear() {
-  size_t highest_block = highest_set / 8;
+  size_t highest_block = ceil_div(highest_set, 8);
 
-  for (size_t i = 0; i < (highest_block + 1); ++i) {
+  for (size_t i = 0; i < highest_block; ++i) {
     data[i] = 0;
   }
 
   highest_set = 0;
+}
+
+usize BitArray::count_set() const {
+  usize count = 0;
+
+  usize top = ceil_div(length, 8);
+  for(usize i = 0; i < top; ++i) {
+    count += std::popcount(data[i]);
+  }
+
+  return count;
+}
+
+usize BitArray::count_unset() const {
+  return length - count_set();
+}
+
+struct BitItr {
+  const u8* data;
+  usize index;
+  usize length;
+  usize next();
+};
+
+usize BitArray::UnsetBitItr::next() {
+  usize i_big = index / 8;
+  usize i_sml = index % 8;
+
+  const usize l_big = length / 8;
+  const usize l_sml = length % 8;
+
+  if(i_big < l_big) {
+    while(i_sml < 8) {
+      if(!test_bit(data, i_big, i_sml)) {
+        const usize n = i_big * 8 + i_sml;
+        index = n + 1;
+        return n;
+      }
+
+      i_sml += 1;
+    }
+
+    i_sml = 0;
+    i_big += 1;
+    while(i_big < l_big) {
+      if(std::popcount(data[i_big]) != 8) {
+        do {
+          if(!test_bit(data, i_big, i_sml)) {
+            const usize n = i_big * 8 + i_sml;
+            index = n + 1;
+            return n;
+          }
+
+          i_sml += 1;
+        } while(i_sml < 8);
+
+        INVALID_CODE_PATH("Popcount was not 8, but didn't find the bit");
+      }
+
+      i_big += 1;
+    }
+
+    ASSERT(i_sml == 0);
+  }
+
+  ASSERT(i_big == l_big);
+
+  while(i_sml < l_sml) {
+    if(!test_bit(data, i_big, i_sml)) {
+      const usize n = i_big * 8 + i_sml;
+      index = n + 1;
+      return n;
+    }
+
+    i_sml += 1;
+  }
+
+  index = length;
+  return index;
+}
+
+BitArray::UnsetBitItr BitArray::unset_itr() const {
+  return {data, 0, length};
 }
 }

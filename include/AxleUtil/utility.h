@@ -1129,6 +1129,20 @@ struct BitArray {
   bool intersects(const BitArray& b) const;
   bool test_all() const;
 
+  usize count_set() const;
+  usize count_unset() const;
+
+
+  struct UnsetBitItr {
+    const u8* data;
+    usize index;
+    usize length;
+
+    usize next();
+  };  
+
+  UnsetBitItr unset_itr() const;
+
   void clear();
 };
 
