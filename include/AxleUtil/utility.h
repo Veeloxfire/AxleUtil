@@ -1410,7 +1410,7 @@ struct AtomicQueue {
       new_holder[i] = std::move(holder[_ptr_index(i)]);
     }
 
-    free_no_destruct(holder);
+    free_no_destruct<T>(holder);
     holder = new_holder;
     capacity = new_cap;
 
