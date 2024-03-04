@@ -35,9 +35,13 @@ struct InternalException final : std::exception {
   OwnedArr<const char> message_string;
 
   InternalException(OwnedArr<const char>&& data) : message_string(std::move(data)) {}
-  virtual ~InternalException() = default;
+  InternalException(InternalException&& d) = default;
+  InternalException(const InternalException& d) noexcept
+    : message_string(copy_arr(d.message_string)) {}
 
-  virtual const char* what() const noexcept override {
+  virtual ~InternalException() final = default;
+
+  virtual const char* what() const noexcept override final {
     return message_string.data;
   }
 };
