@@ -274,14 +274,12 @@ struct MemoryPool {
 
   template<typename T>
   T* push() {
-    static_assert(std::is_trivial_v<T>);
     u8* ast = push_alloc_bytes(sizeof(T), alignof(T));
     return new (ast) T();
   }
 
   template<typename T>
   T* push_n(usize n) {
-    static_assert(std::is_trivial_v<T>);
     u8* ast = push_alloc_bytes(sizeof(T) * n, alignof(T));
 
     for (usize i = 0; i < n; i++) {
