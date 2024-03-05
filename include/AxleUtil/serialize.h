@@ -28,71 +28,85 @@ struct Serializer {
 template<typename T>
 struct Serializer<const T> : Serializer<T> {};
 
+namespace TypeTests {
+  template<typename T>
+  struct IsSerializer {
+    static constexpr bool VAL = false;
+  };
 
-template<typename T, typename S>
+  template<typename T>
+  struct IsSerializer<Serializer<T>> {
+    static constexpr bool VAL = true;
+  };
+
+  template<typename T>
+  concept NotSerializer = !TypeTests::IsSerializer<T>::VAL;
+}
+
+template<typename T, TypeTests::NotSerializer S>
 constexpr void serialize_le(const S& base, const T& val) {
   Serializer<S> ser(base);
   Serializable<T>::serialize_le(ser, val);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr void serialize_be(const S& base, const T& val) {
   Serializer<S> ser(base);
   Serializable<T>::serialize_be(ser, val);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr void serialize_le(S& base, const T& val) {
   Serializer<S> ser(base);
   Serializable<T>::serialize_le(ser, val);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr void serialize_le(Serializer<S>& ser, const T& val) {
   Serializable<T>::serialize_le(ser, val);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr void serialize_be(S& base, const T& val) {
   Serializer<S> ser(base);
   Serializable<T>::serialize_be(ser, val);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr void serialize_be(Serializer<S>& ser, const T& val) {
   Serializable<T>::serialize_be(ser, val);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr T deserialize_le(const S& base) {
   Serializer<const S> ser(base);
   return Serializable<T>::deserialize_le(ser);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr T deserialize_be(const S& base) {
   Serializer<const S> ser(base);
   return Serializable<T>::deserialize_be(ser);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr T deserialize_le(S& base) {
   Serializer<S> ser(base);
   return Serializable<T>::deserialize_le(ser);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr T deserialize_be(S& base) {
   Serializer<S> ser(base);
   return Serializable<T>::deserialize_be(ser);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr T deserialize_le(Serializer<S>& base) {
   return Serializable<T>::deserialize_le(base);
 }
 
-template<typename T, typename S>
+template<typename T, TypeTests::NotSerializer S>
 constexpr T deserialize_be(Serializer<S>& base) {
   return Serializable<T>::deserialize_be(base);
 }
