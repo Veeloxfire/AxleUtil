@@ -28,6 +28,19 @@ struct Serializer {
 template<typename T>
 struct Serializer<const T> : Serializer<T> {};
 
+
+template<typename T, typename S>
+constexpr void serialize_le(const S& base, const T& val) {
+  Serializer<S> ser(base);
+  Serializable<T>::serialize_le(ser, val);
+}
+
+template<typename T, typename S>
+constexpr void serialize_be(const S& base, const T& val) {
+  Serializer<S> ser(base);
+  Serializable<T>::serialize_be(ser, val);
+}
+
 template<typename T, typename S>
 constexpr void serialize_le(S& base, const T& val) {
   Serializer<S> ser(base);

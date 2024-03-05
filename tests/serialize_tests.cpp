@@ -3,6 +3,35 @@
 
 using namespace Axle;
 
+TEST_FUNCTION(Serializable, options) {
+  constexpr i32 i = 0x76'54'32'10;
+  constexpr const u8 le_res[] { 0x10, 0x32, 0x54, 0x76 };
+  constexpr const u8 be_res[] { 0x76, 0x54, 0x32, 0x10 };
+  constexpr usize res_size = 4;
+  static_assert(sizeof(be_res) == res_size);
+  static_assert(sizeof(le_res) == res_size);
+
+  {
+    u8 arr[4] = {};
+
+    serialize_le<i32>(arr, i);
+    TEST_ARR_EQ(le_res, res_size, arr, 4);
+
+    serialize_be<i32>(arr, i);
+    TEST_ARR_EQ(be_res, res_size, arr, 4); 
+  }
+
+  {
+    u8 arr[4] = {};
+
+    serialize_le<i32>(Axle::view_arr(arr), i);
+    TEST_ARR_EQ(le_res, res_size, arr, 4);
+
+    serialize_be<i32>(Axle::view_arr(arr), i);
+    TEST_ARR_EQ(be_res, res_size, arr, 4); 
+  }
+}
+
 TEST_FUNCTION(Serialize, ints) {
   {
     u8 arr[8] = {0};
