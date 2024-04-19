@@ -400,16 +400,16 @@ struct Array {
   size_t size = 0;// used size
   size_t capacity = 0;
 
-  T& operator[](size_t index) const {
+  [[nodiscard]] constexpr T& operator[](size_t index) const {
     ASSERT(index < size);
     return data[index];
   }
 
   //No copy!
-  Array(const Array&) = delete;
+  constexpr Array(const Array&) noexcept = delete;
 
-  Array() noexcept = default;
-  Array(Array&& arr) noexcept : data(arr.data), size(arr.size), capacity(arr.capacity)
+  constexpr Array() noexcept = default;
+  constexpr Array(Array&& arr) noexcept : data(arr.data), size(arr.size), capacity(arr.capacity)
   {
     arr.data = nullptr;
     arr.size = 0;
@@ -440,13 +440,13 @@ struct Array {
     free();
   }
 
-  const T* begin() const { return data; }
-  const T* end() const { return data + size; }
+  constexpr const T* begin() const { return data; }
+  constexpr const T* end() const { return data + size; }
 
-  T* back() { return data + size - 1; }
+  constexpr T* back() { return data + size - 1; }
 
-  T* mut_begin() { return data; }
-  T* mut_end() { return data + size; }
+  constexpr T* mut_begin() { return data; }
+  constexpr T* mut_end() { return data + size; }
 
   T remove_at(const size_t index) {
     ASSERT(index < size);
@@ -495,7 +495,7 @@ struct Array {
   }
 
   template<typename L>
-  bool any_of(L&& lambda) const {
+  [[nodiscard]] constexpr bool any_of(L&& lambda) const {
     auto i = begin();
     const auto i_end = end();
 
@@ -509,7 +509,7 @@ struct Array {
   }
 
   template<typename L>
-  const T* find_if(L&& lambda) const {
+  [[nodiscard]] constexpr const T* find_if(L&& lambda) const {
     auto i = begin();
     const auto i_end = end();
 
@@ -522,7 +522,7 @@ struct Array {
     return nullptr;
   }
 
-  void replace_a_with_b(const T& a, const T& b) {
+  constexpr void replace_a_with_b(const T& a, const T& b) {
     for (size_t i = 0; i < size; i++) {
       if (data[i] == a) {
         data[i] = b;
@@ -614,7 +614,7 @@ struct Array {
   }
 
   T take() noexcept {
-    const T t = std::move(data[size - 1]);
+    T t = std::move(data[size - 1]);
     pop();
     return t;
   }
@@ -637,7 +637,7 @@ struct Array {
     }
   }
 
-  bool contains(const T& t) const noexcept {
+  [[nodiscard]] constexpr bool contains(const T& t) const noexcept {
     auto i = begin();
     const auto end_i = end();
 

@@ -138,18 +138,18 @@ struct ViewArr {
   T* data = nullptr;
   usize size = 0;
 
-  constexpr const T* begin() const { return data; }
-  constexpr const T* end() const { return data + size; }
+  [[nodiscard]] constexpr const T* begin() const { return data; }
+  [[nodiscard]] constexpr const T* end() const { return data + size; }
 
-  constexpr T* mut_begin() const { return data; }
-  constexpr T* mut_end() const { return data + size; }
+  [[nodiscard]] constexpr T* mut_begin() const { return data; }
+  [[nodiscard]] constexpr T* mut_end() const { return data + size; }
 
-  constexpr T& operator[](usize i) const {
+  [[nodiscard]] constexpr T& operator[](usize i) const {
     ASSERT(i < size);
     return data[i];
   }
 
-  constexpr operator ViewArr<const T>() const {
+  [[nodiscard]] constexpr operator ViewArr<const T>() const {
     return { data, size };
   }
 };
@@ -159,17 +159,17 @@ struct ViewArr<const T> {
   const T* data = nullptr;
   usize size = 0;
 
-  constexpr const T* begin() const { return data; }
-  constexpr const T* end() const { return data + size; }
+  [[nodiscard]] constexpr const T* begin() const { return data; }
+  [[nodiscard]] constexpr const T* end() const { return data + size; }
 
-  constexpr const T& operator[](usize i) const {
+  [[nodiscard]] constexpr const T& operator[](usize i) const {
     ASSERT(i < size);
     return data[i];
   }
 };
 
 template<usize N>
-constexpr ViewArr<const char> lit_view_arr(const char(&arr)[N]) {
+[[nodiscard]] constexpr ViewArr<const char> lit_view_arr(const char(&arr)[N]) {
   ASSERT(arr[N - 1] == '\0');
   return {
     arr,
@@ -193,7 +193,7 @@ constexpr inline void memcpy_ts(const ViewArr<T>& dest, const ViewArr<T>& src) {
 }
 
 template<typename T>
-constexpr inline bool memeq_ts(const ViewArr<const T>& dest, const ViewArr<const T>& src) {
+[[nodiscard]] constexpr inline bool memeq_ts(const ViewArr<const T>& dest, const ViewArr<const T>& src) {
   if (dest.size != src.size) return false;
   if (dest.data == src.data) return true;
 
@@ -206,17 +206,17 @@ constexpr inline bool memeq_ts(const ViewArr<const T>& dest, const ViewArr<const
 }
 
 template<typename T>
-constexpr inline bool memeq_ts(const ViewArr<T>& dest, const ViewArr<T>& src) {
+[[nodiscard]] constexpr inline bool memeq_ts(const ViewArr<T>& dest, const ViewArr<T>& src) {
   return memeq_ts<T>(ViewArr<const T>(dest), ViewArr<const T>(src));
 }
 
 template<typename T>
-constexpr inline bool memeq_ts(const ViewArr<const T>& dest, const ViewArr<T>& src) {
+[[nodiscard]] constexpr inline bool memeq_ts(const ViewArr<const T>& dest, const ViewArr<T>& src) {
   return memeq_ts<T>(dest, ViewArr<const T>(src));
 }
 
 template<typename T>
-constexpr inline bool memeq_ts(const ViewArr<T>& dest, const ViewArr<const T>& src) {
+[[nodiscard]] constexpr inline bool memeq_ts(const ViewArr<T>& dest, const ViewArr<const T>& src) {
   return memeq_ts<T>(ViewArr<const T>(dest), src);
 }
 
@@ -237,7 +237,7 @@ struct Viewable<const T> {
   using ViewT = typename Viewable<T>::ViewT;
 
   template<typename U>
-  static constexpr ViewArr<U> view(const T& v) {
+  [[nodiscard]] static constexpr ViewArr<U> view(const T& v) {
     return Viewable<T>::template view<U>(v);
   }
 };
@@ -247,7 +247,7 @@ struct Viewable<ViewArr<T>> {
   using ViewT = T;
 
   template<typename U>
-  static constexpr ViewArr<U> view(const ViewArr<T>& v) {
+  [[nodiscard]] static constexpr ViewArr<U> view(const ViewArr<T>& v) {
     return v;
   }
 };
@@ -257,7 +257,7 @@ struct Viewable<T[N]> {
   using ViewT = T;
 
   template<typename U>
-  static constexpr ViewArr<U> view(T(&arr)[N]) {
+  [[nodiscard]] static constexpr ViewArr<U> view(T(&arr)[N]) {
     return {arr, N};
   }
 };
@@ -267,7 +267,7 @@ struct Viewable<const T[N]> {
   using ViewT = const T;
 
   template<typename U>
-  static constexpr ViewArr<U> view(const T(&arr)[N]) {
+  [[nodiscard]] static constexpr ViewArr<U> view(const T(&arr)[N]) {
     return {arr, N};
   }
 };
@@ -310,7 +310,7 @@ template<
   typename VT = void,
   typename T
 >
-constexpr ViewArr<ViewTemplates::ViewType<T, VT, false>> view_arr(T& t) {
+[[nodiscard]] constexpr ViewArr<ViewTemplates::ViewType<T, VT, false>> view_arr(T& t) {
   return Viewable<T>::template view<ViewTemplates::ViewType<T, VT, false>>(t);
 }
 
@@ -318,7 +318,7 @@ template<
   typename VT = void,
   typename T
 >
-constexpr ViewArr<ViewTemplates::ViewType<T, VT, false>> view_arr(T& t, usize start, usize count) {
+[[nodiscard]] constexpr ViewArr<ViewTemplates::ViewType<T, VT, false>> view_arr(T& t, usize start, usize count) {
   const auto arr = Viewable<T>::template view<ViewTemplates::ViewType<T, VT, false>>(t);
   ASSERT(arr.size >= start + count);
   return {
@@ -331,7 +331,7 @@ template<
   typename VT = void,
   typename T
 >
-constexpr ViewArr<ViewTemplates::ViewType<T, VT, true>> const_view_arr(T& t) {
+[[nodiscard]] constexpr ViewArr<ViewTemplates::ViewType<T, VT, true>> const_view_arr(T& t) {
   return Viewable<T>::template view<ViewTemplates::ViewType<T, VT, true>>(t);
 }
 
@@ -339,7 +339,7 @@ template<
   typename VT = void,
   typename T
 >
-constexpr ViewArr<ViewTemplates::ViewType<T, VT, true>> const_view_arr(T& t, usize start, usize count) {
+[[nodiscard]] constexpr ViewArr<ViewTemplates::ViewType<T, VT, true>> const_view_arr(T& t, usize start, usize count) {
   const auto arr = Viewable<T>::template view<ViewTemplates::ViewType<T, VT, true>>(t);
   ASSERT(arr.size >= start + count);
   return {
@@ -352,7 +352,7 @@ template<
   typename VT = void,
   typename T
 >
-constexpr ViewArr<ViewTemplates::ViewType<const T, VT, false>> view_arr(const T& t) {
+[[nodiscard]] constexpr ViewArr<ViewTemplates::ViewType<const T, VT, false>> view_arr(const T& t) {
   return Viewable<const T>::template view<ViewTemplates::ViewType<const T, VT, false>>(t);
 }
 
@@ -360,7 +360,7 @@ template<
   typename VT = void,
   typename T
 >
-constexpr ViewArr<ViewTemplates::ViewType<const T, VT, false>> view_arr(const T& t, usize start, usize count) {
+[[nodiscard]] constexpr ViewArr<ViewTemplates::ViewType<const T, VT, false>> view_arr(const T& t, usize start, usize count) {
   const auto arr = Viewable<const T>::template view<ViewTemplates::ViewType<const T, VT, false>>(t);
   ASSERT(arr.size >= start + count);
   return {
@@ -373,7 +373,7 @@ template<
   typename VT = void,
   typename T
 >
-constexpr ViewArr<ViewTemplates::ViewType<const T, VT, true>> const_view_arr(const T& t) {
+[[nodiscard]] constexpr ViewArr<ViewTemplates::ViewType<const T, VT, true>> const_view_arr(const T& t) {
   return Viewable<const T>::template view<ViewTemplates::ViewType<const T, VT, true>>(t);
 }
 
@@ -381,7 +381,7 @@ template<
   typename VT = void,
   typename T
 >
-constexpr ViewArr<ViewTemplates::ViewType<const T, VT, true>> const_view_arr(const T& t, usize start, usize count) {
+[[nodiscard]] constexpr ViewArr<ViewTemplates::ViewType<const T, VT, true>> const_view_arr(const T& t, usize start, usize count) {
   const auto arr = Viewable<const T>::template view<ViewTemplates::ViewType<const T, VT, true>>(t);
   ASSERT(arr.size >= start + count);
   return {
@@ -391,7 +391,7 @@ constexpr ViewArr<ViewTemplates::ViewType<const T, VT, true>> const_view_arr(con
 }
 
 template<typename T, typename U>
-ViewArr<T> cast_arr(const ViewArr<U>& arr) {
+[[nodiscard]] ViewArr<T> cast_arr(const ViewArr<U>& arr) {
   static_assert(std::is_trivial_v<T> && std::is_trivial_v<U>);
   static_assert(sizeof(T) % sizeof(U) == 0);
   return { reinterpret_cast<T*>(arr.data), arr.size / sizeof(U) };
@@ -402,14 +402,14 @@ struct ConstArray {
   T data[size];
 
   template<typename ... U>
-  constexpr static auto create(U&& ... u) {
+  [[nodiscard]] constexpr static auto create(U&& ... u) {
     static_assert(sizeof...(U) == size, "Must be fully filled");
 
     return ConstArray{ {std::forward<U>(u)...} };
   }
 
-  constexpr const T* begin() const { return data; }
-  constexpr const T* end() const { return data + size; }
+  [[nodiscard]] constexpr const T* begin() const { return data; }
+  [[nodiscard]] constexpr const T* end() const { return data + size; }
 };
 
 template<typename T, size_t size>
@@ -417,7 +417,7 @@ struct Viewable<ConstArray<T, size>> {
   using ViewT = T;
 
   template<typename U>
-  static constexpr ViewArr<T> view(const ConstArray<T, size>& v) {
+  [[nodiscard]] static constexpr ViewArr<T> view(const ConstArray<T, size>& v) {
     return {v.data, size};
   }
 };
@@ -431,7 +431,7 @@ for(auto it = (name).mut_begin(), JOIN(__end, __LINE__) = (name).mut_end(); \
 it != JOIN(__end, __LINE__); ++it)
 
 
-constexpr uint8_t absolute(int8_t i) {
+[[nodiscard]] constexpr uint8_t absolute(int8_t i) {
   if (i == INT8_MIN) {
     return static_cast<uint8_t>(INT8_MAX) + 1u;
   }
@@ -443,7 +443,7 @@ constexpr uint8_t absolute(int8_t i) {
   }
 }
 
-constexpr uint16_t absolute(int16_t i) {
+[[nodiscard]] constexpr uint16_t absolute(int16_t i) {
   if (i == INT16_MIN) {
     return static_cast<uint16_t>(INT16_MAX) + 1u;
   }
@@ -455,7 +455,7 @@ constexpr uint16_t absolute(int16_t i) {
   }
 }
 
-constexpr uint32_t absolute(int32_t i) {
+[[nodiscard]] constexpr uint32_t absolute(int32_t i) {
   if (i == INT32_MIN) {
     return static_cast<uint32_t>(INT32_MAX) + 1u;
   }
@@ -467,7 +467,7 @@ constexpr uint32_t absolute(int32_t i) {
   }
 }
 
-constexpr uint64_t absolute(int64_t i) {
+[[nodiscard]] constexpr uint64_t absolute(int64_t i) {
   if (i == INT64_MIN) {
     return 0x8000000000000000ull;
   }
@@ -480,20 +480,20 @@ constexpr uint64_t absolute(int64_t i) {
 }
 
 template<typename T>
-constexpr inline T square(T t) { return t * t; }
+[[nodiscard]] constexpr inline T square(T t) { return t * t; }
 
 template<typename T>
-constexpr inline T larger(T t1, T t2) noexcept {
+[[nodiscard]] constexpr inline T larger(T t1, T t2) noexcept {
   return t1 > t2 ? t1 : t2;
 }
 
 template<typename T>
-constexpr inline T smaller(T t1, T t2) noexcept {
+[[nodiscard]] constexpr inline T smaller(T t1, T t2) noexcept {
   return t1 < t2 ? t1 : t2;
 }
 
 template<typename T, size_t N>
-constexpr size_t array_size(T(&)[N]) {
+[[nodiscard]] constexpr size_t array_size(T(&)[N]) {
   return N;
 }
 
