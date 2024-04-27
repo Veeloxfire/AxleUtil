@@ -377,7 +377,7 @@ struct GrowingMemoryPool {
       return alloc_internal(size, align);
     }
     else {
-      assert(align <= 8);
+      ASSERT(align <= 8);
       return Axle::allocate_default<u8>(size);
     }
   }

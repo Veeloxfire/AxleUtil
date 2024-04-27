@@ -2,7 +2,6 @@
 #define AXLEUTIL_SAFE_LIB_H_
 
 #include <cstdlib>
-#include <cassert>
 #include <new>
 
 #include <AxleUtil/primitives.h>
