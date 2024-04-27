@@ -32,22 +32,32 @@ foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
   set("CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper}" "${PROJECT_BINARY_DIR}/out")
 endforeach()
 
-
-
 add_library(AxleUtil STATIC)
 set_target_properties(AxleUtil PROPERTIES OUTPUT_NAME "AxleUtil$<CONFIG>")
+
+add_library(AxleTestServer STATIC)
+set_target_properties(AxleTestServer PROPERTIES OUTPUT_NAME "AxleTestServer$<CONFIG>")
+
+add_library(AxleTestClient STATIC)
+set_target_properties(AxleTestClient PROPERTIES OUTPUT_NAME "AxleTestClient$<CONFIG>")
+
+target_link_libraries(AxleTestServer AxleUtil)
+target_link_libraries(AxleTestClient AxleUtil)
+add_dependencies(AxleTestServer AxleTestClient) # Client must be up to date
+
+target_compile_definitions(AxleTestServer PRIVATE AXLE_TEST_CLIENT_EXE="AxleTestClient$<CONFIG>.exe")
 
 target_include_directories(AxleUtil PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 if(MSVC)
-  target_compile_options(AxleUtil PRIVATE /W4 /WX)
+  target_compile_options(AxleUtil PUBLIC /W4 /WX)
 else()
-  target_compile_options(AxleUtil PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(AxleUtil PUBLIC -Wall -Wextra -Wpedantic -Werror)
 endif()
 
 option(AxleTRACING "Enable execution tracing" OFF)
 if(AxleTRACING)
-  target_compile_definitions(AxleUtil PRIVATE TRACING_ENABLE AXLE_TRACING)
+  target_compile_definitions(AxleUtil PUBLIC TRACING_ENABLE AXLE_TRACING)
   if(NOT DEFINED TracerINCLUDE)
     message(FATAL_ERROR "Requires TracerINCLUDE to compile with tracing enabled")
   endif()
@@ -64,10 +74,10 @@ endif()
 option(AxleTestSANITY "Enable Sanity Tests" OFF)
 if(AxleTestSANITY)
   message("Enabled: sanity checks")
-  target_compile_definitions(AxleUtil PUBLIC AXLE_TEST_SANITY)
+  target_compile_definitions(AxleTestClient PUBLIC AXLE_TEST_SANITY)
 endif()
 
-set(CppFiles
+set(UtilSourceFiles
   "${PROJECT_SOURCE_DIR}/src/files.cpp"
   "${PROJECT_SOURCE_DIR}/src/format.cpp"
   "${PROJECT_SOURCE_DIR}/src/io.cpp"
@@ -78,8 +88,15 @@ set(CppFiles
 
   "${PROJECT_SOURCE_DIR}/src/os/os_windows.cpp"
   "${PROJECT_SOURCE_DIR}/src/os/os_windows_files.cpp"
+)
 
-  "${PROJECT_SOURCE_DIR}/src/unit_tests.cpp"
+set(TestClientFiles
+  "${PROJECT_SOURCE_DIR}/AxleTest/client/client.cpp"
+  "${PROJECT_SOURCE_DIR}/AxleTest/client/unit_tests.cpp"
+)
+
+set(TestServerFiles
+  "${PROJECT_SOURCE_DIR}/AxleTest/server/server.cpp"
 )
 
 set(CppHeaders
@@ -100,19 +117,68 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/os/os_windows_files.h"
 
   "${PROJECT_SOURCE_DIR}/include/AxleTest/unit_tests.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleTest/ipc.h"
 )
 
-target_sources(AxleUtil PRIVATE ${CppFiles})
+target_sources(AxleUtil PRIVATE ${UtilSourceFiles})
 target_sources(AxleUtil PRIVATE 
   FILE_SET HEADERS
   BASE_DIRS ${PROJECT_SOURCE_DIR}
   FILES ${CppHeaders}
 )
 
-option(BUILD_TESTS "Build the tests" OFF)
+target_sources(AxleTestServer PRIVATE ${TestServerFiles})
+target_sources(AxleTestServer PRIVATE 
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES ${CppHeaders}
+)
 
-if(BUILD_TESTS)
-  message("Building tests")
-  add_subdirectory("./tests")
-endif()
+target_sources(AxleTestClient PRIVATE ${TestClientFiles})
+target_sources(AxleTestClient PRIVATE
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES ${CppHeaders}
+)
+
+#### Unit tests
+
+add_executable(TestServer)
+add_executable(TestClient)
+
+set_target_properties(TestServer PROPERTIES OUTPUT_NAME "TestServer$<CONFIG>")
+set_target_properties(TestClient PROPERTIES OUTPUT_NAME "TestClient$<CONFIG>")
+
+target_link_libraries(TestServer AxleTestServer)
+target_link_libraries(TestClient AxleTestClient)
+add_dependencies(TestServer TestClient)
+
+target_compile_definitions(TestServer PRIVATE AXLE_TEST_CLIENT_EXE="TestClient$<CONFIG>.exe")
+
+
+
+
+foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
+  string(TOUPPER ${config_type} config_upper)
+  set_target_properties(TestServer TestClient
+      PROPERTIES
+      "ARCHIVE_OUTPUT_DIRECTORY_${config_upper}" "${PROJECT_BINARY_DIR}/out/test"
+      "LIBRARY_OUTPUT_DIRECTORY_${config_upper}" "${PROJECT_BINARY_DIR}/out/test"
+      "RUNTIME_OUTPUT_DIRECTORY_${config_upper}" "${PROJECT_BINARY_DIR}/out/test"
+  )
+endforeach()
+
+set(TestFiles
+  "${PROJECT_SOURCE_DIR}/tests/args_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/containers_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/format_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/serialize_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/stacktrace_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/files_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/math_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/string_tests.cpp"
+)
+
+target_sources(TestServer PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_server_main.cpp")
+target_sources(TestClient PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_client_main.cpp" ${TestFiles})
 

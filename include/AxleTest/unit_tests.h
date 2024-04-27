@@ -35,15 +35,6 @@ namespace AxleTest {
     _testAdder(const Axle::ViewArr<const char>& test_name, TEST_FN fn);
   };
 
-  struct TestContext {
-    Axle::Array<TestErrors> failed_tests;
-  
-    void run_test(const UnitTest& test);
-  };
-
-  void print_failed_tests(const TestContext& context);
-  void test_main();
-
   template<typename T>
   struct TestFormat {
     const T& t;
