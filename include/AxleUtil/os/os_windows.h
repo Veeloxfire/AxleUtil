@@ -160,9 +160,6 @@ namespace Windows {
 
   NativePath get_current_directory();
   void set_current_directory(const ViewArr<const char>& str);
-
-  namespace FILES {
-  }
 }
 }
 
