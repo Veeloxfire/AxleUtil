@@ -205,7 +205,6 @@ constexpr inline uint64_t pow_16(uint64_t v) {
 constexpr inline uint64_t pow_10(uint64_t v) {
   if (v > 19) {
     INVALID_CODE_PATH("Power too high!");
-    return 0;
   }
 
   constexpr uint64_t pow10[] = {

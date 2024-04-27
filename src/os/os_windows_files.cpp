@@ -21,7 +21,6 @@ FILES::OpenedFile open(const NativePath& name,
       }
     default: {
       INVALID_CODE_PATH("Invalid Open Mode");
-      return {};
     }
   }
 
@@ -55,7 +54,6 @@ FILES::OpenedFile create(const NativePath& name,
       }
     default: {
       INVALID_CODE_PATH("Invalid Open Mode");
-      return {};
     }
   }
 
@@ -89,7 +87,6 @@ FILES::OpenedFile replace(const NativePath& name,
       }
     default: {
       INVALID_CODE_PATH("Invalid Open Mode");
-      return {};
     }
   }
 

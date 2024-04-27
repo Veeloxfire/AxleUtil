@@ -5,6 +5,7 @@
 #include <new>
 
 #include <AxleUtil/primitives.h>
+#include <AxleUtil/panic.h>
 
 namespace Axle {
 #define STR_REPLAC2(a) #a
@@ -16,13 +17,10 @@ namespace Axle {
 
 #define TODO() static_assert(false, "Code is broken")
 
-void throw_testing_assertion(const char* message);
-void abort_assertion(const char* message) noexcept;
-
 #define ASSERT(expr) do { if(!(expr))\
-Axle::throw_testing_assertion("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " __FILE__ ":\n" #expr); } while(false)
+Axle::Panic::panic("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " __FILE__ ":\n" #expr); } while(false)
 
-#define INVALID_CODE_PATH(reason) Axle::throw_testing_assertion("Invalid Code path \"" reason "\"")
+#define INVALID_CODE_PATH(reason) Axle::Panic::panic("Invalid Code path \"" reason "\"")
 
 //#define COUNT_ALLOC
 
@@ -148,6 +146,10 @@ struct ViewArr<const T> {
     return data[i];
   }
 };
+
+namespace Panic {
+  [[noreturn]] void panic(const ViewArr<const char>& message) noexcept;
+}
 
 template<usize N>
 [[nodiscard]] constexpr ViewArr<const char> lit_view_arr(const char(&arr)[N]) {

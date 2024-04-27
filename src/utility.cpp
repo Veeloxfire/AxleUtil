@@ -12,9 +12,19 @@
 #include <bit>
 
 namespace Axle {
-static OwnedArr<const char> create_exception_message(const char* message) noexcept {
-  Format::ArrayFormatter formatter = {};
-  formatter.load_string(message, strlen_ts(message));
+static bool panicking = false;
+static const void* panic_callback_userdata = nullptr;
+static Panic::CallbackFn panic_callback = Panic::default_panic_callback;
+
+void Panic::set_panic_callback(const void* data, CallbackFn callback) noexcept {
+  panic_callback_userdata = data;
+  panic_callback = callback;
+}
+
+void Panic::default_panic_callback(const void*, const ViewArr<const char>& message) noexcept {
+  IO_Single::ScopeLock lock;
+  Format::STErrPrintFormatter formatter = {};
+  formatter.load_string(message.data, message.size);
 
   using TraceNode = Axle::Stacktrace::TraceNode;
   const TraceNode* tn = Axle::Stacktrace::EXECUTION_TRACE;
@@ -27,54 +37,26 @@ static OwnedArr<const char> create_exception_message(const char* message) noexce
       tn = tn->prev;
     }
   }
-  formatter.null_terminate();
-  return formatter.take();
 }
 
-struct InternalException final : std::exception {
-  OwnedArr<const char> message_string;
-
-  InternalException(OwnedArr<const char>&& data) : message_string(std::move(data)) {}
-  InternalException(InternalException&& d) = default;
-  InternalException(const InternalException& d) noexcept
-    : message_string(copy_arr(d.message_string)) {}
-
-  virtual ~InternalException() final = default;
-
-  virtual const char* what() const noexcept override final {
-    return message_string.data;
-  }
-};
-
-void throw_testing_assertion(const char* message) {
-  if(IsDebuggerPresent()) DebugBreak();
-  
-  if (std::uncaught_exceptions() == 0) {
-    OwnedArr<const char> final_message = create_exception_message(message);
-    throw InternalException(std::move(final_message));
-  }
+[[noreturn]] void Panic::panic(const ViewArr<const char>& message) noexcept {
+  panic(message.data, message.size);
 }
 
-void abort_assertion(const char* message) noexcept {
+[[noreturn]] void Panic::panic(const char* message, usize size) noexcept {
   if(IsDebuggerPresent()) DebugBreak();
-
-  const ViewArr<const char> msg_view = {message, strlen_ts(message) };
-
-  IO::err_print(msg_view);
   
-  using TraceNode = Axle::Stacktrace::TraceNode;
-  const TraceNode* tn = Axle::Stacktrace::EXECUTION_TRACE;
-  if(tn != nullptr) {
-    IO::err_print("\nStacktrace:\n");
-    IO::err_format("- {}", tn->name);
-    tn = tn->prev;
-    while(tn != nullptr) {
-      IO::err_format("\n- {}", tn->name);
-      tn = tn->prev;
-    }
+  if(panicking) {
+    fputs("ERROR: panic called, while panicking\nMessage: \"", stderr);
+    fwrite(message, 1, size, stderr);
+    fputs("\"\n", stderr);
+  }
+  else {
+    panicking = true;
+    panic_callback(panic_callback_userdata, {message, size});
   }
 
-  std::abort();
+  std::terminate();
 }
 
 SquareBitMatrix::~SquareBitMatrix() {

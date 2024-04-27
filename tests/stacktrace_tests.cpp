@@ -39,39 +39,3 @@ TEST_FUNCTION(Stacktrace, gather) {
 
   TEST_STR_EQ(expected, trace_names);
 }
-
-TEST_FUNCTION(Stacktrace, throwing) {
-  ASSERT(Axle::Stacktrace::EXECUTION_TRACE == nullptr);
-  try {
-    Axle::throw_testing_assertion("hello");
-
-    test_errors->report_error("Test did not throw");
-  }
-  catch(const std::exception& e) {
-    const char* msg = e.what();
-    usize msg_len = Axle::strlen_ts(msg);
-
-    const Axle::ViewArr<const char> msg_view{msg, msg_len};
-    const Axle::ViewArr<const char> expected = Axle::lit_view_arr("hello");
-    TEST_STR_EQ(expected, msg_view);
-  }
-
-  try {
-    Axle::Stacktrace::ScopedExecTrace scope1(Axle::lit_view_arr("scope1"));
-    Axle::Stacktrace::ScopedExecTrace scope2(Axle::lit_view_arr("scope2"));
-    Axle::Stacktrace::ScopedExecTrace scope3(Axle::lit_view_arr("scope3"));
-    Axle::throw_testing_assertion("hello");
-
-    test_errors->report_error("Test did not throw");
-  }
-  catch(const std::exception& e) {
-    TEST_EQ(static_cast<const Axle::Stacktrace::TraceNode*>(nullptr), Axle::Stacktrace::EXECUTION_TRACE);
-
-    const char* msg = e.what();
-    usize msg_len = Axle::strlen_ts(msg);
-
-    const Axle::ViewArr<const char> msg_view{msg, msg_len};
-    const Axle::ViewArr<const char> expected = Axle::lit_view_arr("hello\nStacktrace:\n- scope3\n- scope2\n- scope1");
-    TEST_STR_EQ(expected, msg_view);
-  }
-}
