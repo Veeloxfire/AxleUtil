@@ -141,6 +141,10 @@ static void sync_buffer(FILES::FileData* file) {
   }
 }
 
+void FILES::flush(FILES::FileHandle h) {
+  sync_buffer(h.data);
+}
+
 FILES::FileData::~FileData() noexcept(false) {
   sync_buffer(this);
   CloseHandle(handle);
