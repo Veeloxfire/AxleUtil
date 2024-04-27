@@ -113,6 +113,8 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/threading.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/utility.h"
 
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/std_formats/compare.h"
+  
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/os/os_windows.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/os/os_windows_files.h"
 

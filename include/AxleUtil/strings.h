@@ -3,6 +3,9 @@
 
 #include <AxleUtil/memory.h>
 #include <AxleUtil/format.h>
+
+#include <compare>
+
 namespace Axle {
 struct InternString {
   uint64_t hash;
@@ -51,7 +54,24 @@ namespace Intern {
   inline constexpr InternString TOMBSTONE_STR = {0,0, nullptr};
   inline constexpr const InternString* TOMBSTONE = &TOMBSTONE_STR;
 
-  bool is_alphabetical_order(const InternString* l, const InternString* r);
+  constexpr std::strong_ordering lexicographic_order(const InternString* l, const InternString* r) {
+    if(l == r) return std::strong_ordering::equivalent;
+
+    usize min_size = l->len < r->len ? l->len : r->len;
+    const char* const lstr = l->string;
+    const char* const rstr = r->string;
+
+    for (usize i = 0; i < min_size; i++) {
+      char cl = lstr[i];
+      char cr = rstr[i];
+
+      if (cl != cr) {
+        return cl <=> cr;
+      }
+    }
+
+    return l->len <=> r->len;
+  }
 }
 
 struct Table {

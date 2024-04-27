@@ -6,23 +6,6 @@
 #endif
 
 namespace Axle {
-bool Intern::is_alphabetical_order(const InternString* l, const InternString* r) {
-  size_t min_size = l->len < r->len ? l->len : r->len;
-
-  for (size_t i = 0; i < min_size; i++) {
-    char cl = l->string[i];
-    char cr = r->string[i];
-
-    if (cl == cr) {
-      continue;
-    }
-
-    return cl < cr;
-  }
-
-  return l->len <= r->len;
-}
-
 Table::Table() : data(allocate_default<const InternString*>(8)), size(8) {}
 
 

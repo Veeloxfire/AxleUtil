@@ -1,6 +1,7 @@
 #include <AxleTest/unit_tests.h>
 
 #include <AxleUtil/strings.h>
+#include <AxleUtil/std_formats/compare.h>
 
 using namespace Axle;
 
@@ -133,12 +134,14 @@ TEST_FUNCTION(Interned_Strings, order) {
 
   const InternString* str1 = interner.intern("hello", 5);
   const InternString* str2 = interner.intern("world", 5);
+  const InternString* str3 = interner.intern("hello", 5);
 
-  TEST_EQ(true, Intern::is_alphabetical_order(str1, str1));
-  TEST_EQ(true, Intern::is_alphabetical_order(str2, str2));
+  TEST_EQ(std::strong_ordering::equivalent, Intern::lexicographic_order(str1, str1));
+  TEST_EQ(std::strong_ordering::equivalent, Intern::lexicographic_order(str1, str3));
+  TEST_EQ(std::strong_ordering::equivalent, Intern::lexicographic_order(str2, str2));
 
-  TEST_EQ(true, Intern::is_alphabetical_order(str1, str2));
-  TEST_EQ(false, Intern::is_alphabetical_order(str2, str1));
+  TEST_EQ(std::strong_ordering::less, Intern::lexicographic_order(str1, str2));
+  TEST_EQ(std::strong_ordering::greater, Intern::lexicographic_order(str2, str1));
 }
 
 TEST_FUNCTION(Interned_Strings, set) {
