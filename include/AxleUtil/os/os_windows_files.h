@@ -20,6 +20,32 @@ namespace Axle::Windows::FILES {
   OwnedArr<u8> read_full_file(const NativePath& file_name);
 
   bool exist(const NativePath& name);
+
+  struct RawFile {
+    HANDLE handle;
+  };
+}
+
+namespace Axle {
+  template<>
+  struct Serializer<Axle::Windows::FILES::RawFile> {
+    Axle::Windows::FILES::RawFile rf;
+    constexpr Serializer(Axle::Windows::FILES::RawFile h) : rf{h} {}
+
+    inline void read_bytes(const ViewArr<u8>& bytes) {
+      DWORD read = 0;
+      BOOL res = ReadFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &read, NULL);
+      ASSERT(res != 0);
+      ASSERT(read == bytes.size);
+    }
+
+    inline void write_bytes(const ViewArr<const u8>& bytes) {
+      DWORD written = 0;
+      BOOL res = WriteFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &written, NULL); 
+      ASSERT(res != 0);
+      ASSERT(written == bytes.size);
+    }
+  };
 }
 
 namespace Axle::FILES {

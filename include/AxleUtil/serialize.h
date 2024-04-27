@@ -115,14 +115,12 @@ template<>
 struct Serializable<ViewArr<u8>> {
   template<typename S>
   static constexpr void serialize_le(Serializer<S>& ser, const ViewArr<const u8>& in) {
-    const ViewArr<u8> bytes = ser.take_bytes(in.size);
-    memcpy_ts(bytes, in); 
+    ser.write_bytes(in);
   }
 
   template<typename S>
   static constexpr void serialize_be(Serializer<S>& ser, const ViewArr<const u8>& in) {
-    const ViewArr<u8> bytes = ser.take_bytes(in.size);
-    memcpy_ts(bytes, in); 
+    ser.write_bytes(in);
   }
 };
 
@@ -130,14 +128,12 @@ template<>
 struct Serializable<ViewArr<const u8>> {
   template<typename S>
   static constexpr void serialize_le(Serializer<S>& ser, const ViewArr<const u8>& in) {
-    const ViewArr<u8> bytes = ser.take_bytes(in.size);
-    memcpy_ts(bytes, in); 
+    ser.write_bytes(in);
   }
 
   template<typename S>
   static constexpr void serialize_be(Serializer<S>& ser, const ViewArr<const u8>& in) {
-    const ViewArr<u8> bytes = ser.take_bytes(in.size);
-    memcpy_ts(bytes, in); 
+    ser.write_bytes(in);
   }
 };
 
@@ -147,33 +143,40 @@ struct Serializable<u64> {
 
   template<typename S>
   static constexpr void serialize_le(Serializer<S>& ser, const u64 u) {
-    const ViewArr<u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    bytes[7] = static_cast<uint8_t>(u >> 56);
-    bytes[6] = static_cast<uint8_t>(u >> 48);
-    bytes[5] = static_cast<uint8_t>(u >> 40);
-    bytes[4] = static_cast<uint8_t>(u >> 32);
-    bytes[3] = static_cast<uint8_t>(u >> 24);
-    bytes[2] = static_cast<uint8_t>(u >> 16);
-    bytes[1] = static_cast<uint8_t>(u >> 8);
-    bytes[0] = static_cast<uint8_t>(u);
+    const u8 arr[SERIALIZE_SIZE] = {
+      static_cast<uint8_t>(u),
+      static_cast<uint8_t>(u >> 8),
+      static_cast<uint8_t>(u >> 16),
+      static_cast<uint8_t>(u >> 24),
+      static_cast<uint8_t>(u >> 32),
+      static_cast<uint8_t>(u >> 40),
+      static_cast<uint8_t>(u >> 48),
+      static_cast<uint8_t>(u >> 56),
+    };
+
+    ser.write_bytes(view_arr(arr));
   }
 
   template<typename S>
   static constexpr void serialize_be(Serializer<S>& ser, const u64 u) {
-    const ViewArr<u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    bytes[0] = static_cast<uint8_t>(u >> 56);
-    bytes[1] = static_cast<uint8_t>(u >> 48);
-    bytes[2] = static_cast<uint8_t>(u >> 40);
-    bytes[3] = static_cast<uint8_t>(u >> 32);
-    bytes[4] = static_cast<uint8_t>(u >> 24);
-    bytes[5] = static_cast<uint8_t>(u >> 16);
-    bytes[6] = static_cast<uint8_t>(u >> 8);
-    bytes[7] = static_cast<uint8_t>(u);
+    const u8 arr[SERIALIZE_SIZE] = {
+      static_cast<uint8_t>(u >> 56),
+      static_cast<uint8_t>(u >> 48),
+      static_cast<uint8_t>(u >> 40),
+      static_cast<uint8_t>(u >> 32),
+      static_cast<uint8_t>(u >> 24),
+      static_cast<uint8_t>(u >> 16),
+      static_cast<uint8_t>(u >> 8),
+      static_cast<uint8_t>(u),
+    };
+
+    ser.write_bytes(view_arr(arr));
   }
 
   template<typename S>
   static constexpr u64 deserialize_le(Serializer<S>& ser) {
-    const ViewArr<const u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
+    u8 bytes[SERIALIZE_SIZE];
+    ser.read_bytes(view_arr(bytes));
     return (static_cast<uint64_t>(bytes[7]) << 56)
       | (static_cast<uint64_t>(bytes[6]) << 48)
       | (static_cast<uint64_t>(bytes[5]) << 40)
@@ -186,7 +189,8 @@ struct Serializable<u64> {
 
   template<typename S>
   static constexpr u64 deserialize_be(Serializer<S>& ser) {
-    const ViewArr<const u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
+    u8 bytes[SERIALIZE_SIZE];
+    ser.read_bytes(view_arr(bytes));
     return (static_cast<uint64_t>(bytes[0]) << 56)
       | (static_cast<uint64_t>(bytes[1]) << 48)
       | (static_cast<uint64_t>(bytes[2]) << 40)
@@ -204,25 +208,32 @@ struct Serializable<u32> {
 
   template<typename S>
   static constexpr void serialize_le(Serializer<S>& ser, const u32 u) {
-    const ViewArr<u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    bytes[3] = static_cast<uint8_t>(u >> 24);
-    bytes[2] = static_cast<uint8_t>(u >> 16);
-    bytes[1] = static_cast<uint8_t>(u >> 8);
-    bytes[0] = static_cast<uint8_t>(u);
+    const u8 arr[SERIALIZE_SIZE] = {
+      static_cast<uint8_t>(u),
+      static_cast<uint8_t>(u >> 8),
+      static_cast<uint8_t>(u >> 16),
+      static_cast<uint8_t>(u >> 24),
+    };
+
+    ser.write_bytes(view_arr(arr));
   }
 
   template<typename S>
   static constexpr void serialize_be(Serializer<S>& ser, const u32 u) {
-    const ViewArr<u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    bytes[0] = static_cast<uint8_t>(u >> 24);
-    bytes[1] = static_cast<uint8_t>(u >> 16);
-    bytes[2] = static_cast<uint8_t>(u >> 8);
-    bytes[3] = static_cast<uint8_t>(u);
+    const u8 arr[SERIALIZE_SIZE] = {
+      static_cast<uint8_t>(u >> 24),
+      static_cast<uint8_t>(u >> 16),
+      static_cast<uint8_t>(u >> 8),
+      static_cast<uint8_t>(u),
+    };
+
+    ser.write_bytes(view_arr(arr));
   }
 
   template<typename S>
   static constexpr u32 deserialize_le(Serializer<S>& ser) {
-    const ViewArr<const u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
+    u8 bytes[SERIALIZE_SIZE];
+    ser.read_bytes(view_arr(bytes));
     return (static_cast<uint32_t>(bytes[3]) << 24)
       | (static_cast<uint32_t>(bytes[2]) << 16)
       | (static_cast<uint32_t>(bytes[1]) << 8)
@@ -231,7 +242,8 @@ struct Serializable<u32> {
 
     template<typename S>
   static constexpr u32 deserialize_be(Serializer<S>& ser) {
-    const ViewArr<const u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
+    u8 bytes[SERIALIZE_SIZE];
+    ser.read_bytes(view_arr(bytes));
     return (static_cast<uint32_t>(bytes[0]) << 24)
       | (static_cast<uint32_t>(bytes[1]) << 16)
       | (static_cast<uint32_t>(bytes[2]) << 8)
@@ -245,28 +257,36 @@ struct Serializable<u16> {
 
   template<typename S>
   static constexpr void serialize_le(Serializer<S>& ser, const u16 u) {
-    const ViewArr<u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    bytes[1] = static_cast<uint8_t>(u >> 8);
-    bytes[0] = static_cast<uint8_t>(u);
+    const u8 arr[SERIALIZE_SIZE] = {
+      static_cast<uint8_t>(u),
+      static_cast<uint8_t>(u >> 8),
+    };
+
+    ser.write_bytes(view_arr(arr));
   }
 
   template<typename S>
   static constexpr void serialize_be(Serializer<S>& ser, const u16 u) {
-    const ViewArr<u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    bytes[0] = static_cast<uint8_t>(u >> 8);
-    bytes[1] = static_cast<uint8_t>(u);
+    const u8 arr[SERIALIZE_SIZE] = {
+      static_cast<uint8_t>(u >> 8),
+      static_cast<uint8_t>(u),
+    };
+
+    ser.write_bytes(view_arr(arr));
   }
 
   template<typename S>
   static constexpr u16 deserialize_le(Serializer<S>& ser) {
-    const ViewArr<const u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
+    u8 bytes[SERIALIZE_SIZE];
+    ser.read_bytes(view_arr(bytes));
     return (static_cast<uint16_t>(bytes[1]) << 8)
       | static_cast<uint16_t>(bytes[0]);
   }
  
   template<typename S>
   static constexpr u16 deserialize_be(Serializer<S>& ser) {
-    const ViewArr<const u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
+    u8 bytes[SERIALIZE_SIZE];
+    ser.read_bytes(view_arr(bytes));
     return (static_cast<uint16_t>(bytes[0]) << 8)
       | static_cast<uint16_t>(bytes[1]);
   }
@@ -278,26 +298,26 @@ struct Serializable<u8> {
 
   template<typename S>
   static constexpr void serialize_le(Serializer<S>& ser, const u8 u) {
-    const ViewArr<u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    bytes[0] = u;
+    ser.write_bytes({&u, SERIALIZE_SIZE});
   }
 
   template<typename S>
   static constexpr void serialize_be(Serializer<S>& ser, const u8 u) {
-    const ViewArr<u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    bytes[0] = u;
+    ser.write_bytes({&u, SERIALIZE_SIZE});
   }
 
   template<typename S>
   static constexpr u8 deserialize_le(Serializer<S>& ser) {
-    const ViewArr<const u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    return bytes[0];
+    u8 u;
+    ser.read_bytes({&u, SERIALIZE_SIZE});
+    return u;
   }
  
   template<typename S>
   static constexpr u8 deserialize_be(Serializer<S>& ser) {
-    const ViewArr<const u8> bytes = ser.take_bytes(SERIALIZE_SIZE);
-    return bytes[0];
+    u8 u;
+    ser.read_bytes({&u, SERIALIZE_SIZE});
+    return u;
   }
 };
 
@@ -401,11 +421,20 @@ struct Serializer<ViewArr<u8>> {
     : view(arr)
   {}
 
-  constexpr ViewArr<u8> take_bytes(usize size) {
-    ASSERT(view.size >= size);
-    const auto res = view_arr(view, 0, size);
-    view  = view_arr(view, size, view.size - size);
-    return res;
+  constexpr void read_bytes(const ViewArr<u8>& bytes) {
+    ASSERT(view.size >= bytes.size);
+    
+    const auto res = view_arr(view, 0, bytes.size);
+    view  = view_arr(view, bytes.size, view.size - bytes.size);
+    memcpy_ts(bytes, res);
+  }
+
+  constexpr void write_bytes(const ViewArr<const u8>& bytes) {
+    ASSERT(view.size >= bytes.size);
+    
+    const auto res = view_arr(view, 0, bytes.size);
+    view  = view_arr(view, bytes.size, view.size - bytes.size);
+    memcpy_ts(res, bytes);
   }
 };
 
@@ -417,43 +446,42 @@ struct Serializer<ViewArr<const u8>> {
     : view(arr)
   {}
 
-  constexpr ViewArr<const u8> take_bytes(usize size) {
-    ASSERT(view.size >= size);
-    const auto res = view_arr(view, 0, size);
-    view  = view_arr(view, size, view.size - size);
-    return res;
+  constexpr void read_bytes(const ViewArr<u8>& bytes) {
+    ASSERT(view.size >= bytes.size);
+    
+    const auto res = view_arr(view, 0, bytes.size);
+    view  = view_arr(view, bytes.size, view.size - bytes.size);
+    memcpy_ts(bytes, res);
   }
 };
 
 template<usize N>
 struct Serializer<u8[N]> {
-  ViewArr<u8> view;
-  
+  Serializer<ViewArr<u8>> ser;
+
   constexpr Serializer(u8(&arr)[N])
-    : view(view_arr(arr))
+    : ser(view_arr(arr))
   {}
 
-  constexpr ViewArr<u8> take_bytes(usize size) {
-    ASSERT(view.size >= size);
-    const auto res = view_arr(view, 0, size);
-    view  = view_arr(view, size, view.size - size);
-    return res;
+  constexpr void read_bytes(const ViewArr<u8>& bytes) {
+    ser.read_bytes(bytes);
+  }
+
+  constexpr void write_bytes(const ViewArr<const u8>& bytes) {
+    ser.write_bytes(bytes); 
   }
 };
 
 template<usize N>
 struct Serializer<const u8[N]> {
-  ViewArr<const u8> view;
-  
+  Serializer<ViewArr<const u8>> ser;
+
   constexpr Serializer(const u8(&arr)[N])
-    : view(view_arr(arr))
+    : ser(view_arr(arr))
   {}
 
-  constexpr ViewArr<const u8> take_bytes(usize size) {
-    ASSERT(view.size >= size);
-    const auto res = view_arr(view, 0, size);
-    view  = view_arr(view, size, view.size - size);
-    return res;
+  constexpr void read_bytes(const ViewArr<u8>& bytes) {
+    ser.read_bytes(bytes);
   }
 };
 
@@ -463,20 +491,27 @@ struct SerializeZeros {
 
 template<>
 struct Serializable<SerializeZeros> {
+  static constexpr usize BUFFER_SIZE = 1024;
+  static constexpr u8 zeros[BUFFER_SIZE] = {};//zero buffer to write from
+
   template<typename S>
   static constexpr void serialize_le(Serializer<S>& ser, const SerializeZeros u) {
-    const ViewArr<u8> bytes = ser.take_bytes(u.num);
-    for(usize i = 0; i < u.num; ++i) {
-      bytes[i] = 0;
+    const usize count = u.num / BUFFER_SIZE;
+    const usize extra = u.num % BUFFER_SIZE;
+    for(usize i = 0; i < count; ++i) {
+      ser.write_bytes(const_view_arr(zeros));
     }
+    ser.write_bytes(const_view_arr(zeros, 0, extra));
   }
 
   template<typename S>
   static constexpr void serialize_be(Serializer<S>& ser, const SerializeZeros u) {
-    const ViewArr<u8> bytes = ser.take_bytes(u.num);
-    for(usize i = 0; i < u.num; ++i) {
-      bytes[i] = 0;
+    const usize count = u.num / BUFFER_SIZE;
+    const usize extra = u.num % BUFFER_SIZE;
+    for(usize i = 0; i < count; ++i) {
+      ser.write_bytes(const_view_arr(zeros));
     }
+    ser.write_bytes(const_view_arr(zeros, 0, extra));
   }
 };
 }

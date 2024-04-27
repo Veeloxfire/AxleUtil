@@ -723,10 +723,8 @@ struct Serializer<Array<u8>> {
 
   constexpr Serializer(Array<u8>& arr) : bytes(arr) {}
 
-  ViewArr<u8> take_bytes(usize size) {
-    const usize start = bytes.size;
-    bytes.insert_uninit(size);
-    return view_arr(bytes, start, size);
+  void write_bytes(const ViewArr<const u8>& data) {
+    bytes.concat(data);
   }
 };
 

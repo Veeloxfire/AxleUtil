@@ -124,6 +124,8 @@ return lit_view_arr(ErrorCodeString :: NAME);
     return write(file, (const uint8_t*)str, N - 1);
   }
 
+  void flush(FileHandle);
+
   struct FileFormatter {
     FileHandle handle;
     ErrorCode errors = ErrorCode::OK;
@@ -178,6 +180,21 @@ namespace Format {
     }
   };
 }
+
+template<>
+struct Serializer<FILES::FileHandle> {
+  FILES::FileHandle handle;
+
+  constexpr Serializer(FILES::FileHandle h) : handle(h) {}
+
+  inline void read_bytes(const ViewArr<u8>& bytes) {
+    FILES::read_to_bytes(handle, bytes.data, bytes.size); 
+  }
+
+  inline void write_bytes(const ViewArr<const u8>& bytes) {
+    FILES::write(handle, bytes.data, bytes.size); 
+  }
+};
 
 struct InternString;
 struct StringInterner;
