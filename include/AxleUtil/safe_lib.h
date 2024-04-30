@@ -97,6 +97,11 @@ constexpr inline void destruct_arr_void(void* const ptr_v, const size_t num) {
 }
 
 template<typename T>
+constexpr inline void construct_single(Self<T>* const ptr) {
+  new(ptr) T();
+}
+
+template<typename T>
 constexpr inline void destruct_single(Self<T>* const ptr) {
   ptr->~T();
 }
