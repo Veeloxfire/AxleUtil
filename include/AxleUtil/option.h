@@ -3,6 +3,7 @@
 
 #include <AxleUtil/safe_lib.h>
 
+namespace Axle {
 template<typename T>
 struct Option {
   bool valid = false;
@@ -14,20 +15,20 @@ struct Option {
   };
 
   constexpr void destroy() {
-    if(valid) { destruct_single<T>(&value); }
+    if(valid) { Axle::destruct_single<T>(&value); }
     _placeholder = '\0';
-    valid = true;
+    valid = false;
   }
 
   constexpr Option() = default;
   constexpr Option(const Option& o) : valid(o.valid) {
     if(valid) {
-      value = o.value;
+      new (&value) T(value);
     }
   }
   constexpr Option(Option&& o) : valid(o.valid) {
     if(valid) {
-      value = std::move(o.value);
+      new(&value) T(std::move(o.value));
     }
   }
   
@@ -35,17 +36,48 @@ struct Option {
   constexpr Option(T&& t) : valid(true), value(std::move(t)) {}
   
   constexpr Option& operator=(const T& t) {
+    if(!valid) construct_single<T>(&value);
     valid = true;
     value = t;
+
+    return *this;
   }
   constexpr Option& operator=(T&& t) { 
+    if(!valid) construct_single<T>(&value);
     valid = true;
     value = std::move(t);
+
+    return *this;
+  }
+
+  constexpr Option& operator=(const Option& t) {
+    if(t.valid) {
+      if(!valid) construct_single<T>(&value);
+      valid = true;
+      value = t.t;
+    } else {
+      destroy();
+    }
+
+    return *this;
+  }
+
+  constexpr Option& operator=(Option&& t) {
+    if(t.valid) {
+      if(!valid) construct_single<T>(&value);
+      valid = true;
+      value = t.t;
+    } else {
+      destroy();
+    }
+
+    return *this;
   }
 
   constexpr ~Option() {
     destroy();
   }
 };
+}
 
 #endif
