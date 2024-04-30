@@ -112,6 +112,11 @@ constexpr void reset_type(Self<T>* t) noexcept {
   new(t) T();
 }
 
+template<typename...>
+struct DependentFalse {
+  constexpr static bool VAL = false;
+};
+
 template<typename T>
 struct ViewArr {
   T* data = nullptr;
@@ -205,12 +210,7 @@ template<typename T>
 
 template<typename T>
 struct Viewable {
-  template<typename U>
-  struct TemplateFalse {
-    constexpr static bool VAL = false;
-  };
-
-  static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized viewable");
+  static_assert(DependentFalse<T>::VAL, "Attempted to use unspecialized viewable");
 };
 
 //Default implementation for a type which

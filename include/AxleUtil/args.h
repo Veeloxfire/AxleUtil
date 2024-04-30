@@ -17,12 +17,7 @@ namespace clArg {
 
   template<typename T>
   struct Parser {
-    template<typename>
-    struct TemplateFalse {
-      constexpr static bool VAL = false;
-    };
-
-    static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized parse arg");
+    static_assert(Axle::DependentFalse<T>::VAL, "Attempted to use unspecialized parse arg");
   };
 
   template<>

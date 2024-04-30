@@ -6,22 +6,14 @@ namespace Axle {
 
 template<typename T>
 struct Serializable {
-  template<typename U>
-  struct TemplateFalse {
-    constexpr static bool VAL = false;
-  };
+  static_assert(DependentFalse<T>::VAL, "Attempted to use unspecialized serializable arg");
+};
 
-  static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized serializable arg");
 };
 
 template<typename T>
 struct Serializer {
-  template<typename U>
-  struct TemplateFalse {
-    constexpr static bool VAL = false;
-  };
-
-  static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized serializer");
+  static_assert(DependentFalse<T>::VAL, "Attempted to use unspecialized serializer");
 };
 
 //default implementation copies non-const version

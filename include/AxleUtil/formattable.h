@@ -72,12 +72,7 @@ namespace Format {
 
   template<typename T>
   struct FormatArg {
-    template<typename U>
-    struct TemplateFalse {
-      constexpr static bool VAL = false;
-    };
-
-    static_assert(TemplateFalse<T>::VAL, "Attempted to use unspecialized format arg");
+    static_assert(DependentFalse<T>::VAL, "Attempted to use unspecialized format arg");
   };
 
   template<>
