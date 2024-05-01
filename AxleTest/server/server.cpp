@@ -248,10 +248,9 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
 
   Axle::OwnedArr<SingleTest> tests = Axle::new_arr<SingleTest>(test_count);
   Axle::OwnedArr<char> strings = Axle::new_arr<char>(strings_size);
-  u32 test_id = 0;
   u32 counter = 0;
 
-  for(u32 i = 0; i < test_id; ++i) {
+  for(u32 i = 0; i < test_count; ++i) {
     {
       AxleTest::IPC::MessageHeader header;
       if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(ser, header)) return false;
@@ -260,9 +259,11 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
 
       u32 size;
       if(!Axle::deserialize_le<u32>(ser, size)) return false;
-    
+      ASSERT(size != 0);
+
       Axle::ViewArr<char> name = view_arr(strings, counter, size);
       tests[i].test_name = name;
+      ASSERT(name.size != 0);
       counter += size;
 
       Axle::ViewArr<u8> arr = cast_arr<u8>(name);
@@ -299,7 +300,6 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
 bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
                                 const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>&) {
   STACKTRACE_FUNCTION();
-  
 
   Axle::Windows::NativePath self_dir_holder;
   DWORD self_path_len = GetModuleFileNameA(NULL, self_dir_holder.path, MAX_PATH);
