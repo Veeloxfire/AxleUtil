@@ -717,8 +717,8 @@ struct Viewable<Array<T>> {
 };
 
 
-template<>
-struct Serializer<Array<u8>> {
+template<ByteOrder Ord>
+struct Serializer<Array<u8>, Ord> {
   Array<u8>& bytes;
 
   constexpr Serializer(Array<u8>& arr) : bytes(arr) {}

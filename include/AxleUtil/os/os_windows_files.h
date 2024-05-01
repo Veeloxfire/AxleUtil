@@ -27,16 +27,15 @@ namespace Axle::Windows::FILES {
 }
 
 namespace Axle {
-  template<>
-  struct Serializer<Axle::Windows::FILES::RawFile> {
+  template<ByteOrder Ord>
+  struct Serializer<Axle::Windows::FILES::RawFile, Ord> {
     Axle::Windows::FILES::RawFile rf;
     constexpr Serializer(Axle::Windows::FILES::RawFile h) : rf{h} {}
 
-    inline void read_bytes(const ViewArr<u8>& bytes) {
+    inline bool read_bytes(const ViewArr<u8>& bytes) {
       DWORD read = 0;
       BOOL res = ReadFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &read, NULL);
-      ASSERT(res != 0);
-      ASSERT(read == bytes.size);
+      return (res != 0 && static_cast<usize>(read) == bytes.size);
     }
 
     inline void write_bytes(const ViewArr<const u8>& bytes) {

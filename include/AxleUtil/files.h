@@ -176,13 +176,13 @@ namespace Format {
     template<Formatter F>
     constexpr static void load_string(F& res, FILES::ErrorCode er) {
       ViewArr<const char> err_str = FILES::error_code_string(er);
-      res.load_string_raw(err_str.data, err_str.size);
+      res.load_string(err_str.data, err_str.size);
     }
   };
 }
 
-template<>
-struct Serializer<FILES::FileHandle> {
+template<ByteOrder Ord>
+struct Serializer<FILES::FileHandle, Ord> {
   FILES::FileHandle handle;
 
   constexpr Serializer(FILES::FileHandle h) : handle(h) {}

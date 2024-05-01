@@ -191,18 +191,22 @@ TEST_FUNCTION(Deserialize, ints) {
       0x01, 0x23, 0x45, 0x67, 0x89, 0xab,0xcd, 0xef
     };
     static_assert(sizeof(be_res) == 8);
-    const u64 v = deserialize_be<u64>(be_res);
+    u64 value;
+    bool valid = deserialize_be<u64>(be_res, value);
+    TEST_EQ(true, valid);
     const u64 expected = 0x01'23'45'67'89'ab'cd'efllu;
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   {
     const u8 le_res[] {
       0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01
     };
     static_assert(sizeof(le_res) == 8);
-    const u64 v = deserialize_le<u64>(le_res);
+    u64 value;
+    bool valid = deserialize_le<u64>(le_res, value);
+    TEST_EQ(true, valid);
     const u64 expected = 0x01'23'45'67'89'ab'cd'efllu;
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
 
   {
@@ -210,18 +214,22 @@ TEST_FUNCTION(Deserialize, ints) {
       0x01, 0x23, 0x45, 0x67,
     };
     static_assert(sizeof(be_res) == 4);
-    const u32 v = deserialize_be<u32>(be_res);
+    u32 value;
+    bool valid = deserialize_be<u32>(be_res, value);
+    TEST_EQ(true, valid);
     const u32 expected = 0x01'23'45'67u;
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   {
     const u8 le_res[] {
       0x67, 0x45, 0x23, 0x01
     };
     static_assert(sizeof(le_res) == 4);
-    const u32 v = deserialize_le<u32>(le_res);
+    u32 value;
+    bool valid = deserialize_le<u32>(le_res, value);
+    TEST_EQ(true, valid);
     const u32 expected = 0x01'23'45'67u;
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   
   {
@@ -229,9 +237,11 @@ TEST_FUNCTION(Deserialize, ints) {
       0x01, 0x23,
     };
     static_assert(sizeof(be_res) == 2);
-    const u16 v = deserialize_be<u16>(be_res);
+    u16 value;
+    bool valid = deserialize_be<u16>(be_res, value);
+    TEST_EQ(true, valid);
     const u16 expected = static_cast<u16>(0x01'23);
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
 
   {
@@ -239,9 +249,11 @@ TEST_FUNCTION(Deserialize, ints) {
       0x23, 0x01
     };
     static_assert(sizeof(le_res) == 2);
-    const u16 v = deserialize_le<u16>(le_res);
+    u16 value;
+    bool valid = deserialize_le<u16>(le_res, value);
+    TEST_EQ(true, valid);
     const u16 expected = static_cast<u16>(0x01'23u);
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
 
   {
@@ -249,36 +261,44 @@ TEST_FUNCTION(Deserialize, ints) {
       0x01,
     };
     static_assert(sizeof(be_res) == 1);
-    const u8 v = deserialize_be<u8>(be_res);
+    u8 value;
+    bool valid = deserialize_be<u8>(be_res, value);
+    TEST_EQ(true, valid);
     const u8 expected = static_cast<u8>(0x01u);
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   {
     const u8 le_res[] {
       0x01
     };
     static_assert(sizeof(le_res) == 1);
-    const u8 v = deserialize_le<u8>(le_res);
+    u8 value;
+    bool valid = deserialize_le<u8>(le_res, value);
+    TEST_EQ(true, valid);
     const u8 expected = static_cast<u8>(0x01u);
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   {
     const u8 be_res[] {
       0x01, 0x23, 0x45, 0x67, 0x89, 0xab,0xcd, 0xef
     };
     static_assert(sizeof(be_res) == 8);
-    const i64 v = deserialize_be<i64>(be_res);
+    i64 value;
+    bool valid = deserialize_be<i64>(be_res, value);
+    TEST_EQ(true, valid);
     const i64 expected = 0x01'23'45'67'89'ab'cd'efll;
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   {
     const u8 le_res[] {
       0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01
     };
     static_assert(sizeof(le_res) == 8);
-    const i64 v = deserialize_le<i64>(le_res);
+    i64 value;
+    bool valid = deserialize_le<i64>(le_res, value);
+    TEST_EQ(true, valid);
     const i64 expected = 0x01'23'45'67'89'ab'cd'efll;
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
 
   {
@@ -286,18 +306,22 @@ TEST_FUNCTION(Deserialize, ints) {
       0x01, 0x23, 0x45, 0x67,
     };
     static_assert(sizeof(be_res) == 4);
-    const i32 v = deserialize_be<i32>(be_res);
+    i32 value;
+    bool valid = deserialize_be<i32>(be_res, value);
+    TEST_EQ(true, valid);
     const i32 expected = 0x01'23'45'67;
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   {
     const u8 le_res[] {
       0x67, 0x45, 0x23, 0x01
     };
     static_assert(sizeof(le_res) == 4);
-    const i32 v = deserialize_le<i32>(le_res);
+    i32 value;
+    bool valid = deserialize_le<i32>(le_res, value);
+    TEST_EQ(true, valid);
     const i32 expected = 0x01'23'45'67;
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   
   {
@@ -305,18 +329,22 @@ TEST_FUNCTION(Deserialize, ints) {
       0x01, 0x23,
     };
     static_assert(sizeof(be_res) == 2);
-    const i16 v = deserialize_be<i16>(be_res);
+    i16 value;
+    bool valid = deserialize_be<i16>(be_res, value);
+    TEST_EQ(true, valid);
     const i16 expected = static_cast<i16>(0x01'23);
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   {
     const u8 le_res[] {
       0x23, 0x01
     };
     static_assert(sizeof(le_res) == 2);
-    const i16 v = deserialize_le<i16>(le_res);
+    i16 value;
+    bool valid = deserialize_le<i16>(le_res, value);
+    TEST_EQ(true, valid);
     const i16 expected = static_cast<i16>(0x01'23);
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
 
   {
@@ -324,32 +352,43 @@ TEST_FUNCTION(Deserialize, ints) {
       0x01,
     };
     static_assert(sizeof(be_res) == 1);
-    const i8 v = deserialize_be<i8>(be_res);
+    i8 value;
+    bool valid = deserialize_be<i8>(be_res, value);
+    TEST_EQ(true, valid);
     const i8 expected = static_cast<i8>(0x01);
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
   {
     const u8 le_res[] {
       0x01
     };
     static_assert(sizeof(le_res) == 1);
-    const i8 v = deserialize_le<i8>(le_res);
+    i8 value;
+    bool valid = deserialize_le<i8>(le_res, value);
+    TEST_EQ(true, valid);
     const i8 expected = static_cast<i8>(0x01);
-    TEST_EQ(expected, v);
+    TEST_EQ(expected, value);
   }
 }
 
 TEST_FUNCTION(Deserialize, rvalues) {
   //Should be able to deserialize from an r-value
-
+  
   const u8 bytes[4] {1, 2, 3, 4};
-  u32 u_le = deserialize_le<u32>(ViewArr<const u8>{bytes, 4});
-  const u32 expected_le = 0x04030201u;
-  TEST_EQ(expected_le, u_le);
-
-  u32 u_be = deserialize_be<u32>(ViewArr<const u8>{bytes, 4});
-  const u32 expected_be = 0x01020304u;
-  TEST_EQ(expected_be, u_be);
+  {
+    u32 value;
+    bool valid = deserialize_le<u32>(ViewArr<const u8>{bytes, 4}, value);
+    TEST_EQ(true, valid);
+    const u32 expected_le = 0x04030201u;
+    TEST_EQ(expected_le, value);
+  }
+  {
+    u32 value;
+    bool valid = deserialize_be<u32>(ViewArr<const u8>{bytes, 4}, value);
+    TEST_EQ(true, valid);
+    const u32 expected_be = 0x01020304u;
+    TEST_EQ(expected_be, value);
+  }
 }
 
 TEST_FUNCTION(Serialize, zeros) {
@@ -373,35 +412,67 @@ TEST_FUNCTION(Serialize, zeros) {
 }
 
 TEST_FUNCTION(Serialize, multiple) {
-  u8 bytes[10] = {0};
-  const u8 expected[] = {
-    0x12, 0x6a, 0,0,0,0,0, 0xff, 0x9e, 0x02
-  };
+  {
+    u8 bytes[10] = {0};
+    const u8 expected[] = {
+      0x12, 0x6a, 0,0,0,0,0, 0x9e, 0xff, 0x02
+    };
+    Serializer<u8[10], ByteOrder::LittleEndian> ser(bytes);
 
-  Serializer<u8[10]> ser(bytes);
+    serialize_le(ser, 0x00006a12u);
+    serialize_le(ser, SerializeZeros{3});
+    serialize_le(ser, static_cast<u16>(0xff9e));
+    serialize_le(ser, static_cast<u8>(0x02));
 
-  serialize_le(ser, 0x00006a12u);
-  serialize_le(ser, SerializeZeros{3});
-  serialize_be(ser, static_cast<u16>(0xff9e));
-  serialize_be(ser, static_cast<u8>(0x02));
+    TEST_ARR_EQ(expected, array_size(expected),
+        bytes, array_size(bytes));
+  }
+  {
+    u8 bytes[10] = {0};
+    const u8 expected[] = {
+      0, 0, 0x6a, 0x12, 0,0,0, 0xff, 0x9e, 0x02
+    };
+    Serializer<u8[10], ByteOrder::BigEndian> ser(bytes);
 
-  TEST_ARR_EQ(expected, array_size(expected),
-      bytes, array_size(bytes));
+    serialize_be(ser, 0x00006a12u);
+    serialize_be(ser, SerializeZeros{3});
+    serialize_be(ser, static_cast<u16>(0xff9e));
+    serialize_be(ser, static_cast<u8>(0x02));
+
+    TEST_ARR_EQ(expected, array_size(expected),
+        bytes, array_size(bytes));
+  }
 }
 
 TEST_FUNCTION(Serialize, to_array) {
-  const u8 expected[] = {
-    0x12, 0x6a, 0,0,0,0,0, 0xff, 0x9e, 0x02
-  };
+  {
+    const u8 expected[] = {
+      0x12, 0x6a, 0,0,0,0,0, 0x9e, 0xff, 0x02
+    };
+    Array<u8> bytes = {};
+    Serializer<Array<u8>, ByteOrder::LittleEndian> ser(bytes);
 
-  Array<u8> bytes = {};
-  Serializer<Array<u8>> ser(bytes);
+    serialize_le(ser, 0x00006a12u);
+    serialize_le(ser, SerializeZeros{3});
+    serialize_le(ser, static_cast<u16>(0xff9e));
+    serialize_le(ser, static_cast<u8>(0x02));
 
-  serialize_le(ser, 0x00006a12u);
-  serialize_le(ser, SerializeZeros{3});
-  serialize_be(ser, static_cast<u16>(0xff9e));
-  serialize_be(ser, static_cast<u8>(0x02));
+    TEST_ARR_EQ(expected, array_size(expected),
+                bytes.data, bytes.size);
+  }
+  {
+    const u8 expected[] = {
+      0, 0, 0x6a, 0x12, 0,0,0, 0xff, 0x9e, 0x02
+    };
+    Array<u8> bytes = {};
+    Serializer<Array<u8>, ByteOrder::BigEndian> ser(bytes);
 
-  TEST_ARR_EQ(expected, array_size(expected),
-              bytes.data, bytes.size);
+    serialize_be(ser, 0x00006a12u);
+    serialize_be(ser, SerializeZeros{3});
+    serialize_be(ser, static_cast<u16>(0xff9e));
+    serialize_be(ser, static_cast<u8>(0x02));
+
+    TEST_ARR_EQ(expected, array_size(expected),
+                bytes.data, bytes.size);
+  }
 }
