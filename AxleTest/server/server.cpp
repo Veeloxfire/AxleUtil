@@ -16,19 +16,90 @@ namespace IO = Axle::IO;
 
 using namespace Axle::Primitives;
 
-PROCESS_INFORMATION start_test_executable(const Axle::ViewArr<const char>& self, 
-                                          const Axle::ViewArr<const char>& exe,
-                                          HANDLE hstdout, HANDLE hstdin) {
-  HANDLE save_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
-  HANDLE save_stdin = GetStdHandle(STD_INPUT_HANDLE);
+struct OwnedHandle {
+  HANDLE h;
+  
+  void close() {
+    if(h != INVALID_HANDLE_VALUE) CloseHandle(h);
+    h = INVALID_HANDLE_VALUE;
+  }
 
-  SetStdHandle(STD_OUTPUT_HANDLE, hstdout);
-  SetStdHandle(STD_INPUT_HANDLE, hstdin);
+  bool is_valid() const {
+    return h != INVALID_HANDLE_VALUE;
+  }
 
-  DEFER(&) {
-    SetStdHandle(STD_OUTPUT_HANDLE, save_stdout);
-    SetStdHandle(STD_INPUT_HANDLE, save_stdin);
-  };
+  operator HANDLE() && {
+    return std::exchange(h, INVALID_HANDLE_VALUE);
+  }
+
+  OwnedHandle() : h(INVALID_HANDLE_VALUE) {}
+  OwnedHandle(HANDLE&& h_) : h(std::exchange(h_, INVALID_HANDLE_VALUE)) {}
+  OwnedHandle(OwnedHandle&& h_) : h(std::exchange(h_.h, INVALID_HANDLE_VALUE)) {}
+
+  OwnedHandle& operator=(HANDLE&& h_) {
+    h = std::exchange(h_, INVALID_HANDLE_VALUE);
+    return *this;
+  }
+
+  OwnedHandle& operator=(OwnedHandle&& h_) {
+    if(this == &h_) return *this;
+
+    h = std::exchange(h_.h, INVALID_HANDLE_VALUE);
+    return *this;
+  }
+  
+  ~OwnedHandle() {
+    if(h != INVALID_HANDLE_VALUE) CloseHandle(h);
+  }
+};
+
+struct ChildProcess {
+  OwnedHandle write_handle;
+  OwnedHandle read_handle;
+
+  OwnedHandle process_handle;
+  OwnedHandle thread_handle;
+};
+
+ChildProcess start_test_executable(const Axle::ViewArr<const char>& self, 
+                                   const Axle::ViewArr<const char>& exe) {
+  STACKTRACE_FUNCTION();
+  
+  OwnedHandle parent_read;
+  OwnedHandle child_write;
+
+  {
+    SECURITY_ATTRIBUTES inheritable_pipes;
+    inheritable_pipes.nLength = sizeof(inheritable_pipes);
+    inheritable_pipes.lpSecurityDescriptor = NULL;
+    inheritable_pipes.bInheritHandle = true;    
+
+    if(!CreatePipe(&parent_read.h, &child_write.h, &inheritable_pipes, 0)) {
+      LOG::error("Failed to create back communication pipes");
+      return {};
+    }
+  }
+
+  ASSERT(parent_read.is_valid());
+  ASSERT(child_write.is_valid());
+
+  OwnedHandle parent_write;
+  OwnedHandle child_read;
+  {
+    SECURITY_ATTRIBUTES inheritable_pipes;
+    inheritable_pipes.nLength = sizeof(inheritable_pipes);
+    inheritable_pipes.lpSecurityDescriptor = NULL;
+
+    inheritable_pipes.bInheritHandle = true;    
+
+    if(!CreatePipe(&child_read.h, &parent_write.h, &inheritable_pipes, 0)) {
+      LOG::error("Failed to create forwards communication pipes");
+      return {}; 
+    }
+  }
+
+  ASSERT(parent_write.is_valid());
+  ASSERT(child_read.is_valid());
 
   STARTUPINFO startup_info;
   memset(&startup_info, 0, sizeof(startup_info));
@@ -42,15 +113,65 @@ PROCESS_INFORMATION start_test_executable(const Axle::ViewArr<const char>& self,
   Axle::memcpy_ts(Axle::view_arr(exe_path.path, 0, self.size), self);
   Axle::memcpy_ts(Axle::view_arr(exe_path.path, self.size, exe.size), exe);
 
-  BOOL ret = CreateProcessA(exe_path.c_str(), NULL, NULL, NULL, true, NORMAL_PRIORITY_CLASS, NULL, NULL, &startup_info, &pi);
+  OwnedHandle process_handle;
+  OwnedHandle thread_handle;
 
-  if(ret == 0) {
-    u32 ec = GetLastError();
-    LOG::error("Failed to open process: {}. Error code: {}", exe, ec);
-    return { INVALID_HANDLE_VALUE };
+  {
+    HANDLE save_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
+    HANDLE save_stdin = GetStdHandle(STD_INPUT_HANDLE);
+
+    SetStdHandle(STD_OUTPUT_HANDLE, child_write.h);
+    SetStdHandle(STD_INPUT_HANDLE, child_read.h);
+
+    DEFER(&) {
+      SetStdHandle(STD_OUTPUT_HANDLE, save_stdout);
+      SetStdHandle(STD_INPUT_HANDLE, save_stdin);
+    };
+
+    BOOL ret = CreateProcessA(exe_path.c_str(), NULL, NULL, NULL, true, NORMAL_PRIORITY_CLASS, NULL, NULL, &startup_info, &pi);
+
+    process_handle = std::move(pi.hProcess);
+    thread_handle = std::move(pi.hThread);
+
+    if(ret == 0) {
+      u32 ec = GetLastError();
+      LOG::error("Failed to open process: {}. Error code: {}", exe, ec);
+
+      return {}; 
+    }
   }
 
-  return pi;
+  ChildProcess child = {};
+  child.read_handle = std::move(parent_read);
+  child.write_handle = std::move(parent_write);
+  child.process_handle = std::move(process_handle);
+  child.thread_handle = std::move(thread_handle);
+
+  ASSERT(parent_read.h == INVALID_HANDLE_VALUE);
+  ASSERT(parent_write.h == INVALID_HANDLE_VALUE);
+  ASSERT(process_handle.h == INVALID_HANDLE_VALUE);
+  ASSERT(thread_handle.h == INVALID_HANDLE_VALUE);
+  return child;
+}
+
+static bool expect_valid_header(Axle::Windows::FILES::RawFile in_handle, IPC::Type type) { 
+  IPC::MessageHeader header;
+  if(!Axle::deserialize_le<IPC::MessageHeader>(in_handle, header)) {
+    LOG::error("Header read operation failed");
+    return false;
+  }
+
+  if(header.version != IPC::VERSION) {
+    LOG::error("Incompatable IPC version. Expected: {}, Found: {}", IPC::VERSION, header.version);
+    return false;
+  }
+
+  if(header.type != type) {
+    LOG::error("Expected Type: {}, Found: {}", type, header.type);
+    return false;
+  }
+
+  return true;
 }
 
 struct ReportMessage {
@@ -59,26 +180,30 @@ struct ReportMessage {
 };
 
 static bool expect_report(Axle::Windows::FILES::RawFile in_handle, ReportMessage& out) {
-  Axle::Serializer<Axle::Windows::FILES::RawFile> ser = in_handle;
+  STACKTRACE_FUNCTION();
   
-  const IPC::MessageHeader header = Axle::Serializable<IPC::MessageHeader>::deserialize_le(ser);
-  if(header.version != IPC::VERSION) {
-    LOG::error("Incompatable IPC version. Expected: {}, Found: {}", IPC::VERSION, header.version);
+  if(!expect_valid_header(in_handle, IPC::Type::Report)) {
     return false;
   }
 
-  if(header.type != IPC::Type::Report) {
-    LOG::error("Expected Report Type. Found: {}", static_cast<u32>(header.type));
+  if(!Axle::deserialize_le<IPC::ReportType>(in_handle, out.type)) {
+    LOG::error("Report type read operation failed");
     return false;
   }
 
-  out.type = static_cast<IPC::ReportType>(Axle::Serializable<u32>::deserialize_le(ser));
+  u32 message_len;
+  if(!Axle::deserialize_le<u32>(in_handle, message_len)) {
+    LOG::error("Message len read operation failed");
+    return false;
+  }
 
-  const u32 message_len = Axle::Serializable<u32>::deserialize_le(ser);
- 
   if(message_len > 0) {
     Axle::OwnedArr<char> m = Axle::new_arr<char>(message_len);
-    ser.read_bytes(Axle::cast_arr<u8>(Axle::view_arr(m)));
+    Axle::ViewArr<u8> view = Axle::cast_arr<u8>(Axle::view_arr(m));
+    if(!Axle::deserialize_le<Axle::ViewArr<u8>>(in_handle, view)) {
+      LOG::error("Message read operation failed");
+      return false;
+    }
 
     out.message = std::move(m);
   }
@@ -86,48 +211,95 @@ static bool expect_report(Axle::Windows::FILES::RawFile in_handle, ReportMessage
   return true;
 }
 
-bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe) {
-  HANDLE parent_read = INVALID_HANDLE_VALUE;
-  HANDLE child_write = INVALID_HANDLE_VALUE;
+struct SingleTest {
+  Axle::ViewArr<const char> test_name;
+  Axle::ViewArr<const char> context_name;
+};
 
+struct TestInfo {
+  Axle::OwnedArr<SingleTest> tests;
+  Axle::OwnedArr<const char> strings;
+};
+
+static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& out) {
+  STACKTRACE_FUNCTION();
+  
+  Axle::Serializer<Axle::Windows::FILES::RawFile, Axle::ByteOrder::LittleEndian> ser = {in_handle};
+
+  u32 test_count;
   {
-    SECURITY_ATTRIBUTES inheritable_pipes;
-    inheritable_pipes.nLength = sizeof(inheritable_pipes);
-    inheritable_pipes.lpSecurityDescriptor = NULL;
-    inheritable_pipes.bInheritHandle = true;    
+    IPC::Deserialize::DataT<u32> dt = {test_count};
 
-    if(!CreatePipe(&parent_read, &child_write, &inheritable_pipes, 0)) {
-      LOG::error("Failed to create back communication pipes");
+    if(!Axle::deserialize_le(ser, dt)) {
+      LOG::error("Test count message invalid");
       return false;
     }
   }
 
-  ASSERT(parent_read != INVALID_HANDLE_VALUE);
-  ASSERT(child_write != INVALID_HANDLE_VALUE);
-
-  DEFER(&) {
-    CloseHandle(parent_read);
-    CloseHandle(child_write);
-  };
-
-  HANDLE parent_write = INVALID_HANDLE_VALUE;
-  HANDLE child_read = INVALID_HANDLE_VALUE;
+  u32 strings_size;
   {
-    SECURITY_ATTRIBUTES inheritable_pipes;
-    inheritable_pipes.nLength = sizeof(inheritable_pipes);
-    inheritable_pipes.lpSecurityDescriptor = NULL;
-    inheritable_pipes.bInheritHandle = true;    
+    IPC::Deserialize::DataT<u32> dt = {strings_size};
 
-    if(!CreatePipe(&child_read, &parent_write, &inheritable_pipes, 0)) {
-      LOG::error("Failed to create forwards communication pipes");
+    if(!Axle::deserialize_le(ser, dt)) {
+      LOG::error("Strings size message invalid");
       return false;
     }
   }
 
-  DEFER(&) {
-    CloseHandle(parent_write);
-    CloseHandle(child_read);
-  };
+  Axle::OwnedArr<SingleTest> tests = Axle::new_arr<SingleTest>(test_count);
+  Axle::OwnedArr<char> strings = Axle::new_arr<char>(strings_size);
+  u32 test_id = 0;
+  u32 counter = 0;
+
+  for(u32 i = 0; i < test_id; ++i) {
+    {
+      AxleTest::IPC::MessageHeader header;
+      if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(ser, header)) return false;
+      if(header.version != AxleTest::IPC::VERSION) return false;
+      if(header.type != AxleTest::IPC::Type::Data) return false;
+
+      u32 size;
+      if(!Axle::deserialize_le<u32>(ser, size)) return false;
+    
+      Axle::ViewArr<char> name = view_arr(strings, counter, size);
+      tests[i].test_name = name;
+      counter += size;
+
+      Axle::ViewArr<u8> arr = cast_arr<u8>(name);
+      if(!Axle::deserialize_le<Axle::ViewArr<u8>>(ser, arr)) return false;
+    }
+
+    {
+      AxleTest::IPC::MessageHeader header;
+      if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(ser, header)) return false;
+      if(header.version != AxleTest::IPC::VERSION) return false;
+      if(header.type != AxleTest::IPC::Type::Data) return false;
+
+      u32 size;
+      if(!Axle::deserialize_le<u32>(ser, size)) return false;
+
+      if(size > 0) {
+        Axle::ViewArr<char> name = view_arr(strings, counter, size);
+        tests[i].context_name = name;
+        counter += size;
+
+        Axle::ViewArr<u8> arr = cast_arr<u8>(name);
+        if(!Axle::deserialize_le<Axle::ViewArr<u8>>(ser, arr)) return false;
+      }
+      else {
+        tests[i].context_name = {};
+      }
+    }
+  }
+ 
+  out.tests = std::move(tests);
+  out.strings = std::move(strings);
+  return true;
+}
+bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
+                                const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>&) {
+  STACKTRACE_FUNCTION();
+  
 
   Axle::Windows::NativePath self_dir_holder;
   DWORD self_path_len = GetModuleFileNameA(NULL, self_dir_holder.path, MAX_PATH);
@@ -139,75 +311,56 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe) {
   }
   const Axle::ViewArr<const char> self_path = { self_dir_holder.path, self_path_len };
 
-  PROCESS_INFORMATION pi = start_test_executable(self_path, client_exe, child_write, child_read);
-  
-  if(pi.hProcess == INVALID_HANDLE_VALUE) return false;
 
-  DEFER(&) {
-    if(pi.hThread != INVALID_HANDLE_VALUE) CloseHandle(pi.hThread);
-    if(pi.hProcess != INVALID_HANDLE_VALUE) CloseHandle(pi.hProcess);
-  };
-
-  const Axle::Windows::FILES::RawFile out_handle = {parent_write};
-  const Axle::Windows::FILES::RawFile in_handle = {parent_read};
+  TestInfo test_info;
   
-  Axle::serialize_le(out_handle, IPC::Serialize::Query{});
-  u32 count;
   {
-    const IPC::MessageHeader header = Axle::deserialize_le<IPC::MessageHeader>(in_handle);
-    if(header.version != IPC::VERSION) {
-      LOG::error("Incompatable IPC version. Expected: {}, Found: {}", IPC::VERSION, header.version);
-      return false;
-    }
+    ChildProcess cp = start_test_executable(self_path, client_exe);
+    
+    if(!cp.process_handle.is_valid()) return false;
 
-    switch(header.type) {
-      case IPC::Type::Data: {
-        const auto data_size = Axle::deserialize_le<u32>(in_handle);
-        ASSERT(data_size == 4);
-        count = Axle::deserialize_le<u32>(in_handle);
-        break;
-      }
-      case IPC::Type::Query:
-      case IPC::Type::Execute:
-      case IPC::Type::Report:
-      default: {
-        LOG::error("Expected Data message. Found: {}", static_cast<u32>(header.type));
-        return false;
-      }
+    const Axle::Windows::FILES::RawFile out_handle = {cp.write_handle.h};
+    const Axle::Windows::FILES::RawFile in_handle = {cp.read_handle.h};
+    
+    Axle::serialize_le(out_handle, IPC::Serialize::QueryTestInfo{});
+    if(!expect_test_info(in_handle, test_info)) {
+      LOG::error("Failed to read test info");
+      return false;
     }
   }
 
+  LOG::debug("{} tests found", test_info.tests.size);
+
   struct FailedResult {
-    Axle::OwnedArr<const char> test_name;
+    Axle::ViewArr<const char> test_name;
     Axle::OwnedArr<const char> result_message;
   };
 
   Axle::Array<FailedResult> failed_arr;
 
-  for(u32 i = 0; i < count; ++i) {
-    if(pi.hProcess == INVALID_HANDLE_VALUE) {
-      pi = start_test_executable(self_path, client_exe, child_write, child_read);
-      if(pi.hProcess == INVALID_HANDLE_VALUE) return false;
-    }
+  for(u32 i = 0; i < test_info.tests.size; ++i) {
+    ChildProcess cp = start_test_executable(self_path, client_exe);
+
+    if(!cp.process_handle.is_valid()) return false;
+
+    const Axle::Windows::FILES::RawFile out_handle = {cp.write_handle.h};
+    const Axle::Windows::FILES::RawFile in_handle = {cp.read_handle.h};
 
     Axle::serialize_le(out_handle, IPC::Serialize::Execute{i});
-    
-    ReportMessage start_message;
-    if(!expect_report(in_handle, start_message)) return false;
-    
-    if(start_message.type != IPC::ReportType::Start) {
-      LOG::error("Expected Start message (0). Found: {}", static_cast<u32>(start_message.type));
-      return false;
-    }
 
-    IO::format("{} ...\t", start_message.message);
+    const Axle::ViewArr<const char> test_name = test_info.tests[i].test_name;
+    ASSERT(test_info.tests[i].context_name.size == 0);
+    IO::format("{} ...\t", test_name);
 
     ReportMessage outcome_message;
-    if(!expect_report(in_handle, outcome_message)) return false;
+    if(!expect_report(in_handle, outcome_message)) {
+      failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
+      continue;
+    }
 
     if(outcome_message.type == IPC::ReportType::Failure) {
       IO::print("Failed\n");
-      failed_arr.insert({std::move(start_message.message), std::move(outcome_message.message)});
+      failed_arr.insert({test_name, std::move(outcome_message.message)});
     }
     else if(outcome_message.type == IPC::ReportType::Success) {
       IO::print("Success\n");
@@ -215,12 +368,9 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe) {
     }
     else {
       LOG::error("Unexpected Report Message Type: {}", static_cast<u32>(outcome_message.type));
+      failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
+      continue;
     }
-
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
-    pi.hThread = INVALID_HANDLE_VALUE;
-    pi.hProcess = INVALID_HANDLE_VALUE;
   }
 
   if(failed_arr.size > 0) {

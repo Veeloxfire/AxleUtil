@@ -6,11 +6,6 @@ Axle::Array<AxleTest::UnitTest> &AxleTest::unit_tests_ref() {
   return t;
 }
 
-AxleTest::_testAdder::_testAdder(const Axle::ViewArr<const char> &test_name,
-                                   AxleTest::TEST_FN fn) {
-  unit_tests_ref().insert({test_name, fn});
-}
-
 #ifdef AXLE_TEST_SANITY
 namespace FAIL_TESTS {
   static void report(AxleTest::TestErrors *test_errors) {
@@ -58,31 +53,31 @@ namespace FAIL_TESTS {
 }
 
 template<void(*func)(AxleTest::TestErrors*)>
-void fail_test(AxleTest::TestErrors* errors) {
-  func(errors);
+struct FailTestAdder {
+  static void fail_test(AxleTest::TestErrors* errors, const AxleTest::IPC::OpaqueContext&) {
+    func(errors);
 
-  if (errors->is_panic()) {
-    errors->first_error = Axle::OwnedArr<const char>{};
+    if (errors->is_panic()) {
+      errors->first_error = Axle::OwnedArr<const char>{};
+    }
+    else {
+      errors->first_error = Axle::copy_arr("Fail test didn't fail");
+    }
   }
-  else {
-    errors->first_error = Axle::copy_arr("Fail test didn't fail");
-  }
-}
 
-const AxleTest::_testAdder fail_tests[] = {
-  {Axle::lit_view_arr("FAIL_TESTS::Report Error"), fail_test<FAIL_TESTS::report>},
-  {Axle::lit_view_arr("FAIL_TESTS::TEST_EQ"), fail_test<FAIL_TESTS::test_eq>},
-  {Axle::lit_view_arr("FAIL_TESTS::TEST_NEQ"), fail_test<FAIL_TESTS::test_neq>},
-  {Axle::lit_view_arr("FAIL_TESTS::TEST_EQ pointer"), fail_test<FAIL_TESTS::test_eq_ptr>},
-  {Axle::lit_view_arr("FAIL_TESTS::TEST_NEQ pointer"),
-   fail_test<FAIL_TESTS::test_neq_ptr>},
-  {Axle::lit_view_arr("FAIL_TESTS::TEST_ARR_EQ size"),
-   fail_test<FAIL_TESTS::test_arr_eq_size>},
-  {Axle::lit_view_arr("FAIL_TESTS::TEST_ARR_EQ values"),
-   fail_test<FAIL_TESTS::test_arr_eq_values>},
-  {Axle::lit_view_arr("FAIL_TESTS::TEST_STR_EQ ViewArr"),
-   fail_test<FAIL_TESTS::test_str_eq_view>},
-  {Axle::lit_view_arr("FAIL_TESTS::TEST_STR_EQ Axle::OwnedArr"),
-   fail_test<FAIL_TESTS::test_str_eq_owned>},
+  FailTestAdder(const Axle::ViewArr<const char> &test_name) {
+    AxleTest::unit_tests_ref().insert(AxleTest::UnitTest{test_name, {}, fail_test});
+  }
 };
+
+// Add all the tests
+const FailTestAdder<FAIL_TESTS::report> fail_test_0 {Axle::lit_view_arr("FAIL_TESTS::Report Error")}; 
+const FailTestAdder<FAIL_TESTS::test_eq> fail_test_1 {Axle::lit_view_arr("FAIL_TESTS::TEST_EQ")};
+const FailTestAdder<FAIL_TESTS::test_neq> fail_test_2 {Axle::lit_view_arr("FAIL_TESTS::TEST_NEQ")};
+const FailTestAdder<FAIL_TESTS::test_eq_ptr> fail_test_3 {Axle::lit_view_arr("FAIL_TESTS::TEST_EQ pointer")};
+const FailTestAdder<FAIL_TESTS::test_neq_ptr> fail_test_4 {Axle::lit_view_arr("FAIL_TESTS::TEST_NEQ pointer")};
+const FailTestAdder<FAIL_TESTS::test_arr_eq_size> fail_test_5 {Axle::lit_view_arr("FAIL_TESTS::TEST_ARR_EQ size")};
+const FailTestAdder<FAIL_TESTS::test_arr_eq_values> fail_test_6 {Axle::lit_view_arr("FAIL_TESTS::TEST_ARR_EQ values")};
+const FailTestAdder<FAIL_TESTS::test_str_eq_view> fail_test_7 {Axle::lit_view_arr("FAIL_TESTS::TEST_STR_EQ ViewArr")};
+const FailTestAdder<FAIL_TESTS::test_str_eq_owned> fail_test_8 {Axle::lit_view_arr("FAIL_TESTS::TEST_STR_EQ Axle::OwnedArr")};
 #endif

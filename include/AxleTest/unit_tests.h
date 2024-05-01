@@ -4,6 +4,9 @@
 #include <AxleUtil/format.h>
 #include <AxleUtil/utility.h>
 
+#include <AxleTest/ipc.h>
+#include <bit>
+
 namespace AxleTest {
   using Axle::usize;
 
@@ -22,17 +25,55 @@ namespace AxleTest {
 
     constexpr bool is_panic() const { return first_error.data != nullptr; }
   };
-  using TEST_FN = void(*)(TestErrors* _test_errors);
+
+  using INTERNAL_TEST_FN = void(*)(TestErrors* test_errors, const IPC::OpaqueContext& context);
+
+  template<typename T>
+  using ACTUAL_TEST_FN = void(*)(TestErrors* test_errors, const T* context);
+
 
   struct UnitTest {
     Axle::ViewArr<const char> test_name;
-    TEST_FN test_func;
+    Axle::ViewArr<const char> context_name;
+    INTERNAL_TEST_FN test_func;
   };
 
   Axle::Array<UnitTest>& unit_tests_ref();
 
+  template<typename T>
+  struct ContextName;
+
+  template<void(*TEST_FN)(TestErrors*)>
+  constexpr void call_nocontext_test(TestErrors* errors, const IPC::OpaqueContext& oc) {
+      ASSERT(oc.data.size == 0);
+      ASSERT(oc.name.size == 0);
+      TEST_FN(errors); 
+  }
+
+  template<typename Ctx, void(*TEST_FN)(TestErrors*, const Ctx*)>
+  constexpr void call_context_test(TestErrors* errors, const IPC::OpaqueContext& oc) {
+      ASSERT(oc.data.size == sizeof(Ctx));
+      ASSERT(memeq_ts(oc.name, {ContextName<Ctx>::Name}));
+
+      u8 holder[sizeof(Ctx)] = {};
+      memcpy_ts(view_arr(holder), oc.data);  
+      Ctx ctx = std::bit_cast<Ctx>(holder);
+      TEST_FN(errors, &ctx);
+  }
+
+  
+  template<typename Ctx, void(*TEST_FN)(TestErrors*, const Ctx*)>
   struct _testAdder {
-    _testAdder(const Axle::ViewArr<const char>& test_name, TEST_FN fn);
+    _testAdder(const Axle::ViewArr<const char>& test_name, const Axle::ViewArr<const char>& context_name) {
+      unit_tests_ref().insert({test_name, context_name, call_nocontext_test<TEST_FN>});
+    }
+  };
+  
+  template<void(*TEST_FN)(TestErrors*)>
+  struct _testAdderNoContext {
+    _testAdderNoContext(const Axle::ViewArr<const char> &test_name) {
+      unit_tests_ref().insert({test_name, {}, call_nocontext_test<TEST_FN>});
+    }
   };
 
   template<typename T>
@@ -173,7 +214,9 @@ if (test_errors->is_panic()) return; } while (false)
 AxleTest::test_eq_str(test_errors, __LINE__, Axle::lit_view_arr(#expected), expected, Axle::lit_view_arr(#actual), actual);\
 if (test_errors->is_panic()) return; } while (false)
 
-#define TEST_FUNCTION(space, name) namespace AxleTest:: JOIN(_anon_ns_ ## space, __LINE__) { static void JOIN(_anon_tf_ ## name, __LINE__) (AxleTest::TestErrors*); } static AxleTest::_testAdder JOIN(_test_adder_, __LINE__) = {Axle::lit_view_arr(#space "::" #name), AxleTest:: JOIN( _anon_ns_ ## space, __LINE__) :: JOIN(_anon_tf_ ## name, __LINE__) }; static void AxleTest:: JOIN( _anon_ns_ ## space, __LINE__) :: JOIN(_anon_tf_ ## name, __LINE__) (AxleTest::TestErrors* test_errors)
+#define TEST_FUNCTION_CTX(space, name, ctx_ty) namespace AxleTest:: JOIN(_anon_ns_ ## space, __LINE__) { static void JOIN(_anon_tf_ ## name, __LINE__) (AxleTest::TestErrors*); } static AxleTest::_testAdder<ctx_ty, AxleTest:: JOIN( _anon_ns_ ## space, __LINE__) :: JOIN(_anon_tf_ ## name, __LINE__)> JOIN(_test_adder_, __LINE__) = {Axle::lit_view_arr(#space "::" #name), Axle::lit_view_arr(#ctx_ty) }; static void AxleTest:: JOIN( _anon_ns_ ## space, __LINE__) :: JOIN(_anon_tf_ ## name, __LINE__) (AxleTest::TestErrors* test_errors)
+
+#define TEST_FUNCTION(space, name) namespace AxleTest:: JOIN(_anon_ns_ ## space, __LINE__) { static void JOIN(_anon_tf_ ## name, __LINE__) (AxleTest::TestErrors*); } static AxleTest::_testAdderNoContext<AxleTest:: JOIN( _anon_ns_ ## space, __LINE__) :: JOIN(_anon_tf_ ## name, __LINE__)> JOIN(_test_adder_, __LINE__) = {Axle::lit_view_arr(#space "::" #name) }; static void AxleTest:: JOIN( _anon_ns_ ## space, __LINE__) :: JOIN(_anon_tf_ ## name, __LINE__) (AxleTest::TestErrors* test_errors)
 
 #define TEST_CHECK_ERRORS() do { if(test_errors->is_panic()) return; } while(false)
 

@@ -7,25 +7,20 @@
 
 #include <AxleTest/ipc.h>
 #include <AxleTest/unit_tests.h>
+#include <AxleUtil/option.h>
 
 using namespace Axle::Primitives;
 using Axle::Windows::FILES::RawFile;
 
 static AxleTest::IPC::Serialize::Report report_fail(const Axle::ViewArr<const char>& message) {
   return AxleTest::IPC::Serialize::Report{
-    AxleTest::IPC::ReportType::Failure, message.data, static_cast<u32>(message.size)
-  };
-}
-
-static AxleTest::IPC::Serialize::Report report_start(const Axle::ViewArr<const char>& message) {
-  return AxleTest::IPC::Serialize::Report{
-    AxleTest::IPC::ReportType::Start, message.data, static_cast<u32>(message.size)
+    AxleTest::IPC::ReportType::Failure, message
   };
 }
 
 static AxleTest::IPC::Serialize::Report report_success(const Axle::ViewArr<const char>& message) {
   return AxleTest::IPC::Serialize::Report{
-    AxleTest::IPC::ReportType::Success, message.data, static_cast<u32>(message.size)
+    AxleTest::IPC::ReportType::Success, message
   };
 }
 
@@ -36,6 +31,8 @@ static void client_panic_callback(const void* ud, const Axle::ViewArr<const char
 }
 
 bool AxleTest::IPC::client_main() {
+  STACKTRACE_FUNCTION();
+
   const Axle::Windows::FILES::RawFile out_handle = { GetStdHandle(STD_OUTPUT_HANDLE) };
   const Axle::Windows::FILES::RawFile in_handle = { GetStdHandle(STD_INPUT_HANDLE) };
 
@@ -64,37 +61,67 @@ bool AxleTest::IPC::client_main() {
 
   const auto& unit_tests = AxleTest::unit_tests_ref();
   
-  while(true) {
-    AxleTest::IPC::MessageHeader header = Axle::deserialize_le<AxleTest::IPC::MessageHeader>(in_handle);
-  
+  {
+    STACKTRACE_SCOPE("Communication layer");
+
+    AxleTest::IPC::MessageHeader header;
+    if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(in_handle, header)) {
+      formatted_error("Invalid read");
+      return false;
+    }
+ 
     if(header.version != AxleTest::IPC::VERSION) {
       formatted_error("Incompatible IPC version. Found: {}, Expected: {}", header.version, AxleTest::IPC::VERSION);
       return false;
     }
 
     switch(header.type) {
-      case AxleTest::IPC::Type::Query: {
+      case AxleTest::IPC::Type::QueryTestInfo: {
+        STACKTRACE_SCOPE("QueryTestInfo");
+
         const u32 size = static_cast<u32>(unit_tests.size);
-        u8 arr[Axle::Serializable<u32>::SERIALIZE_SIZE];
-        Axle::serialize_le(arr, size);
-        Axle::serialize_le(out_handle, AxleTest::IPC::Serialize::Data{ arr, Axle::Serializable<u32>::SERIALIZE_SIZE });
-        break;
+          Axle::serialize_le(out_handle, AxleTest::IPC::Serialize::DataT<u32>{ size });
+        {
+          u32 strings_size = 0;
+          FOR(unit_tests, it) {
+            strings_size += static_cast<u32>(it->test_name.size);
+            strings_size += static_cast<u32>(it->context_name.size);
+          }
+
+          Axle::serialize_le(out_handle, AxleTest::IPC::Serialize::DataT<u32>{ strings_size });
+        }
+
+        FOR(unit_tests, it) {
+          Axle::serialize_le(out_handle, AxleTest::IPC::Serialize::Data{ Axle::cast_arr<const u8>(it->test_name) });
+          Axle::serialize_le(out_handle, AxleTest::IPC::Serialize::Data{ Axle::cast_arr<const u8>(it->context_name) });
+        }
+        return true;
       }
 
       case AxleTest::IPC::Type::Execute: {
+        STACKTRACE_SCOPE("Execute");
+
         AxleTest::TestErrors errors;
-        const u32 test_id = Axle::deserialize_le<u32>(in_handle);
-        
+
+        u32 test_id;
+        if(!Axle::deserialize_le<u32>(in_handle, test_id)) {
+          formatted_error("Unexpected read error");
+          return false;
+        }
+
         if(test_id >= static_cast<u32>(unit_tests.size)) {
           formatted_error("Tried to run test {} / {}", test_id, unit_tests.size);
           return false;
         }
 
         const auto& test = unit_tests[test_id];
-        Axle::serialize_le(out_handle, report_start(test.test_name));
+        
+        IPC::OpaqueContext context = {};
+        context.name = test.context_name;
+        context.data = {};
 
         errors.test_name = test.test_name;
-        test.test_func(&errors);
+        test.test_func(&errors, context);
         if(errors.is_panic()) {
           Axle::serialize_le(out_handle, report_fail(Axle::view_arr(errors.first_error)));
         }
