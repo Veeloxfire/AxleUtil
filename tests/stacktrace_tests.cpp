@@ -1,6 +1,8 @@
 #include <AxleTest/unit_tests.h>
 
+#ifndef STACKTRACE_ENABLE
 #define STACKTRACE_ENABLE
+#endif
 #include <AxleUtil/stacktrace.h>
 
 using namespace Axle::Stacktrace;

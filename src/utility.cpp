@@ -3,7 +3,9 @@
 #include <AxleUtil/io.h>
 
 //Always enabled here
+#ifndef STACKTRACE_ENABLE
 #define STACKTRACE_ENABLE
+#endif
 #include <AxleUtil/stacktrace.h>
 
 #include <AxleUtil/os/os_windows.h>
