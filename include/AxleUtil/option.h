@@ -4,10 +4,11 @@
 #include <AxleUtil/safe_lib.h>
 
 namespace Axle {
+struct InPlaceT {};
+
 template<typename T>
 struct Option {
   bool valid = false;
-
 
   union {
     char _placeholder = '\0';
@@ -34,6 +35,9 @@ struct Option {
   
   constexpr Option(const T& t) : valid(true), value(t) {}
   constexpr Option(T&& t) : valid(true), value(std::move(t)) {}
+
+  template<typename ... Args>
+  constexpr Option(InPlaceT, Args&& ... args) : valid(true), value(std::forward<Args>(args)...) {}
   
   constexpr Option& operator=(const T& t) {
     if(!valid) construct_single<T>(&value);
