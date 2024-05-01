@@ -11,8 +11,10 @@
 #include <intrin.h>
 
 namespace Axle {
+volatile u32 thread_id_counter = 1;
+
 bool SpinLockMutex::acquire_if_free() {
-  return _InterlockedCompareExchange8(&held, '\1', '\0') == '\0';
+  return _InterlockedCompareExchange(&held, THREAD_ID.id, 0) == THREAD_ID.id;
 }
 
 void SpinLockMutex::acquire() {
@@ -24,8 +26,8 @@ void SpinLockMutex::acquire() {
 
 void SpinLockMutex::release() {
   STACKTRACE_FUNCTION();
-  char res = _InterlockedCompareExchange8(&held, '\0', '\1');
-  ASSERT(res == '\1');
+  u32 res = _InterlockedCompareExchange(&held, 0, THREAD_ID.id);
+  ASSERT(res == THREAD_ID.id);
 }
 
 void Signal::set() {
@@ -72,6 +74,7 @@ const ThreadHandle* start_thread(THREAD_PROC thread_proc, void* data) {
   info->proc = thread_proc;
 
   handle->handle = CreateThread(NULL, 0, &generic_thread_proc, info, 0, &handle->id);
+  THREAD_ID.id = InterlockedIncrement(&thread_id_counter);
   return handle;
 }
 

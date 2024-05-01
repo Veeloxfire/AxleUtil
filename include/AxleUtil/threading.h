@@ -1,8 +1,16 @@
 #ifndef AXLEUTIL_THREADING_H_
 #define AXLEUTIL_THREADING_H_
+
+#include <AxleUtil/primitives.h>
+
 namespace Axle {
+struct ThreadID {
+  u32 id;
+};
+inline thread_local ThreadID THREAD_ID = {1};
+
 struct SpinLockMutex {
-  volatile char held;
+  volatile u32 held;
 
   void acquire();
   bool acquire_if_free();
