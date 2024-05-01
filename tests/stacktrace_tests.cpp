@@ -12,7 +12,11 @@ static Axle::OwnedArr<char> func3() {
 
   Axle::Array<char> str = {};
   const TraceNode* tn = EXECUTION_TRACE;
+  ASSERT(tn != nullptr);
+  str.concat(tn->name);
+  tn = tn->prev;
   while(tn != nullptr) {
+    str.insert(' ');
     str.concat(tn->name);
     tn = tn->prev;
   }
@@ -32,12 +36,14 @@ static Axle::OwnedArr<char> func1() {
 }
 
 TEST_FUNCTION(Stacktrace, gather) {
-  ASSERT(Axle::Stacktrace::EXECUTION_TRACE == nullptr);
+  ASSERT(Axle::Stacktrace::EXECUTION_TRACE != nullptr);
+  TEST_STR_EQ(Axle::lit_view_arr("Stacktrace::gather"),
+      Axle::Stacktrace::EXECUTION_TRACE->name);
 
   Axle::OwnedArr<char> trace_names = func1();
 
   const Axle::ViewArr<const char> expected = 
-    Axle::lit_view_arr("func3Testfunc1");
+    Axle::lit_view_arr("func3 Test func1 Stacktrace::gather");
 
   TEST_STR_EQ(expected, trace_names);
 }

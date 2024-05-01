@@ -9,6 +9,11 @@
 #include <AxleTest/unit_tests.h>
 #include <AxleUtil/option.h>
 
+#ifndef STACKTRACE_ENABLE
+#define STACKTRACE_ENABLE
+#endif
+#include <AxleUtil/stacktrace.h>
+
 using namespace Axle::Primitives;
 using Axle::Windows::FILES::RawFile;
 
@@ -121,7 +126,23 @@ bool AxleTest::IPC::client_main() {
         context.data = {};
 
         errors.test_name = test.test_name;
-        test.test_func(&errors, context);
+        {
+          // Set the stacktrace so that tests
+          // get a stracktrace of just their name
+          const Axle::Stacktrace::TraceNode* old_base = Axle::Stacktrace::EXECUTION_TRACE;
+          DEFER(old_base) {
+            // Reset to the old stacktrace
+            Axle::Stacktrace::EXECUTION_TRACE = old_base;
+          };
+
+          const Axle::Stacktrace::TraceNode curr_stacktrace = {
+            nullptr, test.test_name,
+          };
+          Axle::Stacktrace::EXECUTION_TRACE = &curr_stacktrace;
+
+          // Run the test finally
+          test.test_func(&errors, context);
+        }
         if(errors.is_panic()) {
           Axle::serialize_le(out_handle, report_fail(Axle::view_arr(errors.first_error)));
         }
