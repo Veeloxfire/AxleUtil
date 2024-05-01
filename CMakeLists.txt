@@ -50,7 +50,7 @@ target_compile_definitions(AxleTestServer PRIVATE AXLE_TEST_CLIENT_EXE="AxleTest
 target_include_directories(AxleUtil PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 if(MSVC)
-  target_compile_options(AxleUtil PUBLIC /W4 /WX)
+  target_compile_options(AxleUtil PUBLIC /W4 /WX /permissive-)
 else()
   target_compile_options(AxleUtil PUBLIC -Wall -Wextra -Wpedantic -Werror)
 endif()
@@ -156,9 +156,6 @@ target_link_libraries(TestClient AxleTestClient)
 add_dependencies(TestServer TestClient)
 
 target_compile_definitions(TestServer PRIVATE AXLE_TEST_CLIENT_EXE="TestClient$<CONFIG>.exe")
-
-
-
 
 foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
   string(TOUPPER ${config_type} config_upper)
