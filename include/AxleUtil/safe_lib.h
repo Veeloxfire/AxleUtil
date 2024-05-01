@@ -108,7 +108,7 @@ constexpr inline void destruct_single(Self<T>* const ptr) {
 
 template<typename T>
 constexpr inline void destruct_single_void(void* const ptr) {
-  std::launder(reinterpret_cast<T*>(ptr))->~T();
+  destruct_single<T>(reinterpret_cast<T*>(ptr));
 }
 
 template<typename T>
