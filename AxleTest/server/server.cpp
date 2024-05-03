@@ -19,36 +19,36 @@ using namespace Axle::Primitives;
 struct OwnedHandle {
   HANDLE h;
   
-  void close() {
+  void close() noexcept {
     if(h != INVALID_HANDLE_VALUE) CloseHandle(h);
     h = INVALID_HANDLE_VALUE;
   }
 
-  bool is_valid() const {
+  bool is_valid() const noexcept  {
     return h != INVALID_HANDLE_VALUE;
   }
 
-  operator HANDLE() && {
+  operator HANDLE() && noexcept {
     return std::exchange(h, INVALID_HANDLE_VALUE);
   }
 
-  OwnedHandle() : h(INVALID_HANDLE_VALUE) {}
-  OwnedHandle(HANDLE&& h_) : h(std::exchange(h_, INVALID_HANDLE_VALUE)) {}
-  OwnedHandle(OwnedHandle&& h_) : h(std::exchange(h_.h, INVALID_HANDLE_VALUE)) {}
+  OwnedHandle() noexcept : h(INVALID_HANDLE_VALUE) {}
+  OwnedHandle(HANDLE&& h_) noexcept : h(std::exchange(h_, INVALID_HANDLE_VALUE)) {}
+  OwnedHandle(OwnedHandle&& h_) noexcept : h(std::exchange(h_.h, INVALID_HANDLE_VALUE)) {}
 
-  OwnedHandle& operator=(HANDLE&& h_) {
+  OwnedHandle& operator=(HANDLE&& h_) noexcept {
     h = std::exchange(h_, INVALID_HANDLE_VALUE);
     return *this;
   }
 
-  OwnedHandle& operator=(OwnedHandle&& h_) {
+  OwnedHandle& operator=(OwnedHandle&& h_) noexcept {
     if(this == &h_) return *this;
 
     h = std::exchange(h_.h, INVALID_HANDLE_VALUE);
     return *this;
   }
   
-  ~OwnedHandle() {
+  ~OwnedHandle() noexcept {
     if(h != INVALID_HANDLE_VALUE) CloseHandle(h);
   }
 };
