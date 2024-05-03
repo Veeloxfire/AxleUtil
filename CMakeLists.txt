@@ -114,7 +114,9 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/threading.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/utility.h"
 
-  "${PROJECT_SOURCE_DIR}/include/AxleUtil/std_formats/compare.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/stdext/compare.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/stdext/string.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/stdext/vector.h"
   
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/os/os_windows.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/os/os_windows_files.h"
@@ -177,7 +179,9 @@ set(TestFiles
   "${PROJECT_SOURCE_DIR}/tests/files_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/math_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/string_tests.cpp"
-  "${PROJECT_SOURCE_DIR}/tests/testing_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/string_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/stdext/string.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/stdext/vector.cpp"
 )
 
 target_sources(TestServer PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_server_main.cpp")

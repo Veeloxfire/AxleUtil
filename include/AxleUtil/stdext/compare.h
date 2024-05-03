@@ -1,3 +1,6 @@
+#ifndef AXLEUTIL_STDEXT_COMPARE_H_
+#define AXLEUTIL_STDEXT_COMPARE_H_
+
 #include <compare>
 
 #include <AxleUtil/formattable.h>
@@ -20,6 +23,7 @@ namespace Axle::Format {
         INVALID_CODE_PATH("Impossible std::strong_ordering value");
       }
     }
-  };
-  
+  }; 
 }
+
+#endif

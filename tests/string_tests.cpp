@@ -1,7 +1,7 @@
 #include <AxleTest/unit_tests.h>
 
 #include <AxleUtil/strings.h>
-#include <AxleUtil/std_formats/compare.h>
+#include <AxleUtil/stdext/compare.h>
 
 using namespace Axle;
 
