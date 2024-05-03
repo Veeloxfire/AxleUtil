@@ -100,6 +100,33 @@ ChildProcess start_test_executable(const Axle::ViewArr<const char>& self,
 
   ASSERT(parent_write.is_valid());
   ASSERT(child_read.is_valid());
+ 
+  {
+    COMMTIMEOUTS pipe_timeouts={};
+    pipe_timeouts.ReadIntervalTimeout = MAXDWORD;
+    pipe_timeouts.ReadTotalTimeoutMultiplier = 0;
+    pipe_timeouts.ReadTotalTimeoutConstant = 1000;// 1 second allowed for operations
+    pipe_timeouts.WriteTotalTimeoutMultiplier = 0;
+    pipe_timeouts.WriteTotalTimeoutConstant = 1000;// 1 second allowed for operations
+
+    if(!SetCommTimeouts(parent_read.h, &pipe_timeouts)) {
+      LOG::error("Failed to set timeouts");
+      return {};
+    }
+
+    if(!SetCommTimeouts(child_write.h, &pipe_timeouts)) {
+      LOG::error("Failed to set timeouts");
+      return {};
+    }
+    if(!SetCommTimeouts(parent_write.h, &pipe_timeouts)) {
+      LOG::error("Failed to set timeouts");
+      return {};
+    }
+    if(!SetCommTimeouts(child_read.h, &pipe_timeouts)) {
+      LOG::error("Failed to set timeouts");
+      return {};
+    }
+  }
 
   STARTUPINFO startup_info;
   memset(&startup_info, 0, sizeof(startup_info));
