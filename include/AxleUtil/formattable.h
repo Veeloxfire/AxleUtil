@@ -19,6 +19,10 @@ struct DisplayString {
   usize size;
 };
 
+struct CString {
+  const char* str;
+};
+
 struct PrintPtr {
   const void* ptr;
 };
@@ -134,6 +138,18 @@ namespace Format {
     constexpr static void load_string(F& res, const DisplayString& ds) {
       for (usize i = 0; i < ds.size; ++i) {
         FormatArg<DisplayChar>::load_string(res, DisplayChar{ ds.arr[i] });
+      }
+    }
+  };
+
+  template<>
+  struct FormatArg<CString> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, CString cstr) {
+      const char* s = cstr.str;
+      while (*s != '\0') {
+        res.load_char(*s);
+        s += 1;
       }
     }
   };

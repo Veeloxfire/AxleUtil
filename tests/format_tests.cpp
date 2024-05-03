@@ -18,6 +18,13 @@ TEST_FUNCTION(ArrayFormat, strings) {
   TEST_STR_EQ(expected, arr);
 }
 
+TEST_FUNCTION(FormatArg, c_string) {
+  const ViewArr<const char> expected = lit_view_arr("hello world");
+  OwnedArr<const char> arr = format("hello {}", CString{"world"});
+
+  TEST_STR_EQ(expected, arr);
+}
+
 void test_all_valid_signed_ints(AxleTest::TestErrors* test_errors, const ViewArr<const char>& expected, i64 i) {
   if(SCHAR_MAX >= i && i >= SCHAR_MIN) {
     OwnedArr<const char> sc123 = format("{}", (signed char)i);
