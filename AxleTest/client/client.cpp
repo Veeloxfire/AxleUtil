@@ -17,6 +17,11 @@
 using namespace Axle::Primitives;
 using Axle::Windows::FILES::RawFile;
 
+Axle::Array<AxleTest::UnitTest> &AxleTest::unit_tests_ref() {
+  static Axle::Array<AxleTest::UnitTest> t = {};
+  return t;
+}
+
 static AxleTest::IPC::Serialize::Report report_fail(const Axle::ViewArr<const char>& message) {
   return AxleTest::IPC::Serialize::Report{
     AxleTest::IPC::ReportType::Failure, message
@@ -120,10 +125,38 @@ bool AxleTest::IPC::client_main() {
         }
 
         const auto& test = unit_tests[test_id];
-        
+
+        Axle::OwnedArr<u8> maybe_context;
+
+        if(test.context_name.data != nullptr) {
+          AxleTest::IPC::MessageHeader data_header;
+          if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(in_handle, data_header)) {
+            formatted_error("Unexpected read error");
+            return false;
+          }
+
+          if(data_header.version != AxleTest::IPC::VERSION || data_header.type != AxleTest::IPC::Type::Data) {
+            formatted_error("Unexpected header. Version: {}, Type: {}", data_header.version, data_header.type);
+            return false;
+          }
+
+          u32 size;
+          if(!Axle::deserialize_le<u32>(in_handle, size)) {
+            formatted_error("Unexpected read error");
+            return false;
+          }
+
+          maybe_context = Axle::new_arr<u8>(size);
+          Axle::ViewArr<u8> out_data = Axle::view_arr(maybe_context);
+          if(!Axle::deserialize_le<Axle::ViewArr<u8>>(in_handle, out_data)) {
+            formatted_error("Unexpected read error");
+            return false;
+          }
+        }
+
         IPC::OpaqueContext context = {};
         context.name = test.context_name;
-        context.data = {};
+        context.data = Axle::view_arr(maybe_context);
 
         errors.test_name = test.test_name;
         {

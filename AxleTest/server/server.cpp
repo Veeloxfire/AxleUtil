@@ -325,7 +325,7 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
   return true;
 }
 bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
-                                const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>&) {
+                                const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>& contexts) {
   STACKTRACE_FUNCTION();
 
   Axle::Windows::NativePath self_dir_holder;
@@ -366,21 +366,50 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
   Axle::Array<FailedResult> failed_arr;
 
   for(u32 i = 0; i < test_info.tests.size; ++i) {
+    const Axle::ViewArr<const char> test_name = test_info.tests[i].test_name;
+    const Axle::ViewArr<const char> context_name = test_info.tests[i].context_name;
+    Axle::ViewArr<const u8> ctx_data = {};
+    if(context_name.data != nullptr) {
+      IO::format("{} ({}) ...\t", test_name, context_name);
+
+      FOR(contexts, c_it) {
+        if(Axle::memeq_ts(c_it->name, context_name)) {
+          ctx_data = c_it->data;
+          break;
+        }
+      }
+
+      if(ctx_data.data == nullptr) {
+        IO::print("Failed\n");
+        failed_arr.insert({test_name, Axle::format("Invalid context type: {}", context_name)});
+        continue;
+      }
+    }
+    else { 
+      IO::format("{} ...\t", test_name);
+    }
+
     ChildProcess cp = start_test_executable(self_path, client_exe);
 
-    if(!cp.process_handle.is_valid()) return false;
+    if(!cp.process_handle.is_valid()) {
+      IO::print("Failed\n");
+      failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
+      continue;
+    }
 
     const Axle::Windows::FILES::RawFile out_handle = {cp.write_handle.h};
     const Axle::Windows::FILES::RawFile in_handle = {cp.read_handle.h};
 
     Axle::serialize_le(out_handle, IPC::Serialize::Execute{i});
 
-    const Axle::ViewArr<const char> test_name = test_info.tests[i].test_name;
-    ASSERT(test_info.tests[i].context_name.size == 0);
-    IO::format("{} ...\t", test_name);
-
+    if(context_name.data != nullptr) {
+      ASSERT(ctx_data.size > 0);
+      Axle::serialize_le(out_handle, IPC::Serialize::Data{ctx_data});
+    }
+    
     ReportMessage outcome_message;
     if(!expect_report(in_handle, outcome_message)) {
+      IO::print("Failed\n");
       failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
       continue;
     }
@@ -394,8 +423,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       ASSERT(outcome_message.message.size == 0);
     }
     else {
-      LOG::error("Unexpected Report Message Type: {}", static_cast<u32>(outcome_message.type));
-      failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
+      failed_arr.insert({test_name, Axle::format("Unexpected Report Message Type: {}", outcome_message.type)});
       continue;
     }
   }

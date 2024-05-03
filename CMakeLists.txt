@@ -55,6 +55,8 @@ else()
   target_compile_options(AxleUtil PUBLIC -Wall -Wextra -Wpedantic -Werror)
 endif()
 
+target_compile_definitions(AxleUtil PUBLIC STACKTRACE_ENABLE)
+
 option(AxleTRACING "Enable execution tracing" OFF)
 if(AxleTRACING)
   target_compile_definitions(AxleUtil PUBLIC TRACING_ENABLE AXLE_TRACING)
@@ -92,7 +94,6 @@ set(UtilSourceFiles
 
 set(TestClientFiles
   "${PROJECT_SOURCE_DIR}/AxleTest/client/client.cpp"
-  "${PROJECT_SOURCE_DIR}/AxleTest/client/unit_tests.cpp"
 )
 
 set(TestServerFiles
@@ -176,6 +177,7 @@ set(TestFiles
   "${PROJECT_SOURCE_DIR}/tests/files_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/math_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/string_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/testing_tests.cpp"
 )
 
 target_sources(TestServer PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_server_main.cpp")

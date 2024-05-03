@@ -4,11 +4,21 @@
 #include <AxleUtil/serialize.h>
 #include <AxleUtil/formattable.h>
 
-namespace AxleTest::IPC {
-  struct OpaqueContext {
-    Axle::ViewArr<const u8> data;
-    Axle::ViewArr<const char> name;
+namespace AxleTest::IPC { 
+  template<typename T>
+  struct ContextName {
+    static_assert(Axle::DependentFalse<T>::value, "Unspecialized Context Name");
   };
+
+  struct OpaqueContext {
+    Axle::ViewArr<const char> name;
+    Axle::ViewArr<const u8> data;
+  };
+
+  template<typename T>
+  OpaqueContext as_context(const T& t) {
+    return { ContextName<T>::NAME, Axle::cast_arr<const u8, const T>({&t, 1}) };
+  }
 
   bool server_main(const Axle::ViewArr<const char>& client_exe,
                    const Axle::ViewArr<const OpaqueContext>& contexts);

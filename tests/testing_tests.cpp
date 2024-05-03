@@ -1,12 +1,19 @@
 #include <AxleTest/unit_tests.h>
-#include <AxleUtil/io.h>
+#include "test_contexts.h"
 
-Axle::Array<AxleTest::UnitTest> &AxleTest::unit_tests_ref() {
-  static Axle::Array<AxleTest::UnitTest> t = {};
-  return t;
+TEST_FUNCTION(AxleTest, always_pass) {
+  (void)test_errors;
 }
 
-#ifdef AXLE_TEST_SANITY
+TEST_FUNCTION_CTX(AxleTest, recieves_context, TestContexts::Integer) {
+  TEST_EQ(static_cast<u32>(0x1234), context->i);
+}
+
+TEST_FUNCTION(AxleTest, loop) {
+  volatile unsigned int i = 0;
+  while(true) { i += 1; }
+}
+
 namespace FAIL_TESTS {
   static void report(AxleTest::TestErrors *test_errors) {
     test_errors->report_error("Should have errored");
@@ -80,4 +87,4 @@ const FailTestAdder<FAIL_TESTS::test_arr_eq_size> fail_test_5 {Axle::lit_view_ar
 const FailTestAdder<FAIL_TESTS::test_arr_eq_values> fail_test_6 {Axle::lit_view_arr("FAIL_TESTS::TEST_ARR_EQ values")};
 const FailTestAdder<FAIL_TESTS::test_str_eq_view> fail_test_7 {Axle::lit_view_arr("FAIL_TESTS::TEST_STR_EQ ViewArr")};
 const FailTestAdder<FAIL_TESTS::test_str_eq_owned> fail_test_8 {Axle::lit_view_arr("FAIL_TESTS::TEST_STR_EQ Axle::OwnedArr")};
-#endif
+

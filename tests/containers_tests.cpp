@@ -480,6 +480,16 @@ TEST_FUNCTION(Util_ViewArr, memeq_ViewArray) {
 
   TEST_EQ(false, memeq_ts(view_arr(dest), view_arr(dest, 1, 1)));
   TEST_EQ(false, memeq_ts(view_arr(dest), view_arr(dest, 0, 1)));
+
+  {
+    int arr_mut[1] = {1};
+    const int arr_const[1] = {1};
+
+    TEST_EQ(true, memeq_ts<int>(view_arr(arr_mut), view_arr(arr_const)));
+    TEST_EQ(true, memeq_ts<int>(view_arr(arr_const), view_arr(arr_mut)));
+    TEST_EQ(true, memeq_ts<int>(view_arr(arr_mut), view_arr(arr_mut)));
+    TEST_EQ(true, memeq_ts<int>(view_arr(arr_const), view_arr(arr_const)));
+  }
 }
 
 TEST_FUNCTION(Util, freelist_block_allocator) {
