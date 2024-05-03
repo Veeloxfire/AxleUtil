@@ -3,7 +3,7 @@
 
 using namespace Axle;
 
-TEST_FUNCTION(ArrayFormat, syntax) {
+TEST_FUNCTION(Formatters, syntax) {
   const ViewArr<const char> expected = lit_view_arr("hello {} world {}");
   OwnedArr<const char> arr = format("hello {{}} {} {{}}", lit_view_arr("world"));
 
@@ -11,7 +11,7 @@ TEST_FUNCTION(ArrayFormat, syntax) {
 
 }
 
-TEST_FUNCTION(ArrayFormat, strings) {
+TEST_FUNCTION(FormatArg, strings) {
   const ViewArr<const char> expected = lit_view_arr("hello world");
   OwnedArr<const char> arr = format("hello {}", lit_view_arr("world"));
 
@@ -79,7 +79,7 @@ void test_all_valid_unsigned_ints(AxleTest::TestErrors* test_errors, const ViewA
   }
 }
 
-TEST_FUNCTION(ArrayFormat, ints) {
+TEST_FUNCTION(FormatArg, ints) {
   {
     const ViewArr<const char> expected = lit_view_arr("0");
     test_all_valid_signed_ints(test_errors, expected, 0);
@@ -212,7 +212,7 @@ TEST_FUNCTION(ArrayFormat, ints) {
   }
 }
 
-TEST_FUNCTION(ArrayFormat, HexInt) {
+TEST_FUNCTION(FormatArg, HexInt) {
   {
     const ViewArr<const char> expected = lit_view_arr("0xAB");
     OwnedArr<const char> actual = format("{}", Format::Hex<u8>{0xab});
@@ -238,7 +238,7 @@ TEST_FUNCTION(ArrayFormat, HexInt) {
   }
 }
 
-TEST_FUNCTION(FloatFormat, Floats) {
+TEST_FUNCTION(FormatArg, Floats) {
   {
     float f = 0.0f;
     const ViewArr<const char> expected = lit_view_arr("0");
@@ -255,7 +255,7 @@ TEST_FUNCTION(FloatFormat, Floats) {
   }
 }
 
-TEST_FUNCTION(FloatFormat, Double) {
+TEST_FUNCTION(FormatArg, Double) {
   {
     double d = 0.0;
     const ViewArr<const char> expected = lit_view_arr("0");
