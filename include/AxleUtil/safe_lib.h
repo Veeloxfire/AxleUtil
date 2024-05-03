@@ -381,8 +381,14 @@ template<
 template<typename T, typename U>
 [[nodiscard]] ViewArr<T> cast_arr(const ViewArr<U>& arr) {
   static_assert(std::is_trivial_v<T> && std::is_trivial_v<U>);
-  static_assert(sizeof(T) % sizeof(U) == 0);
-  return { reinterpret_cast<T*>(arr.data), arr.size / sizeof(U) };
+  if constexpr (sizeof(T) >= sizeof(U)) {
+    static_assert(sizeof(T) % sizeof(U) == 0);
+    return { reinterpret_cast<T*>(arr.data), arr.size / sizeof(U) };
+  }
+  else {
+    static_assert(sizeof(U) % sizeof(T) == 0);
+    return { reinterpret_cast<T*>(arr.data), arr.size * sizeof(U) };
+  }
 }
 
 template<typename T, size_t size>
