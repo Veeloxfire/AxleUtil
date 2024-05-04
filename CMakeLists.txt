@@ -179,7 +179,7 @@ set(TestFiles
   "${PROJECT_SOURCE_DIR}/tests/files_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/math_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/string_tests.cpp"
-  "${PROJECT_SOURCE_DIR}/tests/string_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/testing_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/stdext/string.cpp"
   "${PROJECT_SOURCE_DIR}/tests/stdext/vector.cpp"
 )

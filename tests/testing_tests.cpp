@@ -12,6 +12,8 @@ TEST_FUNCTION_CTX(AxleTest, recieves_context, TestContexts::Integer) {
 TEST_FUNCTION(AxleTest, loop) {
   volatile unsigned int i = 0;
   while(true) { i += 1; }
+
+  test_errors->report_error("Should have infinite looped");
 }
 
 namespace FAIL_TESTS {
