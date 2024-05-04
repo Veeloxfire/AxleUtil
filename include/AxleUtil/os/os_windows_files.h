@@ -24,11 +24,35 @@ namespace Axle::Windows::FILES {
   struct RawFile {
     HANDLE handle;
   };
+
+  struct TimeoutFile {
+    HANDLE handle;
+    u32 timeout;
+  };
 }
 
 namespace Axle {
   template<ByteOrder Ord>
   struct Serializer<Axle::Windows::FILES::RawFile, Ord> {
+    Axle::Windows::FILES::RawFile rf;
+    constexpr Serializer(Axle::Windows::FILES::RawFile h) : rf{h} {}
+
+    inline bool read_bytes(const ViewArr<u8>& bytes) {
+      DWORD read = 0;
+      BOOL res = ReadFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &read, NULL);
+      return (res != 0 && static_cast<usize>(read) == bytes.size);
+    }
+
+    inline void write_bytes(const ViewArr<const u8>& bytes) {
+      DWORD written = 0;
+      BOOL res = WriteFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &written, NULL); 
+      ASSERT(res != 0);
+      ASSERT(written == bytes.size);
+    }
+  };
+
+  template<ByteOrder Ord>
+  struct Serializer<Axle::Windows::FILES::TimeoutFile, Ord> {
     Axle::Windows::FILES::RawFile rf;
     constexpr Serializer(Axle::Windows::FILES::RawFile h) : rf{h} {}
 
