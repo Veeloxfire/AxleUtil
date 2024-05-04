@@ -22,5 +22,5 @@ TEST_FUNCTION(stdext_string, fmt) {
   const std::string world = "world";
   Axle::OwnedArr<const char> arr = Axle::format("{} {}", hello, world);
 
-  TEST_STR_EQ("hello world", arr);
+  TEST_STR_EQ(Axle::lit_view_arr("hello world"), arr);
 }
