@@ -90,7 +90,6 @@ template<typename S>
 static bool expect_valid_header(S&& serializer, IPC::Type type) { 
   IPC::MessageHeader header;
   if(!Axle::deserialize_le<IPC::MessageHeader>(std::forward<S>(serializer), header)) {
-    LOG::error("Header read operation failed");
     return false;
   }
 
