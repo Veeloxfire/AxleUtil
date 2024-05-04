@@ -53,8 +53,8 @@ namespace Axle {
 
   template<ByteOrder Ord>
   struct Serializer<Axle::Windows::FILES::TimeoutFile, Ord> {
-    Axle::Windows::FILES::RawFile rf;
-    constexpr Serializer(Axle::Windows::FILES::RawFile h) : rf{h} {}
+    Axle::Windows::FILES::TimeoutFile rf;
+    constexpr Serializer(Axle::Windows::FILES::TimeoutFile h) : rf{h} {}
 
     inline bool read_bytes(const ViewArr<u8>& bytes) {
       DWORD read = 0;
