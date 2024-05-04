@@ -20,6 +20,8 @@ namespace AxleTest::IPC {
     return { ContextName<T>::NAME, Axle::cast_arr<const u8, const T>({&t, 1}) };
   }
 
+  constexpr inline const char PIPE_NAME[] = "\\\\.\\pipe\\AxleTestServer";
+
   bool server_main(const Axle::ViewArr<const char>& client_exe,
                    const Axle::ViewArr<const OpaqueContext>& contexts);
   bool client_main();

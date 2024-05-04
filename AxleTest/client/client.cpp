@@ -15,7 +15,8 @@
 #include <AxleUtil/stacktrace.h>
 
 using namespace Axle::Primitives;
-using Axle::Windows::FILES::RawFile;
+namespace Windows = Axle::Windows;
+using Windows::FILES::RawFile;
 
 Axle::Array<AxleTest::UnitTest> &AxleTest::unit_tests_ref() {
   static Axle::Array<AxleTest::UnitTest> t = {};
@@ -43,29 +44,17 @@ static void client_panic_callback(const void* ud, const Axle::ViewArr<const char
 bool AxleTest::IPC::client_main() {
   STACKTRACE_FUNCTION();
 
-  const Axle::Windows::FILES::RawFile out_handle = { GetStdHandle(STD_OUTPUT_HANDLE) };
-  const Axle::Windows::FILES::RawFile in_handle = { GetStdHandle(STD_INPUT_HANDLE) };
+  Windows::OwnedHandle pipe_handle_holder = CreateFileA(AxleTest::IPC::PIPE_NAME, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+  ASSERT(pipe_handle_holder.is_valid());
+  
+  const RawFile out_handle = { pipe_handle_holder.h };
+  const RawFile in_handle = { pipe_handle_holder.h };
 
   const auto formatted_error = [out_handle](Axle::Format::FormatString fs, const auto& ... args) {
     const Axle::OwnedArr<const char> message = Axle::format(fs, args...);
     Axle::serialize_le(out_handle, report_fail(Axle::view_arr(message)));
   };
-
-  HANDLE con_out = CreateFile("CONOUT$", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
-  HANDLE con_in = CreateFile("CONIN$", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL);
-
-  if(con_out == INVALID_HANDLE_VALUE) {
-    formatted_error("Could not connect CONOUT$");
-    return false;
-  }
-
-  if(con_in == INVALID_HANDLE_VALUE) {
-    formatted_error("Could not connect CONIN$");
-    return false;
-  }
-
-  SetStdHandle(STD_OUTPUT_HANDLE, con_out);
-  SetStdHandle(STD_INPUT_HANDLE, con_in);
 
   Axle::Panic::set_panic_callback(&out_handle, client_panic_callback);
 

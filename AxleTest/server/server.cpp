@@ -13,120 +13,43 @@
 namespace LOG = Axle::LOG;
 namespace IPC = AxleTest::IPC;
 namespace IO = Axle::IO;
+namespace Windows = Axle::Windows;
 
 using namespace Axle::Primitives;
 
-struct OwnedHandle {
-  HANDLE h;
-  
-  void close() noexcept {
-    if(h != INVALID_HANDLE_VALUE) CloseHandle(h);
-    h = INVALID_HANDLE_VALUE;
-  }
 
-  bool is_valid() const noexcept  {
-    return h != INVALID_HANDLE_VALUE;
-  }
-
-  operator HANDLE() && noexcept {
-    return std::exchange(h, INVALID_HANDLE_VALUE);
-  }
-
-  OwnedHandle() noexcept : h(INVALID_HANDLE_VALUE) {}
-  OwnedHandle(HANDLE&& h_) noexcept : h(std::exchange(h_, INVALID_HANDLE_VALUE)) {}
-  OwnedHandle(OwnedHandle&& h_) noexcept : h(std::exchange(h_.h, INVALID_HANDLE_VALUE)) {}
-
-  OwnedHandle& operator=(HANDLE&& h_) noexcept {
-    h = std::exchange(h_, INVALID_HANDLE_VALUE);
-    return *this;
-  }
-
-  OwnedHandle& operator=(OwnedHandle&& h_) noexcept {
-    if(this == &h_) return *this;
-
-    h = std::exchange(h_.h, INVALID_HANDLE_VALUE);
-    return *this;
-  }
-  
-  ~OwnedHandle() noexcept {
-    if(h != INVALID_HANDLE_VALUE) CloseHandle(h);
-  }
-};
 
 struct ChildProcess {
-  OwnedHandle write_handle;
-  OwnedHandle read_handle;
+  Windows::OwnedHandle pipe_handle;
 
-  OwnedHandle process_handle;
-  OwnedHandle thread_handle;
+  Windows::OwnedHandle process_handle;
+  Windows::OwnedHandle thread_handle;
 };
 
 ChildProcess start_test_executable(const Axle::ViewArr<const char>& self, 
                                    const Axle::ViewArr<const char>& exe) {
   STACKTRACE_FUNCTION();
   
-  OwnedHandle parent_read;
-  OwnedHandle child_write;
+  Windows::OwnedHandle pipe;
 
   {
     SECURITY_ATTRIBUTES inheritable_pipes;
     inheritable_pipes.nLength = sizeof(inheritable_pipes);
     inheritable_pipes.lpSecurityDescriptor = NULL;
-    inheritable_pipes.bInheritHandle = true;    
+    inheritable_pipes.bInheritHandle = true;
 
-    if(!CreatePipe(&parent_read.h, &child_write.h, &inheritable_pipes, 0)) {
-      LOG::error("Failed to create back communication pipes");
+    pipe = CreateNamedPipeA(AxleTest::IPC::PIPE_NAME, PIPE_ACCESS_DUPLEX,
+        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE, PIPE_UNLIMITED_INSTANCES, 0, 0,
+        NMPWAIT_USE_DEFAULT_WAIT, &inheritable_pipes);
+
+    if(!pipe.is_valid()) {
+      LOG::error("Failed to create communication pipe");
       return {};
     }
   }
 
-  ASSERT(parent_read.is_valid());
-  ASSERT(child_write.is_valid());
 
-  OwnedHandle parent_write;
-  OwnedHandle child_read;
-  {
-    SECURITY_ATTRIBUTES inheritable_pipes;
-    inheritable_pipes.nLength = sizeof(inheritable_pipes);
-    inheritable_pipes.lpSecurityDescriptor = NULL;
-
-    inheritable_pipes.bInheritHandle = true;    
-
-    if(!CreatePipe(&child_read.h, &parent_write.h, &inheritable_pipes, 0)) {
-      LOG::error("Failed to create forwards communication pipes");
-      return {}; 
-    }
-  }
-
-  ASSERT(parent_write.is_valid());
-  ASSERT(child_read.is_valid());
- 
-  {
-    COMMTIMEOUTS pipe_timeouts={};
-    pipe_timeouts.ReadIntervalTimeout = MAXDWORD;
-    pipe_timeouts.ReadTotalTimeoutMultiplier = 0;
-    pipe_timeouts.ReadTotalTimeoutConstant = 1000;// 1 second allowed for operations
-    pipe_timeouts.WriteTotalTimeoutMultiplier = 0;
-    pipe_timeouts.WriteTotalTimeoutConstant = 1000;// 1 second allowed for operations
-
-    if(!SetCommTimeouts(parent_read.h, &pipe_timeouts)) {
-      LOG::error("Failed to set timeouts");
-      return {};
-    }
-
-    if(!SetCommTimeouts(child_write.h, &pipe_timeouts)) {
-      LOG::error("Failed to set timeouts");
-      return {};
-    }
-    if(!SetCommTimeouts(parent_write.h, &pipe_timeouts)) {
-      LOG::error("Failed to set timeouts");
-      return {};
-    }
-    if(!SetCommTimeouts(child_read.h, &pipe_timeouts)) {
-      LOG::error("Failed to set timeouts");
-      return {};
-    }
-  }
+  ASSERT(pipe.is_valid());
 
   STARTUPINFO startup_info;
   memset(&startup_info, 0, sizeof(startup_info));
@@ -140,42 +63,24 @@ ChildProcess start_test_executable(const Axle::ViewArr<const char>& self,
   Axle::memcpy_ts(Axle::view_arr(exe_path.path, 0, self.size), self);
   Axle::memcpy_ts(Axle::view_arr(exe_path.path, self.size, exe.size), exe);
 
-  OwnedHandle process_handle;
-  OwnedHandle thread_handle;
+  BOOL ret = CreateProcessA(exe_path.c_str(), NULL, NULL, NULL, true, NORMAL_PRIORITY_CLASS, NULL, NULL, &startup_info, &pi);
 
-  {
-    HANDLE save_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    HANDLE save_stdin = GetStdHandle(STD_INPUT_HANDLE);
+  Windows::OwnedHandle process_handle = std::move(pi.hProcess);
+  Windows::OwnedHandle thread_handle = std::move(pi.hThread);
 
-    SetStdHandle(STD_OUTPUT_HANDLE, child_write.h);
-    SetStdHandle(STD_INPUT_HANDLE, child_read.h);
+  if(ret == 0) {
+    u32 ec = GetLastError();
+    LOG::error("Failed to open process: {}. Error code: {}", exe, ec);
 
-    DEFER(&) {
-      SetStdHandle(STD_OUTPUT_HANDLE, save_stdout);
-      SetStdHandle(STD_INPUT_HANDLE, save_stdin);
-    };
-
-    BOOL ret = CreateProcessA(exe_path.c_str(), NULL, NULL, NULL, true, NORMAL_PRIORITY_CLASS, NULL, NULL, &startup_info, &pi);
-
-    process_handle = std::move(pi.hProcess);
-    thread_handle = std::move(pi.hThread);
-
-    if(ret == 0) {
-      u32 ec = GetLastError();
-      LOG::error("Failed to open process: {}. Error code: {}", exe, ec);
-
-      return {}; 
-    }
+    return {}; 
   }
 
   ChildProcess child = {};
-  child.read_handle = std::move(parent_read);
-  child.write_handle = std::move(parent_write);
+  child.pipe_handle = std::move(pipe);
   child.process_handle = std::move(process_handle);
   child.thread_handle = std::move(thread_handle);
 
-  ASSERT(parent_read.h == INVALID_HANDLE_VALUE);
-  ASSERT(parent_write.h == INVALID_HANDLE_VALUE);
+  ASSERT(pipe.h == INVALID_HANDLE_VALUE);
   ASSERT(process_handle.h == INVALID_HANDLE_VALUE);
   ASSERT(thread_handle.h == INVALID_HANDLE_VALUE);
   return child;
@@ -346,8 +251,21 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     
     if(!cp.process_handle.is_valid()) return false;
 
-    const Axle::Windows::FILES::RawFile out_handle = {cp.write_handle.h};
-    const Axle::Windows::FILES::RawFile in_handle = {cp.read_handle.h};
+
+    if(!ConnectNamedPipe(cp.pipe_handle.h, NULL)) {
+      DWORD err = GetLastError();
+      if(err != ERROR_PIPE_CONNECTED) {
+        LOG::error("Pipe connection error");
+        return false;
+      }
+    }
+
+    DEFER(handle = cp.pipe_handle.h) {
+      DisconnectNamedPipe(handle);
+    };
+
+    const Axle::Windows::FILES::RawFile out_handle = {cp.pipe_handle.h};
+    const Axle::Windows::FILES::RawFile in_handle = {cp.pipe_handle.h};
     
     Axle::serialize_le(out_handle, IPC::Serialize::QueryTestInfo{});
     if(!expect_test_info(in_handle, test_info)) {
@@ -397,8 +315,20 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       continue;
     }
 
-    const Axle::Windows::FILES::RawFile out_handle = {cp.write_handle.h};
-    const Axle::Windows::FILES::RawFile in_handle = {cp.read_handle.h};
+    if(!ConnectNamedPipe(cp.pipe_handle.h, NULL)) {
+      DWORD err = GetLastError();
+      if(err != ERROR_PIPE_CONNECTED) {
+        LOG::error("Pipe connection error");
+        continue;
+      }
+    }
+
+    DEFER(handle = cp.pipe_handle.h) {
+      DisconnectNamedPipe(handle);
+    };
+
+    const Axle::Windows::FILES::RawFile out_handle = {cp.pipe_handle.h};
+    const Axle::Windows::FILES::RawFile in_handle = {cp.pipe_handle.h};
 
     Axle::serialize_le(out_handle, IPC::Serialize::Execute{i});
 

@@ -104,8 +104,7 @@
 #undef STRICT
 
 #include <AxleUtil/safe_lib.h>
-namespace Axle {
-namespace Windows {
+namespace Axle::Windows {
   template<typename T> 
   struct VirtualPtr {
     T* ptr = nullptr;
@@ -160,7 +159,24 @@ namespace Windows {
 
   NativePath get_current_directory();
   void set_current_directory(const ViewArr<const char>& str);
-}
+
+  struct OwnedHandle {
+    HANDLE h;
+
+    void close() noexcept;
+    bool is_valid() const noexcept;
+
+    operator HANDLE() && noexcept;
+
+    OwnedHandle() noexcept;
+    OwnedHandle(HANDLE&& h_) noexcept;
+    OwnedHandle(OwnedHandle&& h_) noexcept;
+
+    OwnedHandle& operator=(HANDLE&& h_) noexcept;
+    OwnedHandle& operator=(OwnedHandle&& h_) noexcept;
+  
+    ~OwnedHandle() noexcept;
+  };
 }
 
 #endif
