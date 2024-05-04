@@ -86,9 +86,10 @@ ChildProcess start_test_executable(const Axle::ViewArr<const char>& self,
   return child;
 }
 
-static bool expect_valid_header(Axle::Windows::FILES::RawFile in_handle, IPC::Type type) { 
+template<typename S>
+static bool expect_valid_header(S&& serializer, IPC::Type type) { 
   IPC::MessageHeader header;
-  if(!Axle::deserialize_le<IPC::MessageHeader>(in_handle, header)) {
+  if(!Axle::deserialize_le<IPC::MessageHeader>(std::forward<S>(serializer), header)) {
     LOG::error("Header read operation failed");
     return false;
   }
@@ -111,20 +112,21 @@ struct ReportMessage {
   Axle::OwnedArr<const char> message;
 };
 
-static bool expect_report(Axle::Windows::FILES::RawFile in_handle, ReportMessage& out) {
+template<typename S>
+static bool expect_report(S&& serializer, ReportMessage& out) {
   STACKTRACE_FUNCTION();
   
-  if(!expect_valid_header(in_handle, IPC::Type::Report)) {
+  if(!expect_valid_header(std::forward<S>(serializer), IPC::Type::Report)) {
     return false;
   }
 
-  if(!Axle::deserialize_le<IPC::ReportType>(in_handle, out.type)) {
+  if(!Axle::deserialize_le<IPC::ReportType>(std::forward<S>(serializer), out.type)) {
     LOG::error("Report type read operation failed");
     return false;
   }
 
   u32 message_len;
-  if(!Axle::deserialize_le<u32>(in_handle, message_len)) {
+  if(!Axle::deserialize_le<u32>(std::forward<S>(serializer), message_len)) {
     LOG::error("Message len read operation failed");
     return false;
   }
@@ -132,7 +134,7 @@ static bool expect_report(Axle::Windows::FILES::RawFile in_handle, ReportMessage
   if(message_len > 0) {
     Axle::OwnedArr<char> m = Axle::new_arr<char>(message_len);
     Axle::ViewArr<u8> view = Axle::cast_arr<u8>(Axle::view_arr(m));
-    if(!Axle::deserialize_le<Axle::ViewArr<u8>>(in_handle, view)) {
+    if(!Axle::deserialize_le<Axle::ViewArr<u8>>(std::forward<S>(serializer), view)) {
       LOG::error("Message read operation failed");
       return false;
     }
@@ -153,16 +155,15 @@ struct TestInfo {
   Axle::OwnedArr<const char> strings;
 };
 
-static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& out) {
+template<typename S>
+static bool expect_test_info(S&& serializer, TestInfo& out) {
   STACKTRACE_FUNCTION();
   
-  Axle::Serializer<Axle::Windows::FILES::RawFile, Axle::ByteOrder::LittleEndian> ser = {in_handle};
-
   u32 test_count;
   {
     IPC::Deserialize::DataT<u32> dt = {test_count};
 
-    if(!Axle::deserialize_le(ser, dt)) {
+    if(!Axle::deserialize_le(std::forward<S>(serializer), dt)) {
       LOG::error("Test count message invalid");
       return false;
     }
@@ -172,7 +173,7 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
   {
     IPC::Deserialize::DataT<u32> dt = {strings_size};
 
-    if(!Axle::deserialize_le(ser, dt)) {
+    if(!Axle::deserialize_le(std::forward<S>(serializer), dt)) {
       LOG::error("Strings size message invalid");
       return false;
     }
@@ -185,12 +186,12 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
   for(u32 i = 0; i < test_count; ++i) {
     {
       AxleTest::IPC::MessageHeader header;
-      if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(ser, header)) return false;
+      if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(std::forward<S>(serializer), header)) return false;
       if(header.version != AxleTest::IPC::VERSION) return false;
       if(header.type != AxleTest::IPC::Type::Data) return false;
 
       u32 size;
-      if(!Axle::deserialize_le<u32>(ser, size)) return false;
+      if(!Axle::deserialize_le<u32>(std::forward<S>(serializer), size)) return false;
       ASSERT(size != 0);
 
       Axle::ViewArr<char> name = view_arr(strings, counter, size);
@@ -199,17 +200,17 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
       counter += size;
 
       Axle::ViewArr<u8> arr = cast_arr<u8>(name);
-      if(!Axle::deserialize_le<Axle::ViewArr<u8>>(ser, arr)) return false;
+      if(!Axle::deserialize_le<Axle::ViewArr<u8>>(std::forward<S>(serializer), arr)) return false;
     }
 
     {
       AxleTest::IPC::MessageHeader header;
-      if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(ser, header)) return false;
+      if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(std::forward<S>(serializer), header)) return false;
       if(header.version != AxleTest::IPC::VERSION) return false;
       if(header.type != AxleTest::IPC::Type::Data) return false;
 
       u32 size;
-      if(!Axle::deserialize_le<u32>(ser, size)) return false;
+      if(!Axle::deserialize_le<u32>(std::forward<S>(serializer), size)) return false;
 
       if(size > 0) {
         Axle::ViewArr<char> name = view_arr(strings, counter, size);
@@ -217,7 +218,7 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
         counter += size;
 
         Axle::ViewArr<u8> arr = cast_arr<u8>(name);
-        if(!Axle::deserialize_le<Axle::ViewArr<u8>>(ser, arr)) return false;
+        if(!Axle::deserialize_le<Axle::ViewArr<u8>>(std::forward<S>(serializer), arr)) return false;
       }
       else {
         tests[i].context_name = {};
@@ -229,6 +230,7 @@ static bool expect_test_info(Axle::Windows::FILES::RawFile in_handle, TestInfo& 
   out.strings = std::move(strings);
   return true;
 }
+
 bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
                                 const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>& contexts) {
   STACKTRACE_FUNCTION();
@@ -264,8 +266,8 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       DisconnectNamedPipe(handle);
     };
 
-    const Axle::Windows::FILES::RawFile out_handle = {cp.pipe_handle.h};
-    const Axle::Windows::FILES::RawFile in_handle = {cp.pipe_handle.h};
+    const Axle::Windows::FILES::TimeoutFile out_handle = {cp.pipe_handle.h};
+    const Axle::Windows::FILES::TimeoutFile in_handle = {cp.pipe_handle.h};
     
     Axle::serialize_le(out_handle, IPC::Serialize::QueryTestInfo{});
     if(!expect_test_info(in_handle, test_info)) {
@@ -327,8 +329,8 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       DisconnectNamedPipe(handle);
     };
 
-    const Axle::Windows::FILES::RawFile out_handle = {cp.pipe_handle.h};
-    const Axle::Windows::FILES::RawFile in_handle = {cp.pipe_handle.h};
+    const Axle::Windows::FILES::TimeoutFile out_handle = {cp.pipe_handle.h};
+    const Axle::Windows::FILES::TimeoutFile in_handle = {cp.pipe_handle.h};
 
     Axle::serialize_le(out_handle, IPC::Serialize::Execute{i});
 
