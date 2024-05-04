@@ -228,10 +228,6 @@ static bool expect_test_info(S&& serializer, TestInfo& out) {
   return true;
 }
 
-DWORD end_executable(LPVOID) {
-  ExitProcess(1);
-}
-
 bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
                                 const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>& contexts) {
   STACKTRACE_FUNCTION();
@@ -326,23 +322,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       ASSERT(r != 0);
 
       if(ec == STILL_ACTIVE) {
-        HANDLE h = CreateRemoteThread(cp.process_handle.h, NULL, 0, end_executable, NULL, 0, NULL);
-
-        const HANDLE wait_handles[] = {
-          h,
-          cp.process_handle.h,
-        };
-        
-        WaitForMultipleObjects(static_cast<DWORD>(Axle::array_size(wait_handles)), wait_handles, true, 1000);
-          
-        ec = 0;
-        r = GetExitCodeProcess(cp.process_handle.h, &ec);
-        ASSERT(r != 0);
-
-        if(ec == STILL_ACTIVE) {
-          LOG::error("Forced to terminate process");
-          TerminateProcess(cp.process_handle.h, 1);
-        }
+        TerminateProcess(cp.process_handle.h, 1);
       }
     };
 
