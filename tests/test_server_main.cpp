@@ -8,6 +8,6 @@ int main() {
     AxleTest::IPC::as_context(i),
   };
 
-  bool r = AxleTest::IPC::server_main(Axle::lit_view_arr(AXLE_TEST_CLIENT_EXE), Axle::view_arr(contexts));
+  bool r = AxleTest::IPC::server_main(Axle::lit_view_arr(AXLE_TEST_CLIENT_EXE), Axle::view_arr(contexts), 1000);
   if(!r) return -1;
 }

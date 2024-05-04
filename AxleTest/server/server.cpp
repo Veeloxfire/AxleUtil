@@ -17,8 +17,6 @@ namespace Windows = Axle::Windows;
 
 using namespace Axle::Primitives;
 
-
-
 struct ChildProcess {
   Windows::OwnedHandle pipe_handle;
 
@@ -228,7 +226,8 @@ static bool expect_test_info(S&& serializer, TestInfo& out) {
 }
 
 bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
-                                const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>& contexts) {
+                                const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>& contexts,
+                                u32 timeout_time_ms) {
   STACKTRACE_FUNCTION();
 
   Axle::Windows::NativePath self_dir_holder;
@@ -264,7 +263,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       DisconnectNamedPipe(handle);
     };
 
-    const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, 1000};
+    const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, timeout_time_ms};
     const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
     
     Axle::serialize_le(out_handle, IPC::Serialize::QueryTestInfo{});
@@ -337,7 +336,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       DisconnectNamedPipe(handle);
     };
 
-    const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, 1000};
+    const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, timeout_time_ms};
     const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
 
     Axle::serialize_le(out_handle, IPC::Serialize::Execute{i});

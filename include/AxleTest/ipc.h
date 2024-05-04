@@ -23,7 +23,8 @@ namespace AxleTest::IPC {
   constexpr inline const char PIPE_NAME[] = "\\\\.\\pipe\\AxleTestServer";
 
   bool server_main(const Axle::ViewArr<const char>& client_exe,
-                   const Axle::ViewArr<const OpaqueContext>& contexts);
+                   const Axle::ViewArr<const OpaqueContext>& contexts,
+                   u32 timeout_time_ms);
   bool client_main();
   
   /*  AxleTest IPC binary format

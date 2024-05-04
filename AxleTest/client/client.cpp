@@ -54,7 +54,7 @@ bool AxleTest::IPC::client_main() {
   ASSERT(wait_event.is_valid());
 
 
-  const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, pipe_handle.h, 1000};
+  const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, pipe_handle.h, INFINITE};
   const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
   
   const auto formatted_error = [out_handle](Axle::Format::FormatString fs, const auto& ... args) {
