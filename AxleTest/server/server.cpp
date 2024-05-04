@@ -121,13 +121,11 @@ static bool expect_report(S&& serializer, ReportMessage& out) {
   }
 
   if(!Axle::deserialize_le<IPC::ReportType>(std::forward<S>(serializer), out.type)) {
-    LOG::error("Report type read operation failed");
     return false;
   }
 
   u32 message_len;
   if(!Axle::deserialize_le<u32>(std::forward<S>(serializer), message_len)) {
-    LOG::error("Message len read operation failed");
     return false;
   }
 
@@ -135,7 +133,6 @@ static bool expect_report(S&& serializer, ReportMessage& out) {
     Axle::OwnedArr<char> m = Axle::new_arr<char>(message_len);
     Axle::ViewArr<u8> view = Axle::cast_arr<u8>(Axle::view_arr(m));
     if(!Axle::deserialize_le<Axle::ViewArr<u8>>(std::forward<S>(serializer), view)) {
-      LOG::error("Message read operation failed");
       return false;
     }
 
@@ -231,6 +228,10 @@ static bool expect_test_info(S&& serializer, TestInfo& out) {
   return true;
 }
 
+DWORD end_executable(LPVOID) {
+  ExitProcess(1);
+}
+
 bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
                                 const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>& contexts) {
   STACKTRACE_FUNCTION();
@@ -255,7 +256,6 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     ChildProcess cp = start_test_executable(self_path, client_exe);
     
     if(!cp.process_handle.is_valid()) return false;
-
 
     if(!ConnectNamedPipe(cp.pipe_handle.h, NULL)) {
       DWORD err = GetLastError();
@@ -319,6 +319,32 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
       continue;
     }
+
+    DEFER(&cp) {
+      DWORD ec = 0;
+      BOOL r = GetExitCodeProcess(cp.process_handle.h, &ec);
+      ASSERT(r != 0);
+
+      if(ec == STILL_ACTIVE) {
+        HANDLE h = CreateRemoteThread(cp.process_handle.h, NULL, 0, end_executable, NULL, 0, NULL);
+
+        const HANDLE wait_handles[] = {
+          h,
+          cp.process_handle.h,
+        };
+        
+        WaitForMultipleObjects(static_cast<DWORD>(Axle::array_size(wait_handles)), wait_handles, true, 1000);
+          
+        ec = 0;
+        r = GetExitCodeProcess(cp.process_handle.h, &ec);
+        ASSERT(r != 0);
+
+        if(ec == STILL_ACTIVE) {
+          LOG::error("Forced to terminate process");
+          TerminateProcess(cp.process_handle.h, 1);
+        }
+      }
+    };
 
     if(!ConnectNamedPipe(cp.pipe_handle.h, NULL)) {
       DWORD err = GetLastError();
