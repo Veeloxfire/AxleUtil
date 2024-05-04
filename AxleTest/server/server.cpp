@@ -38,7 +38,7 @@ ChildProcess start_test_executable(const Axle::ViewArr<const char>& self,
     inheritable_pipes.lpSecurityDescriptor = NULL;
     inheritable_pipes.bInheritHandle = true;
 
-    pipe = CreateNamedPipeA(AxleTest::IPC::PIPE_NAME, PIPE_ACCESS_DUPLEX,
+    pipe = CreateNamedPipeA(AxleTest::IPC::PIPE_NAME, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE, PIPE_UNLIMITED_INSTANCES, 0, 0,
         NMPWAIT_USE_DEFAULT_WAIT, &inheritable_pipes);
 
@@ -247,6 +247,9 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
 
 
   TestInfo test_info;
+
+  Windows::OwnedHandle wait_event = CreateEventA(NULL, false, false, NULL);
+  ASSERT(wait_event.is_valid());
   
   {
     ChildProcess cp = start_test_executable(self_path, client_exe);
@@ -266,8 +269,8 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       DisconnectNamedPipe(handle);
     };
 
-    const Axle::Windows::FILES::TimeoutFile out_handle = {cp.pipe_handle.h};
-    const Axle::Windows::FILES::TimeoutFile in_handle = {cp.pipe_handle.h};
+    const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, 1000};
+    const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
     
     Axle::serialize_le(out_handle, IPC::Serialize::QueryTestInfo{});
     if(!expect_test_info(in_handle, test_info)) {
@@ -329,8 +332,8 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       DisconnectNamedPipe(handle);
     };
 
-    const Axle::Windows::FILES::TimeoutFile out_handle = {cp.pipe_handle.h};
-    const Axle::Windows::FILES::TimeoutFile in_handle = {cp.pipe_handle.h};
+    const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, 1000};
+    const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
 
     Axle::serialize_le(out_handle, IPC::Serialize::Execute{i});
 

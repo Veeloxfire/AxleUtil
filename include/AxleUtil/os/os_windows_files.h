@@ -26,6 +26,7 @@ namespace Axle::Windows::FILES {
   };
 
   struct TimeoutFile {
+    HANDLE hwaitevent;
     HANDLE handle;
     u32 timeout;
   };
@@ -57,16 +58,50 @@ namespace Axle {
     constexpr Serializer(Axle::Windows::FILES::TimeoutFile h) : rf{h} {}
 
     inline bool read_bytes(const ViewArr<u8>& bytes) {
+      OVERLAPPED overlapped;
+      memset(&overlapped, 0, sizeof(overlapped));
+      overlapped.hEvent = rf.hwaitevent;
+
       DWORD read = 0;
-      BOOL res = ReadFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &read, NULL);
-      return (res != 0 && static_cast<usize>(read) == bytes.size);
+      BOOL res = ReadFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &read, &overlapped);
+
+      if(res != 0) {
+        return static_cast<usize>(read) == bytes.size;
+      }
+      else {
+        DWORD qwait = GetLastError();
+        if(qwait != ERROR_IO_PENDING) return false;
+
+        DWORD wait_res = WaitForSingleObject(overlapped.hEvent, rf.timeout);
+        if(wait_res != WAIT_OBJECT_0) return false;
+
+        res = GetOverlappedResult(rf.handle, &overlapped, &read, false);
+        return res != 0 && static_cast<usize>(read) == bytes.size;
+      }
     }
 
     inline void write_bytes(const ViewArr<const u8>& bytes) {
+      OVERLAPPED overlapped;
+      memset(&overlapped, 0, sizeof(overlapped));
+      overlapped.hEvent = rf.hwaitevent;
+
       DWORD written = 0;
-      BOOL res = WriteFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &written, NULL); 
-      ASSERT(res != 0);
-      ASSERT(written == bytes.size);
+      BOOL res = WriteFile(rf.handle, bytes.data, static_cast<u32>(bytes.size), &written, &overlapped); 
+
+      if(res != 0) {
+        ASSERT(written == bytes.size);
+        return;
+      }
+      else {
+        DWORD qwait = GetLastError();
+        ASSERT(qwait == ERROR_IO_PENDING);
+
+        DWORD wait_res = WaitForSingleObject(overlapped.hEvent, rf.timeout);
+        ASSERT(wait_res == WAIT_OBJECT_0);
+
+        res = GetOverlappedResult(rf.handle, &overlapped, &written, false);
+        ASSERT(res != 0 && static_cast<usize>(written) == bytes.size);
+      }
     }
   };
 }

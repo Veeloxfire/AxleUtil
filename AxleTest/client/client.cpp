@@ -44,13 +44,19 @@ static void client_panic_callback(const void* ud, const Axle::ViewArr<const char
 bool AxleTest::IPC::client_main() {
   STACKTRACE_FUNCTION();
 
-  Windows::OwnedHandle pipe_handle_holder = CreateFileA(AxleTest::IPC::PIPE_NAME, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  Windows::OwnedHandle pipe_handle = CreateFileA(AxleTest::IPC::PIPE_NAME,
+      GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+      NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
 
-  ASSERT(pipe_handle_holder.is_valid());
+  ASSERT(pipe_handle.is_valid());
+
+  Windows::OwnedHandle wait_event = CreateEventA(NULL, false, false, NULL);
+  ASSERT(wait_event.is_valid());
+
+
+  const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, pipe_handle.h, 1000};
+  const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
   
-  const RawFile out_handle = { pipe_handle_holder.h };
-  const RawFile in_handle = { pipe_handle_holder.h };
-
   const auto formatted_error = [out_handle](Axle::Format::FormatString fs, const auto& ... args) {
     const Axle::OwnedArr<const char> message = Axle::format(fs, args...);
     Axle::serialize_le(out_handle, report_fail(Axle::view_arr(message)));
