@@ -14,7 +14,8 @@ namespace Axle {
 volatile u32 thread_id_counter = 1;
 
 bool SpinLockMutex::acquire_if_free() {
-  return _InterlockedCompareExchange(&held, THREAD_ID.id, 0) == THREAD_ID.id;
+  const long res = _InterlockedCompareExchange(&held, static_cast<long>(THREAD_ID.id), 0);
+  return res == 0 || res == static_cast<long>(THREAD_ID.id);
 }
 
 void SpinLockMutex::acquire() {
@@ -26,7 +27,7 @@ void SpinLockMutex::acquire() {
 
 void SpinLockMutex::release() {
   STACKTRACE_FUNCTION();
-  u32 res = _InterlockedCompareExchange(&held, 0, THREAD_ID.id);
+  u32 res = _InterlockedCompareExchange(&held, 0, static_cast<long>(THREAD_ID.id));
   ASSERT(res == THREAD_ID.id);
 }
 
@@ -58,6 +59,7 @@ DWORD WINAPI generic_thread_proc(
   STACKTRACE_FUNCTION();
   ThreadingInfo* info = (ThreadingInfo*)lpParameter;
 
+  THREAD_ID.id = InterlockedIncrement(&thread_id_counter);
   info->proc(info->handle, info->data);
 
   free_destruct_single<ThreadingInfo>(info);
@@ -72,9 +74,9 @@ const ThreadHandle* start_thread(THREAD_PROC thread_proc, void* data) {
   ThreadingInfo* info = allocate_default<ThreadingInfo>();
   info->data = data;
   info->proc = thread_proc;
+  info->handle = handle;
 
   handle->handle = CreateThread(NULL, 0, &generic_thread_proc, info, 0, &handle->id);
-  THREAD_ID.id = InterlockedIncrement(&thread_id_counter);
   return handle;
 }
 

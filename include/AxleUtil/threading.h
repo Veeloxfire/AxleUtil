@@ -10,7 +10,7 @@ struct ThreadID {
 inline thread_local ThreadID THREAD_ID = {1};
 
 struct SpinLockMutex {
-  volatile u32 held;
+  volatile u32 held = 0;
 
   void acquire();
   bool acquire_if_free();
@@ -18,7 +18,7 @@ struct SpinLockMutex {
 };
 
 struct Signal {
-  mutable volatile char held;
+  mutable volatile char held = 0;
 
   void set();
   void unset();
