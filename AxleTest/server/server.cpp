@@ -45,9 +45,23 @@ ChildProcess start_test_executable(const Axle::ViewArr<const char>& self,
       return {};
     }
   }
-
-
+  
   ASSERT(pipe.is_valid());
+  
+  if(!ConnectNamedPipe(pipe.h, NULL)) {
+    DWORD err = GetLastError();
+    if(err != ERROR_PIPE_CONNECTED) {
+      LOG::error("Pipe connection error");
+      return {};
+    }
+  }
+
+  DEFER(&pipe) {
+    if(pipe.is_valid()) {
+      BOOL res = DisconnectNamedPipe(pipe.h);
+      ASSERT(res != 0);
+    }
+  };
 
   STARTUPINFO startup_info;
   memset(&startup_info, 0, sizeof(startup_info));
@@ -251,16 +265,9 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     
     if(!cp.process_handle.is_valid()) return false;
 
-    if(!ConnectNamedPipe(cp.pipe_handle.h, NULL)) {
-      DWORD err = GetLastError();
-      if(err != ERROR_PIPE_CONNECTED) {
-        LOG::error("Pipe connection error");
-        return false;
-      }
-    }
-
     DEFER(handle = cp.pipe_handle.h) {
-      DisconnectNamedPipe(handle);
+      BOOL res = DisconnectNamedPipe(handle);
+      ASSERT(res != 0);
     };
 
     const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, timeout_time_ms};
