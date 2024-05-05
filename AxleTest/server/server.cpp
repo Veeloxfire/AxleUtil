@@ -24,6 +24,18 @@ struct ChildProcess {
   Windows::OwnedHandle thread_handle;
 };
 
+void terminate_child(HANDLE cp, u32 timeout) {
+  WaitForSingleObject(cp, timeout);
+
+  DWORD ec = 0;
+  BOOL r = GetExitCodeProcess(cp, &ec);
+  ASSERT(r != 0);
+
+  if(ec == STILL_ACTIVE) {
+    TerminateProcess(cp, 1);
+  }
+}
+
 ChildProcess start_test_executable(const Axle::ViewArr<const char>& self, 
                                    const Axle::ViewArr<const char>& exe) {
   STACKTRACE_FUNCTION();
@@ -45,23 +57,9 @@ ChildProcess start_test_executable(const Axle::ViewArr<const char>& self,
       return {};
     }
   }
-  
-  ASSERT(pipe.is_valid());
-  
-  if(!ConnectNamedPipe(pipe.h, NULL)) {
-    DWORD err = GetLastError();
-    if(err != ERROR_PIPE_CONNECTED) {
-      LOG::error("Pipe connection error");
-      return {};
-    }
-  }
 
-  DEFER(&pipe) {
-    if(pipe.is_valid()) {
-      BOOL res = DisconnectNamedPipe(pipe.h);
-      ASSERT(res != 0);
-    }
-  };
+
+  ASSERT(pipe.is_valid());
 
   STARTUPINFO startup_info;
   memset(&startup_info, 0, sizeof(startup_info));
@@ -85,6 +83,16 @@ ChildProcess start_test_executable(const Axle::ViewArr<const char>& self,
     LOG::error("Failed to open process: {}. Error code: {}", exe, ec);
 
     return {}; 
+  }
+
+  if(!ConnectNamedPipe(pipe.h, NULL)) {
+    DWORD err = GetLastError();
+    if(err != ERROR_PIPE_CONNECTED) {
+      terminate_child(process_handle.h, 0);
+
+      LOG::error("Pipe connection error");
+      return {};
+    }
   }
 
   ChildProcess child = {};
@@ -265,9 +273,9 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     
     if(!cp.process_handle.is_valid()) return false;
 
-    DEFER(handle = cp.pipe_handle.h) {
-      BOOL res = DisconnectNamedPipe(handle);
-      ASSERT(res != 0);
+    DEFER(&cp, timeout_time_ms, handle = cp.pipe_handle.h) {
+      terminate_child(cp.process_handle.h, timeout_time_ms);
+      DisconnectNamedPipe(handle);
     };
 
     const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, timeout_time_ms};
@@ -320,26 +328,9 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
       continue;
     }
-
-    DEFER(&cp) {
-      DWORD ec = 0;
-      BOOL r = GetExitCodeProcess(cp.process_handle.h, &ec);
-      ASSERT(r != 0);
-
-      if(ec == STILL_ACTIVE) {
-        TerminateProcess(cp.process_handle.h, 1);
-      }
-    };
-
-    if(!ConnectNamedPipe(cp.pipe_handle.h, NULL)) {
-      DWORD err = GetLastError();
-      if(err != ERROR_PIPE_CONNECTED) {
-        LOG::error("Pipe connection error");
-        continue;
-      }
-    }
-
-    DEFER(handle = cp.pipe_handle.h) {
+ 
+    DEFER(&cp, timeout_time_ms, handle = cp.pipe_handle.h) {
+      terminate_child(cp.process_handle.h, timeout_time_ms);
       DisconnectNamedPipe(handle);
     };
 

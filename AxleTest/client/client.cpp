@@ -44,6 +44,12 @@ static void client_panic_callback(const void* ud, const Axle::ViewArr<const char
 bool AxleTest::IPC::client_main() {
   STACKTRACE_FUNCTION();
 
+  //Cannot start until the pipe is ready
+  {
+    BOOL res = WaitNamedPipeA(AxleTest::IPC::PIPE_NAME, NMPWAIT_WAIT_FOREVER);
+    ASSERT(res != 0);
+  }
+
   Windows::OwnedHandle pipe_handle = CreateFileA(AxleTest::IPC::PIPE_NAME,
       GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
       NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
