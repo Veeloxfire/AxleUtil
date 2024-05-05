@@ -25,7 +25,7 @@ namespace AxleTest::IPC {
   bool server_main(const Axle::ViewArr<const char>& client_exe,
                    const Axle::ViewArr<const OpaqueContext>& contexts,
                    u32 timeout_time_ms);
-  bool client_main();
+  bool client_main(const Axle::ViewArr<const char>& runtime_dir);
   
   /*  AxleTest IPC binary format
    *

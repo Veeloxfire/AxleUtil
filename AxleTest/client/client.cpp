@@ -41,7 +41,7 @@ static void client_panic_callback(const void* ud, const Axle::ViewArr<const char
   Axle::serialize_le(*rf, report_fail(message));
 }
 
-bool AxleTest::IPC::client_main() {
+bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
   STACKTRACE_FUNCTION();
 
   //Cannot start until the pipe is ready
@@ -55,6 +55,10 @@ bool AxleTest::IPC::client_main() {
       NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
 
   ASSERT(pipe_handle.is_valid());
+
+  if(runtime_dir.size > 0) {
+    Axle::Windows::set_current_directory(runtime_dir);
+  }
 
   Windows::OwnedHandle wait_event = CreateEventA(NULL, false, false, NULL);
   ASSERT(wait_event.is_valid());
