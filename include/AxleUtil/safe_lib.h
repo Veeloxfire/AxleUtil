@@ -18,9 +18,9 @@ namespace Axle {
 #define TODO() static_assert(false, "Code is broken")
 
 #define ASSERT(expr) do { if(!(expr))\
-Axle::Panic::panic("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " __FILE__ ":\n" #expr); } while(false)
+Axle::Panic::panic("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " STR_REPLACE(__FILE__) ":\n" #expr); } while(false)
 
-#define INVALID_CODE_PATH(reason) Axle::Panic::panic("Invalid Code path \"" reason "\"")
+#define INVALID_CODE_PATH(reason) Axle::Panic::panic("Invalid Code path at line " STR_REPLACE(__LINE__) ", file " STR_REPLACE(__FILE__) ":\n\"" reason "\"")
 
 //#define COUNT_ALLOC
 
