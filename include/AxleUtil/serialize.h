@@ -106,6 +106,22 @@ constexpr bool deserialize_be(Serializer<S, ByteOrder::BigEndian>& base, T& out)
   return Serializable<T>::deserialize(base, out);
 }
 
+template<typename T, typename S>
+constexpr T deserialize_le_force(S&& ser) {
+  T t;
+  const bool res = deserialize_le(std::forward<S>(ser), t);
+  ASSERT(res);
+  return t;
+}
+
+template<typename T, typename S>
+constexpr T deserialize_be_force(S&& ser) {
+  T t;
+  const bool res = deserialize_be(std::forward<S>(ser), t);
+  ASSERT(res);
+  return t;
+}
+
 template<>
 struct Serializable<ViewArr<u8>> {
   template<typename S, ByteOrder Ord>

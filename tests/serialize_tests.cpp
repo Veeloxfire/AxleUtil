@@ -391,6 +391,176 @@ TEST_FUNCTION(Deserialize, rvalues) {
   }
 }
 
+TEST_FUNCTION(DeserializeForce, ints) {
+  {
+    const u8 be_res[] {
+      0x01, 0x23, 0x45, 0x67, 0x89, 0xab,0xcd, 0xef
+    };
+    static_assert(sizeof(be_res) == 8);
+    const u64 value = deserialize_be_force<u64>(be_res);
+    const u64 expected = 0x01'23'45'67'89'ab'cd'efllu;
+    TEST_EQ(expected, value);
+  }
+  {
+    const u8 le_res[] {
+      0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01
+    };
+    static_assert(sizeof(le_res) == 8);
+    const u64 value = deserialize_le_force<u64>(le_res);
+    const u64 expected = 0x01'23'45'67'89'ab'cd'efllu;
+    TEST_EQ(expected, value);
+  }
+
+  {
+    const u8 be_res[] {
+      0x01, 0x23, 0x45, 0x67,
+    };
+    static_assert(sizeof(be_res) == 4);
+    const u32 value = deserialize_be_force<u32>(be_res);
+    const u32 expected = 0x01'23'45'67u;
+    TEST_EQ(expected, value);
+  }
+  {
+    const u8 le_res[] {
+      0x67, 0x45, 0x23, 0x01
+    };
+    static_assert(sizeof(le_res) == 4);
+    const u32 value = deserialize_le_force<u32>(le_res);
+    const u32 expected = 0x01'23'45'67u;
+    TEST_EQ(expected, value);
+  }
+  
+  {
+     const u8 be_res[] {
+      0x01, 0x23,
+    };
+    static_assert(sizeof(be_res) == 2);
+    const u16 value = deserialize_be_force<u16>(be_res);
+    const u16 expected = static_cast<u16>(0x01'23);
+    TEST_EQ(expected, value);
+  }
+
+  {
+    const u8 le_res[] {
+      0x23, 0x01
+    };
+    static_assert(sizeof(le_res) == 2);
+    const u16 value = deserialize_le_force<u16>(le_res);
+    const u16 expected = static_cast<u16>(0x01'23u);
+    TEST_EQ(expected, value);
+  }
+
+  {
+    const u8 be_res[] {
+      0x01,
+    };
+    static_assert(sizeof(be_res) == 1);
+    const u8 value = deserialize_be_force<u8>(be_res);
+    const u8 expected = static_cast<u8>(0x01u);
+    TEST_EQ(expected, value);
+  }
+  {
+    const u8 le_res[] {
+      0x01
+    };
+    static_assert(sizeof(le_res) == 1);
+    const u8 value = deserialize_le_force<u8>(le_res);
+    const u8 expected = static_cast<u8>(0x01u);
+    TEST_EQ(expected, value);
+  }
+  {
+    const u8 be_res[] {
+      0x01, 0x23, 0x45, 0x67, 0x89, 0xab,0xcd, 0xef
+    };
+    static_assert(sizeof(be_res) == 8);
+    const i64 value = deserialize_be_force<i64>(be_res);
+    const i64 expected = 0x01'23'45'67'89'ab'cd'efll;
+    TEST_EQ(expected, value);
+  }
+  {
+    const u8 le_res[] {
+      0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01
+    };
+    static_assert(sizeof(le_res) == 8);
+    const i64 value = deserialize_le_force<i64>(le_res);
+    const i64 expected = 0x01'23'45'67'89'ab'cd'efll;
+    TEST_EQ(expected, value);
+  }
+
+  {
+    const u8 be_res[] {
+      0x01, 0x23, 0x45, 0x67,
+    };
+    static_assert(sizeof(be_res) == 4);
+    const i32 value = deserialize_be_force<i32>(be_res);
+    const i32 expected = 0x01'23'45'67;
+    TEST_EQ(expected, value);
+  }
+  {
+    const u8 le_res[] {
+      0x67, 0x45, 0x23, 0x01
+    };
+    static_assert(sizeof(le_res) == 4);
+    const i32 value = deserialize_le_force<i32>(le_res);
+    const i32 expected = 0x01'23'45'67;
+    TEST_EQ(expected, value);
+  }
+  
+  {
+    const u8 be_res[] {
+      0x01, 0x23,
+    };
+    static_assert(sizeof(be_res) == 2);
+    const i16 value = deserialize_be_force<i16>(be_res);
+    const i16 expected = static_cast<i16>(0x01'23);
+    TEST_EQ(expected, value);
+  }
+  {
+    const u8 le_res[] {
+      0x23, 0x01
+    };
+    static_assert(sizeof(le_res) == 2);
+    const i16 value = deserialize_le_force<i16>(le_res);
+    const i16 expected = static_cast<i16>(0x01'23);
+    TEST_EQ(expected, value);
+  }
+
+  {
+    const u8 be_res[] {
+      0x01,
+    };
+    static_assert(sizeof(be_res) == 1);
+    const i8 value = deserialize_be_force<i8>(be_res);
+    const i8 expected = static_cast<i8>(0x01);
+    TEST_EQ(expected, value);
+  }
+  {
+    const u8 le_res[] {
+      0x01
+    };
+    static_assert(sizeof(le_res) == 1);
+    const i8 value = deserialize_le_force<i8>(le_res);
+    const i8 expected = static_cast<i8>(0x01);
+    TEST_EQ(expected, value);
+  }
+}
+
+TEST_FUNCTION(DeserializeForce, rvalues) {
+  //Should be able to deserialize from an r-value
+  
+  const u8 bytes[4] {1, 2, 3, 4};
+  {
+    const u32 value = deserialize_le_force<u32>(ViewArr<const u8>{bytes, 4});
+    const u32 expected_le = 0x04030201u;
+    TEST_EQ(expected_le, value);
+  }
+  {
+    const u32 value = deserialize_be_force<u32>(ViewArr<const u8>{bytes, 4});
+    const u32 expected_be = 0x01020304u;
+    TEST_EQ(expected_be, value);
+  }
+}
+
 TEST_FUNCTION(Serialize, zeros) {
   {
     u8 bytes[] = {1,1,1,1,1};
