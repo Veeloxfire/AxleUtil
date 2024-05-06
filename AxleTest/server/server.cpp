@@ -366,17 +366,19 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
   }
 
   if(failed_arr.size > 0) {
-    IO::format("{} tests failed\n\n", failed_arr.size);
+    IO::err_format("\n{} / {} tests failed\n", failed_arr.size, test_info.tests.size);
     
     for (const auto &t : failed_arr) {
       Axle::OwnedArr ts = Axle::format_type_set(Axle::view_arr(t.result_message), 2, 80);
 
-      IO::err_format("\n===========\n{} failed with errors:\n{}\n", 
+      IO::err_format("\n===========\n\n\"{}\" failed with errors:\n{}\n", 
                      t.test_name, ts);
     }
+
+    IO::err_print("\n===========\n");
   }
   else {
-    IO::print("All tests succeeded\n\n");
+    IO::print("All tests ({}) succeeded\n", test_info.tests.size);
   }
 
   return true;
