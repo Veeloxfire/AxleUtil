@@ -5,6 +5,11 @@ TEST_FUNCTION(AxleTest, always_pass) {
   (void)test_errors;
 }
 
+TEST_FUNCTION(AxleTest, always_fail) {
+  (void)test_errors;
+  Axle::Panic::panic("Expected to fail");
+}
+
 TEST_FUNCTION_CTX(AxleTest, recieves_context, TestContexts::Integer) {
   TEST_EQ(static_cast<u32>(0x1234), context->i);
 }

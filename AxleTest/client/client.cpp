@@ -16,7 +16,6 @@
 
 using namespace Axle::Primitives;
 namespace Windows = Axle::Windows;
-using Windows::FILES::RawFile;
 
 Axle::Array<AxleTest::UnitTest> &AxleTest::unit_tests_ref() {
   static Axle::Array<AxleTest::UnitTest> t = {};
@@ -36,9 +35,15 @@ static AxleTest::IPC::Serialize::Report report_success(const Axle::ViewArr<const
 }
 
 static void client_panic_callback(const void* ud, const Axle::ViewArr<const char>& message) {
-  const RawFile* rf = reinterpret_cast<const RawFile*>(ud);
+  using Axle::Windows::FILES::TimeoutFile;
+  const TimeoutFile* rf = reinterpret_cast<const TimeoutFile*>(ud);
 
   Axle::serialize_le(*rf, report_fail(message));
+
+  // Exit before we reach `std::terminate`
+  // to remove the annoying popup
+  // its a test and it failed so this is probably okay
+  ExitProcess(1);
 }
 
 bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
@@ -62,7 +67,6 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
 
   Windows::OwnedHandle wait_event = CreateEventA(NULL, false, false, NULL);
   ASSERT(wait_event.is_valid());
-
 
   const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, pipe_handle.h, INFINITE};
   const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
