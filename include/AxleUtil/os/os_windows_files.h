@@ -1,25 +1,44 @@
 #ifndef AXLEUTIL_OS_WINDOWS_FILES_H_
 #define AXLEUTIL_OS_WINDOWS_FILES_H_
 #include <AxleUtil/os/os_windows.h>
-#include <AxleUtil/files.h>
+#include <AxleUtil/files_base.h>
+
+#include <AxleUtil/utility.h>
+
+namespace Axle::FILES::Base {
+  extern template
+  void handle_close<HANDLE>(HANDLE t);
+  extern template
+  void handle_seek_from_start<HANDLE>(HANDLE t, usize size);
+  extern template
+  usize handle_file_size<HANDLE>(HANDLE t);
+  extern template
+  void handle_write<HANDLE>(HANDLE t, const u8* data, usize size);
+  extern template
+  void handle_read<HANDLE>(HANDLE t, u8* data, usize size);
+}
 
 namespace Axle::Windows::FILES {
+  using FileData = Axle::FILES::Base::FileData<HANDLE>;
+
   using Axle::FILES::ErrorCode;
   using Axle::FILES::OPEN_MODE;
-  using Axle::FILES::OpenedFile;
 
-  OpenedFile open(const NativePath& name,
-                  OPEN_MODE open_mode);
-  OpenedFile create(const NativePath& name,
+  ErrorCode open(FileData*& data,
+                 const NativePath& name,
+                 OPEN_MODE open_mode);
+  ErrorCode create(FileData*& data,
+                   const NativePath& name,
+                   OPEN_MODE open_mode);
+  ErrorCode replace(FileData*& data,
+                    const NativePath& name,
                     OPEN_MODE open_mode);
-  OpenedFile replace(const NativePath& name,
-                     OPEN_MODE open_mode);
 
   ErrorCode create_empty_directory(const NativePath& name);
 
   OwnedArr<u8> read_full_file(const NativePath& file_name);
 
-  bool exist(const NativePath& name);
+  bool exists(const NativePath& name);
 
   struct RawFile {
     HANDLE handle;
@@ -103,28 +122,6 @@ namespace Axle {
         ASSERT(res != 0 && static_cast<usize>(written) == bytes.size);
       }
     }
-  };
-}
-
-namespace Axle::FILES {
-  struct FileData {
-    static constexpr usize BUFFER_SIZE = 1024;
-  
-    HANDLE handle;
-    usize real_file_ptr;
-    usize real_file_size;
-
-    usize abstract_file_ptr;
-    usize abstract_file_size;
-
-    usize real_buffer_ptr;
-
-    bool in_sync;
-    u32 buffer_size;
-    u8 buffer[BUFFER_SIZE];
-
-    FileData(HANDLE h);
-    ~FileData() noexcept(false);
   };
 }
 

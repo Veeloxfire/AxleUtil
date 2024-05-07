@@ -1,10 +1,51 @@
 #include <AxleUtil/os/os_windows_files.h>
 
-namespace Axle::Windows::FILES {
-using Axle::FILES::FileData;
 
-FILES::OpenedFile open(const NativePath& name,
-                              OPEN_MODE open_mode) {
+namespace Axle::FILES::Base {
+  void handle_close<HANDLE>(HANDLE t) {
+    CloseHandle(t);
+  }
+
+  void handle_seek_from_start<HANDLE>(HANDLE h, usize ptr) {
+    LARGE_INTEGER li = {};
+    li.QuadPart = ptr; 
+
+    SetFilePointerEx(h, li, &li, FILE_BEGIN);
+
+    ASSERT(static_cast<usize>(li.QuadPart) == ptr);
+  }
+
+  usize handle_file_size<HANDLE>(HANDLE h) {
+    LARGE_INTEGER li = { {0} };
+    GetFileSizeEx(h, &li);
+    return li.QuadPart;
+  }
+
+  void handle_write<HANDLE>(HANDLE h, const u8* data, usize size) {
+    ASSERT(static_cast<usize>(static_cast<DWORD>(size)) == size);
+
+    DWORD bytes_written = 0;
+    BOOL wrote = WriteFile(h, data, static_cast<DWORD>(size), &bytes_written, NULL);
+
+    ASSERT(wrote);
+    ASSERT(static_cast<usize>(bytes_written) == size);
+  }
+
+  void handle_read<HANDLE>(HANDLE h, u8* data, usize size) {
+    ASSERT(static_cast<usize>(static_cast<DWORD>(size)) == size);
+    
+    DWORD bytes_read = 0;
+    BOOL read = ReadFile(h, data, static_cast<DWORD>(size), &bytes_read, NULL);
+    ASSERT(read);
+    ASSERT(static_cast<usize>(bytes_read) == size);
+  }
+}
+
+namespace Axle::Windows::FILES {
+
+ErrorCode open(FileData*& data,
+               const NativePath& name,
+               OPEN_MODE open_mode) {
   DWORD access;
   DWORD share;
 
@@ -27,17 +68,23 @@ FILES::OpenedFile open(const NativePath& name,
 
   HANDLE h = CreateFileA(name.c_str(), access, share, 0, OPEN_EXISTING, 0, 0);
   if (h == INVALID_HANDLE_VALUE) {
-    return { {nullptr}, ErrorCode::COULD_NOT_OPEN_FILE};
+    return ErrorCode::COULD_NOT_OPEN_FILE;
   }
   else {
-    FileData* file = allocate_single_constructed<FileData>(h);
+    if(data == nullptr) {
+      data = allocate_single_constructed<FileData>(h);
+    }
+    else {
+      Axle::reset_type<FileData>(data, h);
+    }
 
-    return { {file}, ErrorCode::OK};
+    return ErrorCode::OK;
   }
 }
 
-FILES::OpenedFile create(const NativePath& name,
-                                OPEN_MODE open_mode) {
+ErrorCode create(FileData*& data,
+                 const NativePath& name,
+                 OPEN_MODE open_mode) {
   DWORD access;
   DWORD share;
 
@@ -60,17 +107,23 @@ FILES::OpenedFile create(const NativePath& name,
 
   HANDLE h = CreateFileA(name.c_str(), access, share, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
   if (h == INVALID_HANDLE_VALUE) {
-    return { {nullptr}, ErrorCode::COULD_NOT_OPEN_FILE};
+    return ErrorCode::COULD_NOT_OPEN_FILE;
   }
   else {
-    FileData* file = allocate_single_constructed<FileData>(h);
+    if(data == nullptr) {
+      data = allocate_single_constructed<FileData>(h);
+    }
+    else {
+      Axle::reset_type<FileData>(data, h);
+    }
 
-    return { {file}, ErrorCode::OK};
+    return ErrorCode::OK;
   }
 }
 
-FILES::OpenedFile replace(const NativePath& name,
-                                 OPEN_MODE open_mode) {
+ErrorCode replace(FileData*& data,
+                  const NativePath& name,
+                  OPEN_MODE open_mode) {
   DWORD access;
   DWORD share;
 
@@ -92,12 +145,17 @@ FILES::OpenedFile replace(const NativePath& name,
 
   HANDLE h = CreateFileA(name.c_str(), access, share, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
   if (h == INVALID_HANDLE_VALUE) {
-    return { {nullptr}, ErrorCode::COULD_NOT_OPEN_FILE};
+    return ErrorCode::COULD_NOT_OPEN_FILE;
   }
   else {
-    FileData* file = allocate_single_constructed<FileData>(h);
+    if(data == nullptr) {
+      data = allocate_single_constructed<FileData>(h);
+    }
+    else {
+      Axle::reset_type<FileData>(data, h);
+    }
 
-    return { {file}, ErrorCode::OK};
+    return ErrorCode::OK;
   }
 }
 
@@ -110,10 +168,9 @@ FILES::ErrorCode create_empty_directory(const NativePath& name) {
     }
 }
 
-bool exist(const NativePath& name) {
+bool exists(const NativePath& name) {
   return GetFileAttributesA(name.c_str()) != INVALID_FILE_ATTRIBUTES;
 }
-
 
 OwnedArr<u8> read_full_file(const NativePath& file_name) {
   HANDLE h = CreateFileA(file_name.c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);

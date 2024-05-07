@@ -9,33 +9,16 @@
 #endif
 
 namespace Axle {
-FILES::FileData::FileData(HANDLE h) : handle(h) {
-  LARGE_INTEGER li = { {0} };
-  GetFileSizeEx(h, &li);
-
-  real_file_size = (usize)li.QuadPart;
-
-  li.QuadPart = 0;
-  SetFilePointerEx(h, li, &li, FILE_CURRENT);
-
-  real_file_ptr = (usize)li.QuadPart;
-
-  abstract_file_ptr = real_file_ptr;
-  abstract_file_size = real_file_size;
-
-  real_buffer_ptr = 0;
-  buffer_size = 0;
-  in_sync = true;
-}
-
 FILES::OpenedFile FILES::open(const ViewArr<const char>& name,
                               OPEN_MODE open_mode) {
  #ifdef AXLE_TRACING
   TRACING_FUNCTION();
 #endif
 
- Windows::NativePath path = name;
-  return Windows::FILES::open(path, open_mode);
+  Windows::NativePath path = name;
+  OpenedFile of;
+  of.error_code = Windows::FILES::open(of.file.data, path, open_mode);
+  return of;
 }
 
 FILES::OpenedFile FILES::create(const ViewArr<const char>& name,
@@ -44,8 +27,10 @@ FILES::OpenedFile FILES::create(const ViewArr<const char>& name,
   TRACING_FUNCTION();
 #endif
 
- Windows::NativePath path = name;
-  return Windows::FILES::create(path, open_mode);
+  Windows::NativePath path = name;
+  OpenedFile of;
+  of.error_code = Windows::FILES::create(of.file.data, path, open_mode);
+  return of;
 }
 
 FILES::OpenedFile FILES::replace(const ViewArr<const char>& name,
@@ -55,7 +40,9 @@ FILES::OpenedFile FILES::replace(const ViewArr<const char>& name,
 #endif
 
   Windows::NativePath path = name;
-  return Windows::FILES::replace(path, open_mode);
+  OpenedFile of;
+  of.error_code = Windows::FILES::replace(of.file.data, path, open_mode);
+  return of;
 }
 
 FILES::ErrorCode FILES::create_empty_directory(const ViewArr<const char>& name) {
@@ -97,9 +84,9 @@ FILES::ErrorCode FILES::delete_full_directory(const ViewArr<const char>& name) {
   else return ErrorCode::COULD_NOT_DELETE_FILE;
 }
 
-bool FILES::exist(const ViewArr<const char>& name) {
+bool FILES::exists(const ViewArr<const char>& name) {
   Windows::NativePath path = name;
-  return Windows::FILES::exist(path);
+  return Windows::FILES::exists(path);
 }
 
 void FILES::close(FileHandle file) {
@@ -110,153 +97,8 @@ void FILES::close(FileHandle file) {
   free_destruct_single<FileData>(file.data);
 }
 
-static void real_seek(FILES::FileData* file, usize ptr) {
-  if (file->real_file_ptr != ptr) {
-    LARGE_INTEGER li = {};
-    li.QuadPart = (LONGLONG)ptr - (LONGLONG)file->real_file_ptr;
-
-    SetFilePointerEx(file->handle, li, &li, FILE_CURRENT);
-
-    ASSERT(static_cast<usize>(li.QuadPart) == ptr);
-    file->real_file_ptr = ptr;
-  }
-}
-
-static void force_sync_buffer(FILES::FileData* file) {
-  real_seek(file, file->real_buffer_ptr);
-
-  DWORD bytes_written = 0;
-  BOOL wrote = WriteFile(file->handle, file->buffer, file->buffer_size, &bytes_written, NULL);
-
-  ASSERT(wrote);
-  ASSERT(bytes_written == file->buffer_size);
-  file->in_sync = true;
-  file->real_file_ptr = file->real_buffer_ptr + file->buffer_size;
-  file->real_file_size = file->abstract_file_size;
-}
-
-static void sync_buffer(FILES::FileData* file) {
-  if (!file->in_sync) {
-    force_sync_buffer(file);
-  }
-}
-
-void FILES::flush(FILES::FileHandle h) {
+void FILES::flush(FileHandle h) {
   sync_buffer(h.data);
-}
-
-FILES::FileData::~FileData() noexcept(false) {
-  sync_buffer(this);
-  CloseHandle(handle);
-}
-
-struct BufferRange {
-  usize ptr_start;
-  u32 buffer_start;
-  u32 size;
-};
-
-static BufferRange get_loaded_range(FILES::FileData* file, usize ptr, usize num_bytes) {
-  BufferRange range = {};
-
-  if (ptr < file->real_buffer_ptr) {
-    if (ptr + num_bytes <= file->real_buffer_ptr) {
-      //No overlap
-      return {};
-    }
-
-    range.ptr_start = file->real_buffer_ptr - ptr;
-    range.buffer_start = 0;
-
-    usize total_after = file->real_buffer_ptr - (ptr + num_bytes);
-    if (total_after < (usize)file->buffer_size) {
-      range.size = (u32)total_after;
-    }
-    else {
-      range.size = file->buffer_size;
-    }
-  }
-  else {
-    usize buffer_end_ptr = file->real_buffer_ptr + (usize)file->buffer_size;
-    if (buffer_end_ptr <= ptr) {
-      //No overlap
-      return {};
-    }
-
-    range.ptr_start = 0;
-    range.buffer_start = (u32)(ptr - file->real_buffer_ptr);
-
-    if (buffer_end_ptr - ptr < num_bytes) {
-      range.size = (u32)(buffer_end_ptr - ptr);
-    }
-    else {
-      range.size = (u32)num_bytes;
-    }
-  }
-
-  return range;
-}
-
-
-static void small_buffer_read(FILES::FileData* const file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
-  ASSERT(num_bytes <= FILES::FileData::BUFFER_SIZE);
-  usize space_in_file = file->real_file_size - file->real_buffer_ptr;
-  usize can_read_size = FILES::FileData::BUFFER_SIZE > space_in_file ? space_in_file : FILES::FileData::BUFFER_SIZE;
-
-  ASSERT(num_bytes <= can_read_size);
-
-  BOOL read = ReadFile(file->handle, file->buffer, (DWORD)can_read_size, NULL, NULL);
-  ASSERT(read);
-  file->real_file_ptr += can_read_size;
-
-  file->real_buffer_ptr = abstract_ptr;
-  file->buffer_size = (u32)can_read_size;
-  memcpy_s(bytes, num_bytes, file->buffer, num_bytes);
-}
-
-static void big_buffer_read(FILES::FileData* const file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
-  ASSERT(num_bytes > FILES::FileData::BUFFER_SIZE);
-  ASSERT(num_bytes <= file->real_file_size - file->real_buffer_ptr);
-
-  BOOL read = ReadFile(file->handle, bytes, (DWORD)num_bytes, NULL, NULL);
-  ASSERT(read);
-  file->real_file_ptr += num_bytes;
-
-  //Take the back bits
-  file->real_buffer_ptr = abstract_ptr + (num_bytes - FILES::FileData::BUFFER_SIZE);
-  memcpy_s(file->buffer, FILES::FileData::BUFFER_SIZE, bytes + (num_bytes - FILES::FileData::BUFFER_SIZE), FILES::FileData::BUFFER_SIZE);
-  file->buffer_size = FILES::FileData::BUFFER_SIZE;
-}
-
-static void generic_buffer_read(FILES::FileData* const file, usize abstract_ptr, uint8_t* bytes, size_t num_bytes) {
-  if (num_bytes <= FILES::FileData::BUFFER_SIZE) {
-    small_buffer_read(file, abstract_ptr, bytes, num_bytes);
-  }
-  else {
-    big_buffer_read(file, abstract_ptr, bytes, num_bytes);
-  }
-}
-
-static void write_new_buffer(FILES::FileData* const file, const uint8_t* bytes, size_t num_bytes) {
-  BOOL wrote = WriteFile(file->handle, bytes, (DWORD)num_bytes, NULL, NULL);
-  ASSERT(wrote);
-
-  file->real_file_ptr += num_bytes;
-  if (file->real_file_ptr > file->real_file_size) {
-    file->real_file_size = file->real_file_ptr;
-  }
-
-  usize size = num_bytes > FILES::FileData::BUFFER_SIZE ? FILES::FileData::BUFFER_SIZE : num_bytes;
-
-  file->real_buffer_ptr = file->abstract_file_ptr + (num_bytes - size);
-  file->in_sync = true;
-  file->buffer_size = (u32)size;
-  memcpy_s(file->buffer, size, bytes + (num_bytes - size), size);
-}
-
-static void seek_from_start_internal(FILES::FileData* file, size_t location) {
-  ASSERT(location <= file->abstract_file_size);
-  file->abstract_file_ptr = location;
 }
 
 FILES::ErrorCode FILES::read_to_bytes(FileHandle file_h, uint8_t* bytes, size_t num_bytes) {
@@ -264,7 +106,7 @@ FILES::ErrorCode FILES::read_to_bytes(FileHandle file_h, uint8_t* bytes, size_t 
 
   FileData* const file = file_h.data;
 
-  BufferRange range = get_loaded_range(file, file->abstract_file_ptr, num_bytes);
+  Base::BufferRange range = get_loaded_range(file, file->abstract_file_ptr, num_bytes);
 
   if (num_bytes > range.size) {
     sync_buffer(file); //always need to sync here
@@ -410,7 +252,7 @@ void FILES::seek_from_start(FileHandle file, size_t location) {
 
 size_t FILES::get_current_pos(FileHandle file) {
   LARGE_INTEGER li = {};
-  SetFilePointerEx(file.data->handle, {}, &li, FILE_CURRENT);
+  SetFilePointerEx(file.data->file_handle, {}, &li, FILE_CURRENT);
 
   return (size_t)li.QuadPart;
 }

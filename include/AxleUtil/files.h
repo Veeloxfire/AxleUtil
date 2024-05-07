@@ -3,84 +3,14 @@
 
 #include <AxleUtil/utility.h>
 #include <AxleUtil/formattable.h>
+
+#include <AxleUtil/os/os_windows_files.h>
+
 namespace Axle {
 namespace FILES {
-#define FILE_ERROR_CODES_X \
-modify(OK)\
-modify(COULD_NOT_CREATE_FILE)\
-modify(COULD_NOT_OPEN_FILE)\
-modify(COULD_NOT_CLOSE_FILE)\
-modify(COULD_NOT_DELETE_FILE)\
-
-  enum struct ErrorCode : uint8_t {
-  #define modify(NAME) NAME,
-    FILE_ERROR_CODES_X
-  #undef modify
-  };
-
-  namespace ErrorCodeString {
-  #define modify(NAME) inline constexpr char NAME[] = #NAME;
-    FILE_ERROR_CODES_X
-  #undef modify
-  }
-
-  constexpr ViewArr<const char> error_code_string(const ErrorCode code) {
-    switch (code) {
-  #define modify(NAME) case ErrorCode :: NAME :\
-return lit_view_arr(ErrorCodeString :: NAME);
-      FILE_ERROR_CODES_X
-  #undef modify
-    }
-
-    return {};
-  }
-
-#undef FILE_ERROR_CODES_X
-
-  enum struct OPEN_MODE : uint8_t {
-    READ = 'r', WRITE = 'w'
-  };
-
-  struct FileData;
-
-  struct FileHandle {
-    FileData* data = nullptr;
-  };
-
-  void close(FileHandle file);
-
-  struct ScopedFile : FileHandle {
-    constexpr ScopedFile() = default;
-    constexpr ScopedFile(const ScopedFile&) = delete;
-    constexpr ScopedFile& operator=(const ScopedFile&) = delete;
-    
-    constexpr void close_this() {
-      if(data != nullptr) { close(*this); } 
-    }
-
-    constexpr ScopedFile(FileData* d) : FileHandle{d} {}
-    constexpr ScopedFile(FileHandle h) : FileHandle(h) {}
-    constexpr ScopedFile(ScopedFile&& sp) 
-      : FileHandle{std::exchange(sp.data, nullptr)} 
-    {}
-
-    constexpr ScopedFile& operator=(ScopedFile&& sp) {
-        if(this == &sp) return *this;
-
-        close_this();
-        data = std::exchange(sp.data, nullptr);
-        return *this;
-    }
-
-    constexpr ~ScopedFile() {
-      close_this(); 
-    }
-  };
-
-  struct OpenedFile {
-    ScopedFile file;
-    ErrorCode error_code;
-  };
+  using FileData = Axle::Windows::FILES::FileData;
+  using FileHandle = Base::FileHandle<FileData>; 
+  using OpenedFile = Base::OpenedFile<FileData>;
 
   OpenedFile open(const ViewArr<const char>& name,
                   OPEN_MODE open_mode);
@@ -89,10 +19,12 @@ return lit_view_arr(ErrorCodeString :: NAME);
   OpenedFile replace(const ViewArr<const char>& name,
                      OPEN_MODE open_mode);
 
+  void close(FileHandle);
+
   ErrorCode create_empty_directory(const ViewArr<const char>& name);
   ErrorCode delete_full_directory(const ViewArr<const char>& name);
 
-  bool exist(const ViewArr<const char>& name);
+  bool exists(const ViewArr<const char>& name);
 
   ErrorCode read_to_bytes(FileHandle file, uint8_t* bytes, size_t num_bytes);
   uint8_t read_byte(FileHandle file);

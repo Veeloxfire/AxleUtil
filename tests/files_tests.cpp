@@ -127,3 +127,48 @@ TEST_FUNCTION(Files, parse_file_locations) {
     TEST_EQ(ext, files.extension);
   }
 }
+
+constexpr auto full_test_file = lit_view_arr("Hello\r\nWorld\r\n1234\r\n99 99 99\r\n");
+
+TEST_FUNCTION(Files, exists) {
+  TEST_EQ(true, FILES::exists(lit_view_arr("./tests/data.txt")));
+  TEST_EQ(false, FILES::exists(lit_view_arr("./tests/data2.txt")));
+}
+
+TEST_FUNCTION(Files, read_full_file) {
+  OwnedArr<const u8> data = FILES::read_full_file(lit_view_arr("./tests/data.txt"));
+
+  TEST_STR_EQ(full_test_file, cast_arr<const char>(view_arr(data)));
+}
+
+TEST_FUNCTION(Files, open_read) {
+  FILES::OpenedFile f = FILES::open(lit_view_arr("./tests/data.txt"), FILES::OPEN_MODE::READ);
+  TEST_EQ(FILES::ErrorCode::OK, f.error_code);
+
+  {
+    usize size = FILES::size_of_file(f.file);
+    TEST_EQ(full_test_file.size, size);
+  }
+
+  {
+    u8 byte = FILES::read_byte(f.file);
+    TEST_EQ(static_cast<u8>('H'), byte);
+  }
+
+  {
+    const u32 expected = deserialize_le_force<u32>(cast_arr<const u8>(lit_view_arr("ello")));
+    u32 i = 0;
+    FILES::ErrorCode error = FILES::read<u32>(f.file, &i, 1);
+    TEST_EQ(FILES::ErrorCode::OK, error);
+    TEST_EQ(expected, i);
+  }
+
+  {
+    constexpr auto remaining = lit_view_arr("\r\nWorld\r\n1234\r\n99 99 99\r\n");
+    u8 bytes[remaining.size];
+    FILES::ErrorCode error = FILES::read_to_bytes(f.file, bytes, array_size(bytes));
+    TEST_EQ(FILES::ErrorCode::OK, error);
+
+    TEST_STR_EQ(remaining, cast_arr<const char>(view_arr(bytes)));
+  }
+}

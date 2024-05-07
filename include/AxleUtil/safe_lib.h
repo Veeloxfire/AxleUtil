@@ -96,9 +96,10 @@ constexpr inline void destruct_arr_void(void* const ptr_v, const size_t num) {
   }
 }
 
-template<typename T>
-constexpr inline void construct_single(Self<T>* const ptr) {
-  new(ptr) T();
+template<typename T, typename ... Args>
+constexpr inline void construct_single(Self<T>* const ptr,
+    Args&& ... args) {
+  new(ptr) T(std::forward<Args>(args)...);
 }
 
 template<typename T>
@@ -111,10 +112,10 @@ constexpr inline void destruct_single_void(void* const ptr) {
   destruct_single<T>(reinterpret_cast<T*>(ptr));
 }
 
-template<typename T>
-constexpr void reset_type(Self<T>* t) noexcept {
+template<typename T, typename ... Args>
+constexpr void reset_type(Self<T>* t, Args&& ... args) noexcept {
   t->~T();
-  new(t) T();
+  new(t) T(std::forward<Args>(args)...);
 }
 
 template<typename...>

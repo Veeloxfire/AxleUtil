@@ -103,6 +103,7 @@ set(TestServerFiles
 set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/args.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/files.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/files_base.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/format.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/formattable.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/io.h"
