@@ -168,6 +168,9 @@ namespace Axle::Windows {
 
     operator HANDLE() && noexcept;
 
+    OwnedHandle(const OwnedHandle& h_) = delete;
+    OwnedHandle& operator=(const OwnedHandle& h_) = delete;
+    
     OwnedHandle() noexcept;
     OwnedHandle(HANDLE&& h_) noexcept;
     OwnedHandle(OwnedHandle&& h_) noexcept;
