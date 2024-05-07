@@ -128,21 +128,22 @@ TEST_FUNCTION(Files, parse_file_locations) {
   }
 }
 
+constexpr auto data_file_path = lit_view_arr("./test/data/data.txt");
 constexpr auto full_test_file = lit_view_arr("Hello\r\nWorld\r\n1234\r\n99 99 99\r\n");
 
 TEST_FUNCTION(Files, exists) {
-  TEST_EQ(true, FILES::exists(lit_view_arr("./tests/data.txt")));
+  TEST_EQ(true, FILES::exists(data_file_path));
   TEST_EQ(false, FILES::exists(lit_view_arr("./tests/data2.txt")));
 }
 
 TEST_FUNCTION(Files, read_full_file) {
-  OwnedArr<const u8> data = FILES::read_full_file(lit_view_arr("./tests/data.txt"));
+  OwnedArr<const u8> data = FILES::read_full_file(data_file_path);
 
   TEST_STR_EQ(full_test_file, cast_arr<const char>(view_arr(data)));
 }
 
 TEST_FUNCTION(Files, open_read) {
-  FILES::OpenedFile f = FILES::open(lit_view_arr("./tests/data.txt"), FILES::OPEN_MODE::READ);
+  FILES::OpenedFile f = FILES::open(data_file_path, FILES::OPEN_MODE::READ);
   TEST_EQ(FILES::ErrorCode::OK, f.error_code);
 
   {
