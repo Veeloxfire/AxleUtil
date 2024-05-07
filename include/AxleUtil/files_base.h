@@ -2,6 +2,7 @@
 #define AXLEUTIL_FILES_BASE_H_
 
 #include <AxleUtil/safe_lib.h>
+#include <AxleUtil/formattable.h>
 
 namespace Axle::FILES {
 #define FILE_ERROR_CODES_X \
@@ -39,6 +40,17 @@ return lit_view_arr(ErrorCodeString :: NAME);
   enum struct OPEN_MODE : u8 {
     READ = 'r', WRITE = 'w'
   };
+
+  enum struct DirectoryElementType {
+    File, Directory,
+  };
+
+  struct DirectoryElement {
+    DirectoryElementType type;
+    ViewArr<const char> name;
+  };
+
+  struct DirectoryIteratorEnd {};
 
   namespace Base {
   // Need to implemented per file handle
@@ -283,5 +295,20 @@ return lit_view_arr(ErrorCodeString :: NAME);
 
 
   }
+}
+
+namespace Axle::Format {
+  template<>
+  struct FormatArg<Axle::FILES::DirectoryElementType> {
+    using DirectoryElementType = Axle::FILES::DirectoryElementType;
+    template<Formatter F>
+    constexpr static void load_string(F& res, DirectoryElementType det) {
+      switch(det) {
+        case DirectoryElementType::File: return res.load_string_lit("DirectoryElementType::Files");
+        case DirectoryElementType::Directory: return res.load_string_lit("DirectoryElementType::Directory");
+      }
+      INVALID_CODE_PATH("Unsupported DirectoryElementType");
+    }
+  };
 }
 #endif

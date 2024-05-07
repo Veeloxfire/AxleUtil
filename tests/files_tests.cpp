@@ -128,7 +128,7 @@ TEST_FUNCTION(Files, parse_file_locations) {
   }
 }
 
-constexpr auto data_file_path = lit_view_arr("./test/data/data.txt");
+constexpr auto data_file_path = lit_view_arr("./tests/data/file.txt");
 constexpr auto full_test_file = lit_view_arr("Hello\r\nWorld\r\n1234\r\n99 99 99\r\n");
 
 TEST_FUNCTION(Files, exists) {
@@ -172,4 +172,40 @@ TEST_FUNCTION(Files, open_read) {
 
     TEST_STR_EQ(remaining, cast_arr<const char>(view_arr(bytes)));
   }
+}
+
+TEST_FUNCTION(Files, DirItr) {
+  const FILES::DirectoryIteratorEnd end = {};
+  FILES::DirectoryIterator itr = FILES::directory_iterator(lit_view_arr("./tests/data/"));
+
+  TEST_EQ(true, itr < end);
+  
+  bool found_dir = false;
+  bool found_file = false;
+
+  for(; itr < end; ++itr) {
+    FILES::DirectoryElement el = *itr;
+    switch(el.type) {
+      case FILES::DirectoryElementType::File: {
+        TEST_EQ(false, found_file);
+        found_file = true;
+        TEST_STR_EQ(lit_view_arr("file.txt"), el.name);
+        break;
+      }
+      case FILES::DirectoryElementType::Directory: {
+        TEST_EQ(false, found_dir);
+        found_dir = true;
+        TEST_STR_EQ(lit_view_arr("dir"), el.name);
+        break;
+      }
+
+      default: {
+        INVALID_CODE_PATH("Unsupported/invalid Directory Element type");
+      }
+    }
+  }
+
+  TEST_EQ(false, itr < end);
+  TEST_EQ(true, found_dir);
+  TEST_EQ(true, found_file);
 }

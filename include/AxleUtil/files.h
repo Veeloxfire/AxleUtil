@@ -9,6 +9,7 @@
 namespace Axle {
 namespace FILES {
   using FileData = Axle::Windows::FILES::FileData;
+  using DirectoryIterator = Axle::Windows::FILES::DirectoryIterator;
   using FileHandle = Base::FileHandle<FileData>; 
   using OpenedFile = Base::OpenedFile<FileData>;
 
@@ -57,6 +58,8 @@ namespace FILES {
   }
 
   void flush(FileHandle);
+
+  DirectoryIterator directory_iterator(const ViewArr<const char>& name) noexcept;
 
   struct FileFormatter {
     FileHandle handle;

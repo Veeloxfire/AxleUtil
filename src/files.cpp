@@ -257,6 +257,30 @@ size_t FILES::get_current_pos(FileHandle file) {
   return (size_t)li.QuadPart;
 }
 
+
+FILES::DirectoryIterator FILES::directory_iterator(const ViewArr<const char>& name) noexcept {
+  Windows::NativePath p = name;
+  
+  char last = name[name.size - 1];
+  if(last == '\\' || last == '/') {
+    ASSERT(name.size < array_size(p.path) - 1);
+    p.path[name.size] = '*';
+  }
+  else {
+    ASSERT(name.size + 1 < array_size(p.path) - 1);
+    p.path[name.size] = '\\';
+    p.path[name.size + 1] = '*';
+  }
+
+  DirectoryIterator itr;
+  itr.find_handle = FindFirstFileA(p.c_str(), &itr.data);
+
+  while(!itr.valid_find()) {
+    itr.find_next();
+  }
+  return itr;
+}
+
 constexpr static bool is_character(char c) {
   return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'z');
 }

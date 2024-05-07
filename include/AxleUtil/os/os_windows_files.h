@@ -49,6 +49,28 @@ namespace Axle::Windows::FILES {
     HANDLE handle;
     u32 timeout;
   };
+
+  struct DirectoryIterator {
+    WIN32_FIND_DATAA data = {};
+    HANDLE find_handle = INVALID_HANDLE_VALUE;
+
+    DirectoryIterator(const DirectoryIterator&) = delete;
+    DirectoryIterator& operator=(const DirectoryIterator&) = delete;
+    
+    DirectoryIterator() noexcept = default;
+    DirectoryIterator(DirectoryIterator&&) noexcept;
+    DirectoryIterator& operator=(DirectoryIterator&&) noexcept;
+    ~DirectoryIterator() noexcept;
+
+    bool valid_find() noexcept;
+    void find_next() noexcept;
+
+    void operator++() noexcept;
+
+    bool operator<(Axle::FILES::DirectoryIteratorEnd) const noexcept;
+
+    Axle::FILES::DirectoryElement operator*() const noexcept;
+  };
 }
 
 namespace Axle {

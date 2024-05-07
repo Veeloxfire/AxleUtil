@@ -186,4 +186,64 @@ OwnedArr<u8> read_full_file(const NativePath& file_name) {
 
   return { data, static_cast<usize>(li.QuadPart) };
 }
+
+  DirectoryIterator::DirectoryIterator(DirectoryIterator&& d) noexcept : data(std::move(d.data)), find_handle(std::exchange(d.find_handle, INVALID_HANDLE_VALUE)) {}
+
+  DirectoryIterator& DirectoryIterator::operator=(DirectoryIterator&& d) noexcept {
+    if(this == &d) return *this;
+
+    data = std::move(d.data);
+    find_handle = std::exchange(d.find_handle, INVALID_HANDLE_VALUE);
+
+    return *this;
+  }
+
+  DirectoryIterator::~DirectoryIterator() noexcept {
+    if(find_handle != INVALID_HANDLE_VALUE) {
+      FindClose(find_handle);
+    }
+  }
+
+  void DirectoryIterator::find_next() noexcept {
+    BOOL b = FindNextFileA(find_handle, &data);
+    if(b == 0) {
+      ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
+      FindClose(find_handle);
+      find_handle = INVALID_HANDLE_VALUE;
+    }
+  }
+  
+  bool DirectoryIterator::valid_find() noexcept {
+    if(find_handle == INVALID_HANDLE_VALUE) return true;
+
+    bool is_self = (data.cFileName[0] == '.' && data.cFileName[1] == '\0');
+    bool is_parent = (data.cFileName[0] == '.' && data.cFileName[1] == '.' && data.cFileName[2] == '\0');
+    return !(is_self || is_parent);
+  }
+
+  void DirectoryIterator::operator++() noexcept {
+    do {
+      find_next();
+    } while(!valid_find());
+  }
+  
+  bool DirectoryIterator::operator<(Axle::FILES::DirectoryIteratorEnd) const noexcept {
+    return find_handle != INVALID_HANDLE_VALUE;
+  }
+
+  Axle::FILES::DirectoryElement DirectoryIterator::operator*() const noexcept {
+    constexpr auto attr_to_type = [](decltype(WIN32_FIND_DATAA::dwFileAttributes) attr) {
+      if((attr & FILE_ATTRIBUTE_DIRECTORY) > 0) {
+        return Axle::FILES::DirectoryElementType::Directory;
+      }
+      else {
+        return Axle::FILES::DirectoryElementType::File;
+      }
+    };
+
+    return {
+      attr_to_type(data.dwFileAttributes),
+      ViewArr<const char>{data.cFileName, strlen_ts(data.cFileName)},
+    };
+  }
 }
