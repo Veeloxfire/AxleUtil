@@ -136,12 +136,46 @@ TEST_FUNCTION(Interned_Strings, order) {
   const InternString* str2 = interner.intern("world", 5);
   const InternString* str3 = interner.intern("hello", 5);
 
-  TEST_EQ(std::strong_ordering::equivalent, Intern::lexicographic_order(str1, str1));
-  TEST_EQ(std::strong_ordering::equivalent, Intern::lexicographic_order(str1, str3));
-  TEST_EQ(std::strong_ordering::equivalent, Intern::lexicographic_order(str2, str2));
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str1, str1));
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str2, str2));
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str3, str3));
 
-  TEST_EQ(std::strong_ordering::less, Intern::lexicographic_order(str1, str2));
-  TEST_EQ(std::strong_ordering::greater, Intern::lexicographic_order(str2, str1));
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str1, str3));
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str3, str1));
+
+  TEST_EQ(std::strong_ordering::less, lexicographic_order(str1, str2));
+  TEST_EQ(std::strong_ordering::greater, lexicographic_order(str2, str1));
+}
+
+TEST_FUNCTION(Interned_Strings, order) {
+  StringInterner interner = {};
+
+  const char str1_holder[] = "hello";
+  const char str3_holder[] = "hello";
+
+  auto str1 = Axle::lit_view_arr(str1_holder);
+  auto str2 = Axle::lit_view_arr("world");
+  auto str3 = Axle::lit_view_arr(str3_holder);
+
+  TEST_NEQ(str1.data, str3.data);
+
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str1, str1));
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str2, str2));
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str3, str3));
+  
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str1, str3));
+  TEST_EQ(std::strong_ordering::equivalent, lexicographic_order(str3, str1));
+
+  TEST_EQ(std::strong_ordering::less, lexicographic_order(str1, str2));
+  TEST_EQ(std::strong_ordering::less, lexicographic_order(str3, str2));
+  TEST_EQ(std::strong_ordering::greater, lexicographic_order(str2, str1));
+  TEST_EQ(std::strong_ordering::greater, lexicographic_order(str2, str3));
+
+  TEST_EQ(std::strong_ordering::greater, lexicographic_order(str1, view_arr(str3, 0, str3.size - 1)));
+  TEST_EQ(std::strong_ordering::less, lexicographic_order(view_arr(str3, 0, str3.size - 1), str1));
+  
+  TEST_EQ(std::strong_ordering::greater, lexicographic_order(str1, view_arr(str1, 0, str1.size - 1)));
+  TEST_EQ(std::strong_ordering::less, lexicographic_order(view_arr(str1, 0, str1.size - 1), str1));
 }
 
 TEST_FUNCTION(Interned_Strings, set) {

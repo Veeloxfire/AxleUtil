@@ -53,25 +53,33 @@ namespace Format {
 namespace Intern {
   inline constexpr InternString TOMBSTONE_STR = {0,0, nullptr};
   inline constexpr const InternString* TOMBSTONE = &TOMBSTONE_STR;
+}
 
-  constexpr std::strong_ordering lexicographic_order(const InternString* l, const InternString* r) {
-    if(l == r) return std::strong_ordering::equivalent;
 
-    usize min_size = l->len < r->len ? l->len : r->len;
-    const char* const lstr = l->string;
-    const char* const rstr = r->string;
 
-    for (usize i = 0; i < min_size; i++) {
-      char cl = lstr[i];
-      char cr = rstr[i];
+constexpr std::strong_ordering lexicographic_order(const ViewArr<const char>& l, const ViewArr<const char>& r) {
+  const auto size_order = l.size <=> r.size;
+  if(l.data == r.data) return size_order;
 
-      if (cl != cr) {
-        return cl <=> cr;
-      }
+  const usize min_size = (size_order < 0) ? l.size : r.size;
+  const char* const lstr = l.data;
+  const char* const rstr = r.data;
+
+  for (usize i = 0; i < min_size; i++) {
+    const char cl = lstr[i];
+    const char cr = rstr[i];
+
+    const auto c_order = cl <=> cr;
+    if (c_order != 0) {
+      return c_order;
     }
-
-    return l->len <=> r->len;
   }
+
+  return size_order;
+}
+
+constexpr std::strong_ordering lexicographic_order(const InternString* l, const InternString* r) {
+  return lexicographic_order(view_arr(l), view_arr(r));
 }
 
 struct Table {
