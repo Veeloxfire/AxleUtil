@@ -105,8 +105,12 @@ const InternString* StringInterner::find(const char* string, const size_t length
 #endif
   STACKTRACE_FUNCTION();
 
-  ASSERT(string != nullptr);
-  ASSERT(length > 0);
+  if(string == nullptr || length == 0) {
+    ASSERT(string == 0 && length == 0);
+    return &empty_string;
+  }
+
+  ASSERT(string != nullptr && length > 0);
 
   const uint64_t hash = fnv1a_hash(string, length);
 
@@ -127,8 +131,12 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
 #endif
   STACKTRACE_FUNCTION();
   
-  ASSERT(string != nullptr);
-  ASSERT(length > 0);
+  if(string == nullptr || length == 0) {
+    ASSERT(string == 0 && length == 0);
+    return &empty_string;
+  }
+
+  ASSERT(string != nullptr && length > 0);
 
   const uint64_t hash = fnv1a_hash(string, length);
 

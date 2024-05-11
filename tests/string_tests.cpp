@@ -74,6 +74,36 @@ TEST_FUNCTION(Interned_Strings, creation) {
   TEST_EQ(hash, str7->hash);
 }
 
+TEST_FUNCTION(Interned_Strings, empty_string) {
+  StringInterner interner = {};
+
+  const InternString* e1 = &interner.empty_string;
+
+  const InternString* s1 = interner.intern(nullptr, 0);
+  const InternString* s2 = interner.intern(nullptr, 0);
+
+  TEST_EQ(e1, s1);
+  TEST_EQ(e1, s2);
+  TEST_EQ(s1, s2);
+  TEST_EQ(static_cast<usize>(0), e1->len);
+  TEST_EQ(static_cast<usize>(0), s1->len);
+  TEST_EQ(static_cast<usize>(0), s2->len);
+
+  {
+    const ViewArr<const char> e_raw = view_arr(e1);
+    TEST_EQ(static_cast<const char*>(nullptr), e_raw.data);
+    TEST_EQ(static_cast<usize>(0), e_raw.size);
+  }
+
+  {
+    Format::ArrayFormatter fmt = {};
+    Format::format_to(fmt, "{}", e1);
+
+    const auto out = fmt.view();
+    TEST_ARR_EQ(static_cast<const char*>(""), static_cast<usize>(0), out.data, out.size);
+  }
+}
+
 TEST_FUNCTION(Interned_Strings, find) {
   StringInterner interner = {};
 
