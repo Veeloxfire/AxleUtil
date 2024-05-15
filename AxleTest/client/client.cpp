@@ -202,6 +202,7 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
         
 #ifdef AXLE_COUNT_ALLOC
         if(Axle::ALLOC_COUNTER::GLOBALLY_ACTIVE) {
+          Axle::ALLOC_COUNTER::GLOBALLY_ACTIVE = false;
           const Axle::ALLOC_COUNTER& allocated = Axle::ALLOC_COUNTER::allocated();
 
           ASSERT(allocated.num_allocs >= allocated.num_static_allocs);
