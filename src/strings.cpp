@@ -93,10 +93,19 @@ void Table::try_resize() {
   }
 }
 
-static void destory_is(void* is) {
+static void destroy_is(void* is) {
   InternString* i = reinterpret_cast<InternString*>(is);
   destruct_arr<char>(i->string, i->len + 1);
   destruct_single<InternString>(i);
+}
+
+static void destroy_is_big(void* is) {
+  InternString* i = reinterpret_cast<InternString*>(is);
+  usize original_size = sizeof(InternString) * i->len + 1;
+  destruct_arr<char>(i->string, i->len + 1);
+  destruct_single<InternString>(i);
+
+  free_destruct_n<u8>(reinterpret_cast<u8*>(is), original_size);
 }
 
 const InternString* StringInterner::find(const char* string, const size_t length) const {
@@ -145,11 +154,18 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
   const InternString* el = *place;
   if (el == nullptr || el == Intern::TOMBSTONE) {
     InternString* new_el; 
+    
     {
+      usize alloc_size = sizeof(InternString) + length + 1;
       auto* dl = allocs.alloc_destruct_element();
-      dl->deleter = &destory_is;
+      if(allocs.is_big_alloc(alloc_size)) {
+        dl->deleter = &destroy_is_big;
+      }
+      else {
+        dl->deleter = &destroy_is;
+      }
 
-      void* mem = allocs.alloc_raw(sizeof(InternString) + length + 1, alignof(InternString));
+      void* mem = allocs.alloc_raw(alloc_size, alignof(InternString));
       mem = std::assume_aligned<alignof(InternString)>(mem);
       
       new_el = new(mem) InternString();

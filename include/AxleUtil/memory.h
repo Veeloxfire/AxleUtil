@@ -367,6 +367,10 @@ struct GrowingMemoryPool {
   Destructlist* dl_top = nullptr;
   DestructlistN* dln_top = nullptr;
 
+  constexpr static bool is_big_alloc(usize N) {
+    return N > BLOCK_SIZE;
+  }
+
   void new_block() {
     Block* old = curr;
     curr = new Block();
@@ -376,7 +380,7 @@ struct GrowingMemoryPool {
   }
  
   void* alloc_internal(usize size, usize align) {
-    ASSERT(size <= BLOCK_SIZE);
+    ASSERT(!is_big_alloc(size));
 
     ASSERT(curr_top <= BLOCK_SIZE);
     if(curr == nullptr) {
@@ -406,12 +410,12 @@ struct GrowingMemoryPool {
   }
 
   void* alloc_raw(usize size, usize align) {
-    if(size <= BLOCK_SIZE) {
-      return alloc_internal(size, align);
-    }
-    else {
+    if(is_big_alloc(size)) {
       ASSERT(align <= 8);
       return Axle::allocate_default<u8>(size);
+    }
+    else {
+      return alloc_internal(size, align);
     }
   }
 
@@ -439,17 +443,17 @@ struct GrowingMemoryPool {
   T* allocate() {
     Destructlist* dl = alloc_destruct_element();
 
-    if constexpr(sizeof(T) <= BLOCK_SIZE) {
-      void* t_space = alloc_internal(sizeof(T), alignof(T));
-      dl->deleter = &destruct_single_void<T>;
-
-      T* t = new (t_space) T();
+    if constexpr(is_big_alloc(sizeof(T))) {
+      T* t = Axle::allocate_default<T>();
+      dl->deleter = &delete_big_alloc<T>;
       dl->data = t;
       return t;
     }
     else {
-      T* t = Axle::allocate_default<T>();
-      dl->deleter = &delete_big_alloc<T>;
+      void* t_space = alloc_internal(sizeof(T), alignof(T));
+      dl->deleter = &destruct_single_void<T>;
+
+      T* t = new (t_space) T();
       dl->data = t;
       return t;
     }
@@ -460,20 +464,20 @@ struct GrowingMemoryPool {
     ASSERT(n > 0);
     DestructlistN* dl = alloc_destruct_element_N();
 
-    if (sizeof(T) * n <= BLOCK_SIZE) {
+    if (is_big_alloc(sizeof(T) * n)) {
+      T* t = Axle::allocate_default<T>(n);
+      dl->deleter = &delete_big_alloc_arr<T>;
+      dl->n = n;
+      dl->data = t;
+      return t;
+    }
+    else {
       void* t_space = alloc_internal(sizeof(T) * n, alignof(T));
       dl->deleter = &destruct_arr_void<T>;
       dl->n = n;
 
       T* t = new(t_space)T[n];
 
-      dl->data = t;
-      return t;
-    }
-    else {
-      T* t = Axle::allocate_default<T>(n);
-      dl->deleter = &delete_big_alloc_arr<T>;
-      dl->n = n;
       dl->data = t;
       return t;
     }
