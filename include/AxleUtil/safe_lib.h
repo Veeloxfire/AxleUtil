@@ -22,8 +22,6 @@ Axle::Panic::panic("Assertion failed in at line " STR_REPLACE(__LINE__) ", file 
 
 #define INVALID_CODE_PATH(reason) Axle::Panic::panic("Invalid Code path at line " STR_REPLACE(__LINE__) ", file " STR_REPLACE(__FILE__) ":\n\"" reason "\"")
 
-//#define COUNT_ALLOC
-
 template<typename T>
 struct TypeIdentity {
   using Type = T;

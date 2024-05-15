@@ -5,7 +5,7 @@
 #include <memory>
 
 namespace Axle {
-#ifdef COUNT_ALLOC
+#ifdef AXLE_COUNT_ALLOC
 template<typename T>
 void free_heap_check(T* ptr, size_t num_bytes) {
   const uint8_t* ptr_end = (const uint8_t*)ptr + num_bytes;
@@ -16,20 +16,21 @@ void free_heap_check(T* ptr, size_t num_bytes) {
 }
 
 struct ALLOC_COUNTER {
-  using DESTRUCTOR = void (*)(void*, size_t);
-
   struct Allocation {
+    bool static_lifetime;
     const char* type_name;
     const void* mem;
     size_t element_size;
     size_t count;
-    DESTRUCTOR destruct_arr;
   };
+
+  bool main_program_runtime = false;
 
   Allocation* allocs = nullptr;
   size_t num_allocs = 0;
   size_t capacity = 0;
 
+  size_t num_static_allocs = 0;
   size_t current_allocated_size = 0;
 
   size_t max_allocated_blocks = 0;
@@ -40,12 +41,34 @@ struct ALLOC_COUNTER {
   size_t valid_remove_calls = 0;
   size_t insert_calls = 0;
 
+  // Active by default
+  inline static bool GLOBALLY_ACTIVE = true;
+  inline static ALLOC_COUNTER& allocated() {
+    ASSERT(GLOBALLY_ACTIVE);
+    struct global_counter { 
+      ALLOC_COUNTER counter;
+      ~global_counter() {
+        GLOBALLY_ACTIVE = false;
+      }
+    };
+    static global_counter allocated_s ={};
+
+    return allocated_s.counter;
+  }
+
+  inline ~ALLOC_COUNTER() {
+    std::free(allocs);
+  }
+
   inline void reset() {
-    allocs = nullptr;
+    main_program_runtime = false;
+
+    if(allocs != nullptr) std::free(allocs);
     num_allocs = 0;
     capacity = 0;
 
     current_allocated_size = 0;
+    num_static_allocs = 0;
 
     max_allocated_blocks = 0;
     max_allocated_size   = 0;
@@ -75,12 +98,15 @@ struct ALLOC_COUNTER {
       allocs = new_allocs;
     }
 
+    allocs[num_allocs].static_lifetime = !main_program_runtime;
     allocs[num_allocs].type_name = typeid(T).name();
     allocs[num_allocs].mem  = (const void*)t;
     allocs[num_allocs].element_size = sizeof(T);
     allocs[num_allocs].count = num;
-    allocs[num_allocs].destruct_arr = (DESTRUCTOR)&destruct_arr<T>;
 
+    if(!main_program_runtime) {
+      num_static_allocs++;
+    }
     num_allocs++;
     if (num_allocs > max_allocated_blocks) {
       max_allocated_blocks = num_allocs;
@@ -126,8 +152,12 @@ struct ALLOC_COUNTER {
   }
 
   //This is an unordered remove
-  void remove_single(Allocation* i) {
+  inline void remove_single(Allocation* i) {
     num_allocs--;
+    if(i->static_lifetime) {
+      ASSERT(num_static_allocs > 0);
+      num_static_allocs--;
+    }
     const auto end = allocs + num_allocs;
 
     //Remove it by moving it to the end of the array
@@ -149,6 +179,8 @@ struct ALLOC_COUNTER {
     }
 
     valid_remove_calls++;
+    
+    ASSERT(num_allocs > 0);
 
     const void* t_v = (void*)t;
 
@@ -157,7 +189,7 @@ struct ALLOC_COUNTER {
 
     for (; i < end; i++) {
       if (i->mem == t_v) {
-        free_heap_check(t, i->count * i->element_size);
+        //free_heap_check(t, i->count * i->element_size);
 
         current_allocated_size -= (i->count * i->element_size);
         remove_single(i);
@@ -166,13 +198,6 @@ struct ALLOC_COUNTER {
     }
 
     INVALID_CODE_PATH("Freed something that wasnt allocated");
-  }
-
-
-  static ALLOC_COUNTER& allocated() {
-    static ALLOC_COUNTER allocated_s ={};
-
-    return allocated_s;
   }
 };
 #endif
@@ -183,7 +208,7 @@ T* allocate_default(const size_t num) {
 
   ASSERT(t != nullptr);
 
-#ifdef COUNT_ALLOC
+#ifdef AXLE_COUNT_ALLOC
   ALLOC_COUNTER::allocated().insert(t, num);
 #endif
 
@@ -202,7 +227,7 @@ T* allocate_single_constructed(U&& ... u) {
 
   ASSERT(t != nullptr);
 
-#ifdef COUNT_ALLOC
+#ifdef AXLE_COUNT_ALLOC
   ALLOC_COUNTER::allocated().insert(t, 1);
 #endif
 
@@ -219,8 +244,10 @@ T* reallocate_default(Self<T>* ptr, const size_t old_size, const size_t new_size
     default_init<T>(val + old_size, new_size - old_size);
   }
 
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().update(ptr, val, new_size);
+#ifdef AXLE_COUNT_ALLOC
+  if(ALLOC_COUNTER::GLOBALLY_ACTIVE) {
+    ALLOC_COUNTER::allocated().update(ptr, val, new_size);
+  }
 #endif
 
   return val;
@@ -228,8 +255,10 @@ T* reallocate_default(Self<T>* ptr, const size_t old_size, const size_t new_size
 
 template<typename T>
 void free_destruct_single(Self<T>* ptr) {
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().remove(ptr);
+#ifdef AXLE_COUNT_ALLOC
+  if(ALLOC_COUNTER::GLOBALLY_ACTIVE) {
+    ALLOC_COUNTER::allocated().remove(ptr);
+  }
 #endif
 
   if (ptr == nullptr) return;
@@ -240,8 +269,10 @@ void free_destruct_single(Self<T>* ptr) {
 
 template<typename T>
 void free_destruct_n(Self<T>* ptr, size_t num) {
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().remove(ptr);
+#ifdef AXLE_COUNT_ALLOC
+  if(ALLOC_COUNTER::GLOBALLY_ACTIVE) {
+    ALLOC_COUNTER::allocated().remove(ptr);
+  }
 #endif
 
   if (ptr == nullptr) return;
@@ -255,8 +286,10 @@ void free_destruct_n(Self<T>* ptr, size_t num) {
 
 template<typename T>
 void free_no_destruct(Self<T>* ptr) {
-#ifdef COUNT_ALLOC
-  ALLOC_COUNTER::allocated().remove(ptr);
+#ifdef AXLE_COUNT_ALLOC
+  if(ALLOC_COUNTER::GLOBALLY_ACTIVE) {
+    ALLOC_COUNTER::allocated().remove(ptr);
+  }
 #endif
 
   if (ptr == nullptr) return;

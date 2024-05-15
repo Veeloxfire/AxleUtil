@@ -49,6 +49,13 @@ static void client_panic_callback(const void* ud, const Axle::ViewArr<const char
 bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
   STACKTRACE_FUNCTION();
 
+
+#ifdef AXLE_COUNT_ALLOC
+  if(Axle::ALLOC_COUNTER::GLOBALLY_ACTIVE) {
+    Axle::ALLOC_COUNTER::allocated().main_program_runtime = true;
+  }
+#endif
+
   //Cannot start until the pipe is ready
   {
     BOOL res = WaitNamedPipeA(AxleTest::IPC::PIPE_NAME, NMPWAIT_WAIT_FOREVER);
@@ -135,62 +142,94 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
 
         const auto& test = unit_tests[test_id];
 
-        Axle::OwnedArr<u8> maybe_context;
-
-        if(test.context_name.data != nullptr) {
-          AxleTest::IPC::MessageHeader data_header;
-          if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(in_handle, data_header)) {
-            formatted_error("Unexpected read error");
-            return false;
-          }
-
-          if(data_header.version != AxleTest::IPC::VERSION || data_header.type != AxleTest::IPC::Type::Data) {
-            formatted_error("Unexpected header. Version: {}, Type: {}", data_header.version, data_header.type);
-            return false;
-          }
-
-          u32 size;
-          if(!Axle::deserialize_le<u32>(in_handle, size)) {
-            formatted_error("Unexpected read error");
-            return false;
-          }
-
-          maybe_context = Axle::new_arr<u8>(size);
-          Axle::ViewArr<u8> out_data = Axle::view_arr(maybe_context);
-          if(!Axle::deserialize_le<Axle::ViewArr<u8>>(in_handle, out_data)) {
-            formatted_error("Unexpected read error");
-            return false;
-          }
-        }
-
-        IPC::OpaqueContext context = {};
-        context.name = test.context_name;
-        context.data = Axle::view_arr(maybe_context);
-
-        errors.test_name = test.test_name;
         {
-          // Set the stacktrace so that tests
-          // get a stracktrace of just their name
-          const Axle::Stacktrace::TraceNode* old_base = Axle::Stacktrace::EXECUTION_TRACE;
-          DEFER(old_base) {
-            // Reset to the old stacktrace
-            Axle::Stacktrace::EXECUTION_TRACE = old_base;
-          };
+          Axle::OwnedArr<u8> maybe_context;
 
-          const Axle::Stacktrace::TraceNode curr_stacktrace = {
-            nullptr, test.test_name,
-          };
-          Axle::Stacktrace::EXECUTION_TRACE = &curr_stacktrace;
+          if(test.context_name.data != nullptr) {
+            AxleTest::IPC::MessageHeader data_header;
+            if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(in_handle, data_header)) {
+              formatted_error("Unexpected read error");
+              return false;
+            }
 
-          // Run the test finally
-          test.test_func(&errors, context);
+            if(data_header.version != AxleTest::IPC::VERSION || data_header.type != AxleTest::IPC::Type::Data) {
+              formatted_error("Unexpected header. Version: {}, Type: {}", data_header.version, data_header.type);
+              return false;
+            }
+
+            u32 size;
+            if(!Axle::deserialize_le<u32>(in_handle, size)) {
+              formatted_error("Unexpected read error");
+              return false;
+            }
+
+            maybe_context = Axle::new_arr<u8>(size);
+            Axle::ViewArr<u8> out_data = Axle::view_arr(maybe_context);
+            if(!Axle::deserialize_le<Axle::ViewArr<u8>>(in_handle, out_data)) {
+              formatted_error("Unexpected read error");
+              return false;
+            }
+          }
+
+          IPC::OpaqueContext context = {};
+          context.name = test.context_name;
+          context.data = Axle::view_arr(maybe_context);
+
+          errors.test_name = test.test_name;
+          {
+            // Set the stacktrace so that tests
+            // get a stracktrace of just their name
+            const Axle::Stacktrace::TraceNode* old_base = Axle::Stacktrace::EXECUTION_TRACE;
+            DEFER(old_base) {
+              // Reset to the old stacktrace
+              Axle::Stacktrace::EXECUTION_TRACE = old_base;
+            };
+
+            const Axle::Stacktrace::TraceNode curr_stacktrace = {
+              nullptr, test.test_name,
+            };
+            Axle::Stacktrace::EXECUTION_TRACE = &curr_stacktrace;
+
+            // Run the test finally
+            test.test_func(&errors, context);
+          }
         }
         if(errors.is_panic()) {
           Axle::serialize_le(out_handle, report_fail(Axle::view_arr(errors.first_error)));
+          return true;
         }
-        else {
-          Axle::serialize_le(out_handle, report_success({}));
+
+        
+#ifdef AXLE_COUNT_ALLOC
+        if(Axle::ALLOC_COUNTER::GLOBALLY_ACTIVE) {
+          const Axle::ALLOC_COUNTER& allocated = Axle::ALLOC_COUNTER::allocated();
+
+          ASSERT(allocated.num_allocs >= allocated.num_static_allocs);
+          const usize count = allocated.num_allocs - allocated.num_static_allocs;
+          if(count > 0) {
+            namespace Format = Axle::Format;
+
+            Format::ArrayFormatter fmt;
+            Format::format_to(fmt, "Leaked {} allocations:", count);
+
+            ASSERT(allocated.allocs != nullptr);
+
+            for(usize i = 0; i < allocated.num_allocs; ++i) {
+              const Axle::ALLOC_COUNTER::Allocation& a
+                = allocated.allocs[i];
+              if(a.static_lifetime) continue;
+
+              Format::format_to(fmt, "\n- {}: {} x \"{}\"",
+                  Axle::PrintPtr{a.mem}, a.count, Axle::CString{a.type_name});
+            }
+
+            Axle::serialize_le(out_handle, report_fail(fmt.view()));
+            return true;
+          }
         }
+#endif
+          
+        Axle::serialize_le(out_handle, report_success({}));
         return true;
       }
 

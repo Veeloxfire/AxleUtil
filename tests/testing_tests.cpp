@@ -21,6 +21,11 @@ TEST_FUNCTION(AxleTest, loop) {
   test_errors->report_error("Should have infinite looped");
 }
 
+TEST_FUNCTION(AxleTest, leak) {
+  (void)test_errors;
+  (void)Axle::allocate_default<int>();
+}
+
 namespace FAIL_TESTS {
   static void report(AxleTest::TestErrors *test_errors) {
     test_errors->report_error("Should have errored");
