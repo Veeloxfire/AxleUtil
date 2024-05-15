@@ -21,10 +21,12 @@ TEST_FUNCTION(AxleTest, loop) {
   test_errors->report_error("Should have infinite looped");
 }
 
-TEST_FUNCTION(AxleTest, leak) {
+#ifdef AXLE_COUNT_ALLOC
+TEST_FUNCTION(AllocCount, leak) {
   (void)test_errors;
   (void)Axle::allocate_default<int>();
 }
+#endif
 
 namespace FAIL_TESTS {
   static void report(AxleTest::TestErrors *test_errors) {
