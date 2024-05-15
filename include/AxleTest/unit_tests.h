@@ -74,6 +74,9 @@ namespace AxleTest {
   };
 
   template<typename T>
+  TestFormat(const T&)->TestFormat<T>;
+
+  template<typename T>
   void test_eq(TestErrors* errors, usize line,
                const Axle::ViewArr<const char>& expected_str, const T& expected,
                const Axle::ViewArr<const char>& actual_str, const T& actual) {
