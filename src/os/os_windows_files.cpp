@@ -2,10 +2,12 @@
 
 
 namespace Axle::FILES::Base {
+  template<>
   void handle_close<HANDLE>(HANDLE t) {
     CloseHandle(t);
   }
 
+  template<>
   void handle_seek_from_start<HANDLE>(HANDLE h, usize ptr) {
     LARGE_INTEGER li = {};
     li.QuadPart = ptr; 
@@ -15,12 +17,14 @@ namespace Axle::FILES::Base {
     ASSERT(static_cast<usize>(li.QuadPart) == ptr);
   }
 
+  template<>
   usize handle_file_size<HANDLE>(HANDLE h) {
     LARGE_INTEGER li = { {0} };
     GetFileSizeEx(h, &li);
     return li.QuadPart;
   }
 
+  template<>
   void handle_write<HANDLE>(HANDLE h, const u8* data, usize size) {
     ASSERT(static_cast<usize>(static_cast<DWORD>(size)) == size);
 
@@ -31,6 +35,7 @@ namespace Axle::FILES::Base {
     ASSERT(static_cast<usize>(bytes_written) == size);
   }
 
+  template<>
   void handle_read<HANDLE>(HANDLE h, u8* data, usize size) {
     ASSERT(static_cast<usize>(static_cast<DWORD>(size)) == size);
     

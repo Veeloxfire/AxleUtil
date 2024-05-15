@@ -6,15 +6,15 @@
 #include <AxleUtil/utility.h>
 
 namespace Axle::FILES::Base {
-  extern template
+  template<>
   void handle_close<HANDLE>(HANDLE t);
-  extern template
+  template<>
   void handle_seek_from_start<HANDLE>(HANDLE t, usize size);
-  extern template
+  template<>
   usize handle_file_size<HANDLE>(HANDLE t);
-  extern template
+  template<>
   void handle_write<HANDLE>(HANDLE t, const u8* data, usize size);
-  extern template
+  template<>
   void handle_read<HANDLE>(HANDLE t, u8* data, usize size);
 }
 
