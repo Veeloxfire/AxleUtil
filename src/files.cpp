@@ -292,10 +292,6 @@ constexpr static bool is_absolute_path(const ViewArr<const char>& r) {
     && (r.data[2] == '\\' || r.data[2] == '/');
 }
 
-constexpr static bool logical_xor(bool a, bool b) {
-  return (a || b) && !(a && b);
-}
-
 static void append_single_to_path(Array<ViewArr<const char>>& path, const ViewArr<const char>& dir) {
   if (dir.size == 0) {
     return;
