@@ -517,6 +517,175 @@ struct GrowingMemoryPool {
   }
 };
 
+
+template<typename T>
+struct DenseBlockAllocator {
+  struct Block {
+    T* data;
+    usize size;
+    usize capacity;
+
+    constexpr usize remaining_size() const {
+      ASSERT(size <= capacity);
+      return capacity - size;
+    }
+  };
+
+  // sorted array of blocks
+  // first_empty points to the first block which isnt full
+  // After that you can binary search up to the size
+  // to find a block with the correct size
+  Block* blocks = nullptr;
+  usize size = 0;
+  usize capacity = 0;
+
+  usize next_alloc_size = 0;
+  usize first_empty = 0;
+  
+  DenseBlockAllocator() = default;
+  ~DenseBlockAllocator() {
+    for(usize i = 0; i < size; ++i) {
+      const Block* const b = blocks + i;
+      free_destruct_n<T>(b->data, b->size);
+    }
+
+    free_destruct_n<Block>(blocks, capacity);
+  }
+  
+  DenseBlockAllocator(const DenseBlockAllocator&) = delete;
+  DenseBlockAllocator(DenseBlockAllocator&&) = delete;
+  DenseBlockAllocator& operator=(const DenseBlockAllocator&) = delete;
+  DenseBlockAllocator& operator=(DenseBlockAllocator&&) = delete;
+
+  void grow() {
+    ASSERT(size == capacity);
+    if(capacity == 0) {
+      capacity = 8;
+    }
+    else {
+      capacity *= 2;
+    }
+
+    blocks = reallocate_default<Block>(blocks, size, capacity);
+  }
+
+  [[nodiscard]] Axle::ViewArr<T> internal_alloc_from_empty(const usize n) {
+    usize blk_index;
+
+    if(first_empty < size && (blocks + size - 1)->remaining_size() >= n) {
+      // Should be able to allocate in the current blocks
+      if(n == 1) {
+        // just pick the first one
+        blk_index = first_empty;
+      }
+      else {
+        // search for one large enough
+        usize l = 0;
+        usize h = size - first_empty;
+        while(l != h) {
+          usize mid = (l + (h - 1)) / 2;
+
+          Block* mid_b = blocks + mid + first_empty;
+
+          if(n <= mid_b->remaining_size()) {
+            h = mid;
+          }
+          else {
+            l = mid + 1;
+          }
+        }
+
+        ASSERT(l < (size - first_empty));
+
+        blk_index = l + first_empty;
+      }
+    }
+    else {
+      // no chance, needs another allocation
+      blk_index = size;
+      if(size == capacity) {
+        grow();
+        ASSERT(blk_index < capacity);
+        ASSERT(blk_index == size);
+      }
+
+      Block* blk = blocks + blk_index;
+      size += 1;
+      ASSERT(blk->data == nullptr);
+
+      if(next_alloc_size == 0) {
+        next_alloc_size = 32;// fairly arbitrary
+      }
+
+      usize na_size = next_alloc_size;
+      next_alloc_size *= 2;
+
+      if(n > na_size) {
+        if(n < (1u << 15u)) {
+          na_size = Axle::ceil_to_pow_2(n);
+        }
+        else {
+          na_size = n;
+        }
+      }
+
+      blk->data = Axle::allocate_default<T>(na_size);
+      blk->size = 0;
+      blk->capacity = na_size;
+    }
+
+
+    ASSERT(blk_index < size);
+    Block* blk = blocks + blk_index;
+    ASSERT(blk->remaining_size() >= n);
+
+    const Axle::ViewArr<T> vals = { blk->data + blk->size, n };
+    blk->size += n;
+    ASSERT(blk->capacity >= blk->size);
+
+    const usize curr_remaining = blk->remaining_size();
+
+    while(blk_index != first_empty) {
+      Block* next_swap = blocks + blk_index - 1;
+
+      // Swap backwards while its too large
+      if(next_swap->remaining_size() > curr_remaining) {
+        std::swap(*blk, *next_swap);
+        blk = next_swap;
+      }
+      else {
+        break;
+      }
+    }
+
+    if(blk->remaining_size() == 0) {
+      first_empty += 1;
+    }
+
+    return vals;
+  }
+
+  [[nodiscard]] T* allocate() {
+    Axle::ViewArr<T> ts = internal_alloc_from_empty(1);
+
+    ASSERT(ts.size == 1);
+    T* t = ts.data;
+    reset_type<T>(t);
+    return t;
+  }
+
+  [[nodiscard]] Axle::ViewArr<T> allocate_n(usize n) {
+    Axle::ViewArr<T> ts = internal_alloc_from_empty(n);
+
+    ASSERT(ts.size == n);
+
+    FOR_MUT(ts, t) {
+      reset_type<T>(t);
+    }
+    return ts;
+  }
+};
+
 struct ArenaAllocator {
   static_assert(sizeof(void*) == sizeof(uint64_t), "Must be 8 bytes");
 
