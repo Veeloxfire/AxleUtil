@@ -1,5 +1,5 @@
 #include <AxleTest/unit_tests.h>
-#include <AxleUtil/utility.h>
+#include <AxleUtil/math.h>
 
 using namespace Axle;
 

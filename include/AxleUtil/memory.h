@@ -2,6 +2,7 @@
 #define AXLEUTIL_MEMORY_H_
 
 #include <AxleUtil/safe_lib.h>
+#include <AxleUtil/math.h>
 #include <memory>
 
 namespace Axle {

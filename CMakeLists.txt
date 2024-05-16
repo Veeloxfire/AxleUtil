@@ -107,6 +107,7 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/format.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/formattable.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/io.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/math.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/memory.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/safe_lib.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/serialize.h"
