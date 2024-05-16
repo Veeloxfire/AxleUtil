@@ -325,7 +325,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
 
     if(!cp.process_handle.is_valid()) {
       IO::print("Failed\n");
-      failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
+      failed_arr.insert({test_name, Axle::copy_arr("Internal Error: Failed to create process")});
       continue;
     }
  
@@ -347,7 +347,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     ReportMessage outcome_message;
     if(!expect_report(in_handle, outcome_message)) {
       IO::print("Failed\n");
-      failed_arr.insert({test_name, Axle::copy_arr("Internal Error")});
+      failed_arr.insert({test_name, Axle::copy_arr("Internal Error: Message never recieved (likely timeout)")});
       continue;
     }
 
