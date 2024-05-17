@@ -7,6 +7,7 @@ struct DeleteCounter {
   usize* i = nullptr;
 
   DeleteCounter() = default;
+  DeleteCounter(usize* p) : i(p) {}
 
   DeleteCounter(const DeleteCounter&) = delete;
   DeleteCounter(DeleteCounter&&) = delete;
@@ -38,6 +39,48 @@ struct DeleteCounter2 {
   }
 };
 
+TEST_FUNCTION(GlobalAllocators, basic) {
+  {
+    usize counter = 0;
+    DeleteCounter* d = Axle::allocate_default<DeleteCounter>(1000);
+    for(usize i = 0; i < 1000; ++i) {
+      d[i].i = &counter;
+    }
+    Axle::free_destruct_n<DeleteCounter>(d, 1000);
+
+    TEST_EQ(static_cast<usize>(1000), counter);
+  }
+
+  {
+    usize counter = 0;
+    DeleteCounter* d = Axle::allocate_default<DeleteCounter>(1000);
+    for(usize i = 0; i < 1000; ++i) {
+      d->i = &counter;
+    }
+    Axle::free_no_destruct<DeleteCounter>(d);
+
+    TEST_EQ(static_cast<usize>(0), counter);
+  }
+
+  {
+    usize counter = 0;
+    Axle::free_destruct_single<DeleteCounter>(Axle::allocate_single_constructed<DeleteCounter>(&counter));
+    TEST_EQ(static_cast<usize>(1), counter);
+  }
+}
+
+TEST_FUNCTION(GlobalAllocators, alloc_zero) {
+  int* i = Axle::allocate_default<int>(0);
+  TEST_EQ(static_cast<int*>(nullptr), i);
+}
+
+TEST_FUNCTION(GrowingMemoryPool, alloc_zero) {
+  Axle::GrowingMemoryPool<128> pool;
+
+  int* empty = pool.allocate_n<int>(0);
+
+  TEST_EQ(static_cast<int*>(nullptr), empty);
+}
 
 TEST_FUNCTION(GrowingMemoryPool, destruct) {
   usize counter = 0;
@@ -188,4 +231,13 @@ TEST_FUNCTION(DenseBlockAllocator, allocate_n) {
   }
 
   TEST_EQ(static_cast<usize>(255 + 129 + 70 + 20 + 16 + 16 + 16 + 16 + 8 + 4 + 2 + 1), counter);
+}
+
+TEST_FUNCTION(DenseBlockAllocator, alloc_zero) {
+  Axle::DenseBlockAllocator<int> pool;
+
+  const Axle::ViewArr<int> empty = pool.allocate_n(0);
+
+  TEST_EQ(static_cast<int*>(nullptr), empty.data);
+  TEST_EQ(static_cast<usize>(0), empty.size);
 }

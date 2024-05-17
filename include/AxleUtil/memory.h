@@ -121,6 +121,7 @@ struct ALLOC_COUNTER {
 
   template<typename T>
   void update(T* from, T* to, size_t num) {
+    ASSERT(to != nullptr && num > 0);
     if (from == nullptr) {
       insert<T>(to, num);
       return;
@@ -135,6 +136,7 @@ struct ALLOC_COUNTER {
 
     for (; i < end; i++) {
       if (i->mem == f_v) {
+        ASSERT(num > 0);
         i->mem = (const void*)to;
 
         current_allocated_size -= (i->count * i->element_size);
@@ -205,6 +207,8 @@ struct ALLOC_COUNTER {
 
 template<typename T>
 T* allocate_default(const size_t num) {
+  if (num == 0) return nullptr;
+
   T* t = (T*)std::malloc(sizeof(T) * num);
 
   ASSERT(t != nullptr);
@@ -238,6 +242,8 @@ T* allocate_single_constructed(U&& ... u) {
 
 template<typename T>
 T* reallocate_default(Self<T>* ptr, const size_t old_size, const size_t new_size) {
+  ASSERT((ptr != nullptr && old_size > 0) || (ptr == nullptr && old_size == 0));
+  ASSERT(new_size != 0);
   T* val = (T*)std::realloc((void*)ptr, sizeof(T) * new_size);
   ASSERT(val != nullptr);
 
@@ -411,7 +417,10 @@ struct GrowingMemoryPool {
   }
 
   void* alloc_raw(usize size, usize align) {
-    if(is_big_alloc(size)) {
+    if(size == 0) {
+      return nullptr;
+    }
+    else if(is_big_alloc(size)) {
       ASSERT(align <= 8);
       return Axle::allocate_default<u8>(size);
     }
@@ -462,7 +471,8 @@ struct GrowingMemoryPool {
 
   template<typename T>
   T* allocate_n(usize n) {
-    ASSERT(n > 0);
+    if(n == 0) return nullptr;
+
     DestructlistN* dl = alloc_destruct_element_N();
 
     if (is_big_alloc(sizeof(T) * n)) {
@@ -675,6 +685,8 @@ struct DenseBlockAllocator {
   }
 
   [[nodiscard]] Axle::ViewArr<T> allocate_n(usize n) {
+    if(n == 0) { return {nullptr, 0}; }
+
     Axle::ViewArr<T> ts = internal_alloc_from_empty(n);
 
     ASSERT(ts.size == n);
