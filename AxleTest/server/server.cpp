@@ -378,7 +378,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     IO::err_print("\n===========\n");
   }
   else {
-    IO::print("All tests ({}) succeeded\n", test_info.tests.size);
+    IO::format("All tests ({}) succeeded\n", test_info.tests.size);
   }
 
   return true;
