@@ -1,7 +1,7 @@
-#include <AxleTest/unit_tests.h>
 #include <AxleUtil/files.h>
 #include <AxleUtil/strings.h>
 
+#include <AxleTest/unit_tests.h>
 using namespace Axle;
 
 TEST_FUNCTION(Files, normalise_paths) {

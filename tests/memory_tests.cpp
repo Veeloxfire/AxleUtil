@@ -1,4 +1,5 @@
 #include <AxleUtil/memory.h>
+
 #include <AxleTest/unit_tests.h>
 
 using namespace Axle::Primitives;

@@ -1,8 +1,7 @@
-#include <AxleTest/unit_tests.h>
-
 #include <AxleUtil/strings.h>
 #include <AxleUtil/stdext/compare.h>
 
+#include <AxleTest/unit_tests.h>
 using namespace Axle;
 
 TEST_FUNCTION(Interned_Strings, creation) {

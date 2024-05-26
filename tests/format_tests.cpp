@@ -1,6 +1,6 @@
-#include <AxleTest/unit_tests.h>
 #include <AxleUtil/format.h>
 
+#include <AxleTest/unit_tests.h>
 using namespace Axle;
 
 TEST_FUNCTION(Formatters, syntax) {

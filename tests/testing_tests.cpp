@@ -1,5 +1,6 @@
-#include <AxleTest/unit_tests.h>
 #include "test_contexts.h"
+
+#include <AxleTest/unit_tests.h>
 
 TEST_FUNCTION(AxleTest, always_pass) {
   (void)test_errors;

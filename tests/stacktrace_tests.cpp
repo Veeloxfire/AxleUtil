@@ -1,10 +1,9 @@
-#include <AxleTest/unit_tests.h>
-
 #ifndef STACKTRACE_ENABLE
 #define STACKTRACE_ENABLE
 #endif
 #include <AxleUtil/stacktrace.h>
 
+#include <AxleTest/unit_tests.h>
 using namespace Axle::Stacktrace;
 
 static Axle::OwnedArr<char> func3() {

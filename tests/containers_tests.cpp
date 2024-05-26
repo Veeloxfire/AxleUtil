@@ -1,6 +1,6 @@
-#include "AxleUtil/utility.h"
-#include <AxleTest/unit_tests.h>
+#include <AxleUtil/utility.h>
 
+#include <AxleTest/unit_tests.h>
 using namespace Axle;
 
 static constexpr int RANDOM_ARR[] = {

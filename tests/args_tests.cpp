@@ -1,6 +1,6 @@
-#include <AxleTest/unit_tests.h>
-
 #include <AxleUtil/args.h>
+
+#include <AxleTest/unit_tests.h>
 
 TEST_FUNCTION(Args, basic) {
   const char* args[] {
