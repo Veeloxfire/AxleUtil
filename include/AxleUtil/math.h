@@ -1,7 +1,7 @@
 #ifndef AXLEUTIL_MATH_H_
 #define AXLEUTIL_MATH_H_
 
-#include <AxleUtil/primitives.h>
+#include <AxleUtil/safe_lib.h>
 
 namespace Axle {
  

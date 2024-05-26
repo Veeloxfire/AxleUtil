@@ -8,19 +8,11 @@
 #include <AxleUtil/panic.h>
 
 namespace Axle {
-#define STR_REPLAC2(a) #a
-#define STR_REPLACE(a) STR_REPLAC2(a)
-
 #define BYTE(a) (static_cast<uint8_t>(a))
 #define JOI2(a, b) a ## b
 #define JOIN(a, b) JOI2(a, b)
 
 #define TODO() static_assert(false, "Code is broken")
-
-#define ASSERT(expr) do { if(!(expr))\
-Axle::Panic::panic("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " STR_REPLACE(__FILE__) ":\n" #expr); } while(false)
-
-#define INVALID_CODE_PATH(reason) Axle::Panic::panic("Invalid Code path at line " STR_REPLACE(__LINE__) ", file " STR_REPLACE(__FILE__) ":\n\"" reason "\"")
 
 template<typename T>
 struct TypeIdentity {

@@ -22,4 +22,12 @@ namespace Axle::Panic {
     panic(message, N - 1);
   }
 }
+#define STR_REPLAC2(a) #a
+#define STR_REPLACE(a) STR_REPLAC2(a)
+
+#define ASSERT(expr) do { if(!(expr))\
+Axle::Panic::panic("Assertion failed in at line " STR_REPLACE(__LINE__) ", file " STR_REPLACE(__FILE__) ":\n" #expr); } while(false)
+
+#define INVALID_CODE_PATH(reason) Axle::Panic::panic("Invalid Code path at line " STR_REPLACE(__LINE__) ", file " STR_REPLACE(__FILE__) ":\n\"" reason "\"")
+
 #endif
