@@ -282,7 +282,7 @@ TEST_FUNCTION(FormatArg, Double) {
 
 TEST_FUNCTION(Formatters, ArrayFormatter) {
   constexpr ViewArr<const char> expected_final 
-      = lit_view_arr("hello worldhello worldhello worldhello world\0");
+      = lit_view_arr("hello worldhello worldhello world\0");
 
   //This is required to make sure we actually stop using the local array
   static_assert(sizeof(Format::ArrayFormatter::LocalArr::arr) < expected_final.size);
@@ -299,6 +299,8 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
     const auto actual_o = arrfm.take();
     TEST_STR_EQ(expected, actual_o);
   }
+  
+  TEST_EQ(static_cast<usize>(0), arrfm.view().size);
 
   Format::format_to(arrfm, "hello world");
   Format::format_to(arrfm, "hello world");
@@ -313,6 +315,18 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
     const auto actual_o = arrfm.take();
     TEST_STR_EQ(expected_final, actual_o);
   }
+
+  TEST_EQ(static_cast<usize>(0), arrfm.view().size);
+
+  while(!arrfm.is_heap) { 
+    Format::format_to(arrfm, "hello world");
+  }
+
+  TEST_EQ(true, arrfm.is_heap);
+  TEST_NEQ(static_cast<usize>(0), arrfm.view().size);
+  arrfm.clear();
+  TEST_EQ(true, arrfm.is_heap);
+  TEST_EQ(static_cast<usize>(0), arrfm.view().size);
 }
 
 TEST_FUNCTION(Formatters, ViewFormatter) {

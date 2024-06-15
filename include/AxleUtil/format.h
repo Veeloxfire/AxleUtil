@@ -60,6 +60,15 @@ namespace Format {
       } 
     }
 
+    void clear() {
+      if(is_heap) {
+        heap_arr.arr.clear();
+      }
+      else {
+        local_arr.size = 0;
+      }
+    }
+
     ViewArr<const char> view() const {
       if (is_heap) {
         return const_view_arr(heap_arr.arr);
@@ -72,10 +81,17 @@ namespace Format {
 
     OwnedArr<char> take() {
       if (is_heap) {
-        return bake_arr(std::move(heap_arr.arr));
+        OwnedArr<char> c = bake_arr(std::move(heap_arr.arr));
+
+        heap_arr.~HeapArr();
+        new (&local_arr) LocalArr{};
+
+        return c;
       }
       else {
-        return copy_arr(local_arr.arr, static_cast<usize>(local_arr.size));
+        OwnedArr<char> c = copy_arr(local_arr.arr, static_cast<usize>(local_arr.size));
+        local_arr.size = 0;
+        return c;
       }
     }
 
