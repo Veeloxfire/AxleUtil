@@ -242,7 +242,7 @@ FILES::ErrorCode FILES::write_aligned_array(FileHandle file, const uint8_t* arr,
   }
 }
 
-FILES::ErrorCode FILES::write_aligned_array(FileHandle file, const Array<uint8_t>& arr, const size_t align) {
+FILES::ErrorCode FILES::write_aligned_array(FileHandle file, const ViewArr<const uint8_t>& arr, const size_t align) {
   return write_aligned_array(file, arr.data, arr.size, align);
 }
 

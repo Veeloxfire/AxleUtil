@@ -44,12 +44,17 @@ namespace FILES {
   ErrorCode write(FileHandle file, const uint8_t* arr, size_t length);
   ErrorCode write_padding_bytes(FileHandle file, uint8_t byte, size_t num);
 
-  ErrorCode write_aligned_array(FileHandle file, const uint8_t* arr, const size_t size, const size_t align);
-  ErrorCode write_aligned_array(FileHandle file, const Array<uint8_t>& arr, const size_t align);
+  ErrorCode write_aligned_array(FileHandle file, const u8* arr, const size_t size, const size_t align);
+  ErrorCode write_aligned_array(FileHandle file, const ViewArr<const u8>& arr, const size_t align);
 
   template<typename T>
   ErrorCode write_obj(FileHandle file, const T& t) {
     return write(file, (const uint8_t*)&t, sizeof(T));
+  }
+
+  template<typename T>
+  ErrorCode write_obj_arr(FileHandle file, const ViewArr<T>& t) {
+    return write(file, (const uint8_t*)t.data, t.size * sizeof(T));
   }
 
   template<usize N>
