@@ -2,6 +2,7 @@
 #define AXLEUTIL_OPTION_H_
 
 #include <AxleUtil/safe_lib.h>
+#include <utility>
 
 namespace Axle {
 struct InPlaceT {};
@@ -22,15 +23,9 @@ struct Option {
   }
 
   constexpr Option() = default;
-  constexpr Option(const Option& o) : valid(o.valid) {
-    if(valid) {
-      new (&value) T(value);
-    }
-  }
-  constexpr Option(Option&& o) : valid(o.valid) {
-    if(valid) {
-      new(&value) T(std::move(o.value));
-    }
+  constexpr Option(const Option& o) : valid(o.valid), value(o.value) {}
+  constexpr Option(Option&& o) : valid(o.valid), value(std::move(o.value)) {
+    o.destroy();
   }
   
   constexpr Option(const T& t) : valid(true), value(t) {}
@@ -58,7 +53,7 @@ struct Option {
     if(t.valid) {
       if(!valid) construct_single<T>(&value);
       valid = true;
-      value = t.t;
+      value = t.value;
     } else {
       destroy();
     }
@@ -70,12 +65,35 @@ struct Option {
     if(t.valid) {
       if(!valid) construct_single<T>(&value);
       valid = true;
-      value = t.t;
+      value = std::move(t.value);
+      t.destroy();
     } else {
       destroy();
     }
 
     return *this;
+  }
+
+  constexpr void set_value(const T& t) {
+    if(valid) {
+      value = t;
+    }
+    else {
+      new (&value) T(t);
+    }
+
+    valid = true;
+  }
+
+  constexpr void set_value(T&& t) {
+    if(valid) {
+      value = std::move(t);
+    }
+    else {
+      new (&value) T(std::move(t));
+    }
+
+    valid = true;
   }
 
   constexpr ~Option() {
