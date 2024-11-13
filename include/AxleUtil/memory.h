@@ -531,9 +531,9 @@ struct GrowingMemoryPool {
 template<typename T>
 struct DenseBlockAllocator {
   struct Block {
-    T* data;
-    usize size;
-    usize capacity;
+    T* data = nullptr;
+    usize size = 0;
+    usize capacity = 0;
 
     constexpr usize remaining_size() const {
       ASSERT(size <= capacity);
@@ -644,8 +644,8 @@ struct DenseBlockAllocator {
       blk->capacity = na_size;
     }
 
-
     ASSERT(blk_index < size);
+    ASSERT(first_empty <= blk_index);
     Block* blk = blocks + blk_index;
     ASSERT(blk->remaining_size() >= n);
 
@@ -655,8 +655,11 @@ struct DenseBlockAllocator {
 
     const usize curr_remaining = blk->remaining_size();
 
-    while(blk_index != first_empty) {
-      Block* next_swap = blocks + blk_index - 1;
+    Block* first_empty_block = blocks + first_empty;
+    ASSERT(first_empty_block <= blk);
+
+    while(blk != first_empty_block) {
+      Block* next_swap = blk - 1;
 
       // Swap backwards while its too large
       if(next_swap->remaining_size() > curr_remaining) {
