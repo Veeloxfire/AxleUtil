@@ -91,7 +91,7 @@ namespace Format {
 
 namespace IO_Single {
   template<typename ... T>
-  void format(const Format::FormatString& format, const T& ... ts) {
+  void format(const Format::FormatString<T...>& format, const T& ... ts) {
     Format::STPrintFormatter result = {};
 
     Format::format_to(result, format, ts...);
@@ -146,7 +146,7 @@ namespace IO {
   }
 
   template<typename ... T>
-  void format(const Format::FormatString& format, const T& ... ts) {
+  void format(const Format::FormatString<T...>& format, const T& ... ts) {
     IO_Single::ScopeLock lock;
     Format::STPrintFormatter result;
 
@@ -154,7 +154,7 @@ namespace IO {
   }
 
   template<typename ... T>
-  void err_format(const Format::FormatString& format, const T& ... ts) {
+  void err_format(const Format::FormatString<T...>& format, const T& ... ts) {
     IO_Single::ScopeLock lock;
     Format::STErrPrintFormatter result;
 
@@ -164,7 +164,7 @@ namespace IO {
 
 namespace LOG {
   template<typename ... T>
-  void debug(const Format::FormatString& format, const T& ... ts) {
+  void debug(const Format::FormatString<T...>& format, const T& ... ts) {
     IO_Single::ScopeLock lock;
     Format::STErrPrintFormatter result;
 
@@ -174,7 +174,7 @@ namespace LOG {
   }
 
   template<typename ... T>
-  void warn(const Format::FormatString& format, const T& ... ts) {
+  void warn(const Format::FormatString<T...>& format, const T& ... ts) {
     IO_Single::ScopeLock lock;
     Format::STErrPrintFormatter result;
 
@@ -184,7 +184,7 @@ namespace LOG {
   }
 
   template<typename ... T>
-  void error(const Format::FormatString& format, const T& ... ts) {
+  void error(const Format::FormatString<T...>& format, const T& ... ts) {
     IO_Single::ScopeLock lock;
     Format::STErrPrintFormatter result;
 

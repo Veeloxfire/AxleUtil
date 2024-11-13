@@ -503,141 +503,216 @@ namespace Format {
     }
   };
 
-  struct FormatString {
-    const char* arr;
-    usize len;
+  namespace format_string_errors {
+    [[noreturn]] inline void cannot_have_null() noexcept {
+      INVALID_CODE_PATH("Invalid format string: Cannot have '\\0' (null character) inside format string");
+    }
+
+    [[noreturn]] inline void invalid_open_brace() noexcept {
+      INVALID_CODE_PATH("Invalid format string: '{' not followed by '}' or '{'");
+    }
+
+    [[noreturn]] inline void invalid_close_brace() noexcept {
+      INVALID_CODE_PATH("Invalid format string: lone '}' not followed by '}'");
+    }
+
+    [[noreturn]] inline void not_enough_arguments() noexcept {
+      INVALID_CODE_PATH("Invalid format string: not enough arguments for format string");
+    }
+
+    [[noreturn]] inline void too_many_arguments() noexcept {
+      INVALID_CODE_PATH("Invalid format string: too many arguments for format string");
+    }
+  }
+
+  template<typename ... Args>
+  constexpr void assert_valid_format_string(const ViewArr<const char>& str) noexcept {
+    usize formatted_arguments = 0;
+    usize i = 0;
+
+    while(i < str.size) {
+      if(str[i] == '\0') {
+        format_string_errors::cannot_have_null();
+      }
+      else if(str[i] == '{') {
+        if(i + 1 < str.size && str[i + 1] == '}') {
+          formatted_arguments += 1;
+          i += 2;
+        }
+        else if(i + 1 < str.size && str[i + 1] == '{') {
+          i += 2;
+        }
+        else {
+          format_string_errors::invalid_open_brace();
+        }
+      }
+      else if(str[i] == '}') {
+        if(i + 1 < str.size && str[i + 1] == '}') {
+          i += 2;
+        }
+        else {
+          format_string_errors::invalid_close_brace();
+        }
+      }
+      else {
+        i += 1;
+      }
+    }
+
+    if(formatted_arguments < sizeof...(Args)) {
+      format_string_errors::not_enough_arguments();
+    }
+    else if(formatted_arguments > sizeof...(Args)) {
+      format_string_errors::too_many_arguments();
+    }
+  }
+
+  template<typename ... Args>
+  struct FormatStringRaw {
+    ViewArr<const char> str;
 
     template<usize N>
-    constexpr FormatString(const char(&_arr)[N]) : arr(_arr), len(N) {}
-
-    constexpr FormatString(const char* _arr, usize _len) : arr(_arr), len(_len) {}
+    consteval FormatStringRaw(const char(&arr)[N]) noexcept : str(lit_view_arr(arr)) {
+      assert_valid_format_string<Args...>(str);
+    }
+    consteval FormatStringRaw(const char* arr, usize len) noexcept : str({arr, len}) {
+      assert_valid_format_string<Args...>(str);
+    }
+    consteval FormatStringRaw(const ViewArr<const char>& arr) noexcept : str(arr) {
+      assert_valid_format_string<Args...>(str);
+    }
   };
+
+  template<typename ... Args>
+  using FormatString = FormatStringRaw<Self<Args>...>;
 
   template<Formatter F>
   struct FormatDispatch {
-    FormatString format_string;
+    ViewArr<const char> format_string;
 
     F& result;
   };
 
   template<Formatter F, typename T>
   constexpr FormatDispatch<F>& operator<<(FormatDispatch<F>& f, const T& t) {
-    const char* string = f.format_string.arr;
+    const char* string = f.format_string.data;
 
     while (true) {
-      if (f.format_string.len == 0 || f.format_string.arr[0] == '\0') {
-        INVALID_CODE_PATH("Found too many arguments in format");
+      if (f.format_string.size == 0) {
+        format_string_errors::too_many_arguments();
       }
-      else if (f.format_string.arr[0] == '{') {
-        if(f.format_string.arr[1] == '{') {
-          const size_t num_chars = f.format_string.arr - string;
+      else if(f.format_string[0] == '\0') {
+        format_string_errors::cannot_have_null();
+      }
+      else if (f.format_string[0] == '{') {
+        if(f.format_string.size > 1 && f.format_string[1] == '{') {
+          const size_t num_chars = f.format_string.data + 1 - string;
           if(num_chars > 0) {
             f.result.load_string(string, num_chars);
           }
 
-          f.format_string.arr += 1;
-          f.format_string.len -= 1;
-          string = f.format_string.arr;
+          f.format_string = view_arr(f.format_string, 2, f.format_string.size - 2);
+          string = f.format_string.data;
         }
-        else if(f.format_string.arr[1] == '}') {
-          const size_t num_chars = f.format_string.arr - string;
+        else if(f.format_string.size > 1 && f.format_string[1] == '}') {
+          const size_t num_chars = f.format_string.data - string;
           if (num_chars > 0) {
             f.result.load_string(string, num_chars);
           }
 
           FormatArg<T>::load_string(f.result, t);
 
-          f.format_string.arr += 2;
-          f.format_string.len -= 2;
+          f.format_string = view_arr(f.format_string, 2, f.format_string.size - 2);
           return f;
         }
         else {
-          INVALID_CODE_PATH("Invalid format string: '{' not followed by '{' or '}'");
+          format_string_errors::invalid_open_brace();
         }
       }
-      else if(f.format_string.arr[0] == '}') {
-        if(f.format_string.arr[1] == '}') {
-          const size_t num_chars = f.format_string.arr - string;
+      else if(f.format_string[0] == '}') {
+        if(f.format_string.size > 1 && f.format_string[1] == '}') {
+          const size_t num_chars = f.format_string.data + 1 - string;
           if(num_chars > 0) {
             f.result.load_string(string, num_chars);
           }
 
-          f.format_string.arr += 1;
-          f.format_string.len -= 1;
-          string = f.format_string.arr;
+          f.format_string = view_arr(f.format_string, 2, f.format_string.size - 2);
+          string = f.format_string.data;
         }
         else {
-          INVALID_CODE_PATH("Invalid format string: '}' not followed by '}'");
+          format_string_errors::invalid_close_brace();
         }
       }
-
-      f.format_string.arr += 1;
-      f.format_string.len -= 1;
+      else {
+        f.format_string = view_arr(f.format_string, 1, f.format_string.size - 1);
+      }
     }
   }
 
   //Doesnt null terminate!
   template<Formatter F, typename ... T>
-  constexpr void format_to(F& result, FormatString format, const T& ... ts) {
+  constexpr void format_to(F& result, const FormatString<T...>& format, const T& ... ts) {
   #ifdef AXLE_TRACING
     TRACING_FUNCTION();
   #endif
     STACKTRACE_FUNCTION();
 
+    ViewArr<const char> fstr = format.str;
+
     if constexpr (sizeof...(T) > 0) {
-      FormatDispatch<F> f = { format, result };
+      FormatDispatch<F> f = { fstr, result };
 
       (f << ... << ts);
-      format = f.format_string;
+      fstr = f.format_string;
     }
 
-    const char* string = format.arr;
+    const char* string = fstr.data;
 
     while (true) {
-      if (format.len == 0 || format.arr[0] == '\0') {
-        const size_t num_chars = format.arr - string;
+      if (fstr.size == 0) {
+        const size_t num_chars = fstr.data - string;
         if (num_chars > 0) {
           result.load_string(string, num_chars);
         }
         return;
       }
-      else if (format.arr[0] == '{') {
-        if(format.arr[1] == '{') {
-          const size_t num_chars = format.arr - string;
+      else if(fstr[0] == '\0') {
+        format_string_errors::cannot_have_null();
+      }
+      else if (fstr[0] == '{') {
+        if(fstr.size > 1 && fstr[1] == '{') {
+          const size_t num_chars = fstr.data + 1 - string;
           if(num_chars > 0) {
             result.load_string(string, num_chars);
           }
 
-          format.arr += 1;
-          format.len -= 1;
-          string = format.arr;
+          fstr = view_arr(fstr, 2, fstr.size - 2);
+          string = fstr.data;
         }
-        else if(format.arr[1] == '}') {
-          INVALID_CODE_PATH("Expected extra arguments in format");
-          break;
+        else if(fstr.size > 1 && fstr[1] == '}') {
+          format_string_errors::not_enough_arguments();
         }
         else {
-          INVALID_CODE_PATH("Invalid format string: '{' not followed by '{' or '}'");
+          format_string_errors::invalid_open_brace();
         }
       }
-      else if(format.arr[0] == '}') {
-        if(format.arr[1] == '}') {
-          const size_t num_chars = format.arr - string;
+      else if(fstr[0] == '}') {
+        if(fstr.size > 1 && fstr[1] == '}') {
+          const size_t num_chars = fstr.data + 1 - string;
           if(num_chars > 0) {
             result.load_string(string, num_chars);
           }
 
-          format.arr += 1;
-          format.len -= 1;
-          string = format.arr;
+          fstr = view_arr(fstr, 2, fstr.size - 2);
+          string = fstr.data;
         }
         else {
-          INVALID_CODE_PATH("Invalid format string: '}' not followed by '}'");
+          format_string_errors::invalid_close_brace();
         }
       }
-
-      format.arr += 1;
-      format.len -= 1;
+      else {
+        fstr = view_arr(fstr, 1, fstr.size - 1);
+      }
     }
   }
 }

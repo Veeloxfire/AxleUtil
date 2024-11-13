@@ -144,7 +144,7 @@ struct StringInterner {
   }
 
   template<typename ... T>
-  inline const InternString* format_intern(const Format::FormatString& fmt, const T& ... ts) {
+  inline const InternString* format_intern(const Format::FormatString<T...>& fmt, const T& ... ts) {
     Format::ArrayFormatter formatter = {};
 
     Format::format_to(formatter, fmt, ts...);

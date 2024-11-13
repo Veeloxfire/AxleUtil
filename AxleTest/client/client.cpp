@@ -78,7 +78,9 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
   const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, pipe_handle.h, INFINITE};
   const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
   
-  const auto formatted_error = [out_handle](Axle::Format::FormatString fs, const auto& ... args) {
+  const auto formatted_error = [out_handle]<typename ... Args>(
+      const Axle::Format::FormatString<Args...>& fs, const Args& ... args
+  ) {
     const Axle::OwnedArr<const char> message = Axle::format(fs, args...);
     Axle::serialize_le(out_handle, report_fail(Axle::view_arr(message)));
   };

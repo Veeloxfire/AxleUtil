@@ -15,7 +15,7 @@ namespace AxleTest {
     Axle::OwnedArr<const char> first_error;
     
     template<typename ... T>
-    void report_error(const Axle::Format::FormatString& fstring, const T& ... t) {
+    void report_error(const Axle::Format::FormatString<T...>& fstring, const T& ... t) {
       if(first_error.data != nullptr) {
         return;
       }

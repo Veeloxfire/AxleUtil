@@ -99,7 +99,7 @@ namespace FILES {
   };
 
   template<typename ... T>
-  ErrorCode format_write(FileHandle handle, const Format::FormatString& format, const T& ... ts) {
+  ErrorCode format_write(FileHandle handle, const Format::FormatString<T...>& format, const T& ... ts) {
     FileFormatter result;
     result.handle = handle;
 
