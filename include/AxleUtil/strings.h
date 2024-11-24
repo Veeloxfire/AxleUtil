@@ -170,6 +170,7 @@ struct InternStringSet {
   const InternString** get(const InternString* key) const;
   void try_extend(size_t num);
   void insert(const InternString* const key);
+  void remove(const InternString* const key);
 };
 
 template<typename T>

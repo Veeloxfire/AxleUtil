@@ -223,7 +223,6 @@ TEST_FUNCTION(Interned_Strings, set) {
   const InternString* str11 = interner.intern("abcdefghi", 9);
   const InternString* str12 = interner.intern("abcdefghij", 10);
 
-
   InternStringSet set = {};
   TEST_EQ(false, set.contains(str1));
   TEST_EQ(false, set.contains(str2));
@@ -363,10 +362,34 @@ TEST_FUNCTION(Interned_Strings, set) {
   TEST_NEQ(save_data, set.data);
   TEST_NEQ(el_capacity, set.el_capacity);
   TEST_EQ((usize)12, set.used);
+
+  set.remove(str2);
+  set.remove(str4);
+  set.remove(str6);
+  set.remove(str8);
+  set.remove(str10);
+  set.remove(str12);
+
+  TEST_EQ(true, set.contains(str1));
+  TEST_EQ(false, set.contains(str2));
+  TEST_EQ(true, set.contains(str3));
+  TEST_EQ(false, set.contains(str4));
+  TEST_EQ(true, set.contains(str5));
+  TEST_EQ(false, set.contains(str6));
+  TEST_EQ(true, set.contains(str7));
+  TEST_EQ(false, set.contains(str8));
+  TEST_EQ(true, set.contains(str9));
+  TEST_EQ(false, set.contains(str10));
+  TEST_EQ(true, set.contains(str11));
+  TEST_EQ(false, set.contains(str12));
+
+  TEST_NEQ(save_data, set.data);
+  TEST_NEQ(el_capacity, set.el_capacity);
+  TEST_EQ((usize)6, set.used);
 }
 
 
-TEST_FUNCTION(Interned_Strings, set) {
+TEST_FUNCTION(Interned_Strings, hashtable) {
   StringInterner interner = {};
 
   const InternString* str1 = interner.intern("hello", 5);

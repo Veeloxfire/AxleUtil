@@ -204,33 +204,40 @@ bool InternStringSet::contains(const InternString* key) const {
   ASSERT(key != nullptr && key != Intern::TOMBSTONE);
   if(el_capacity == 0) return false;
 
-  size_t index = key->hash % el_capacity;
+  const size_t start_index = key->hash % el_capacity;
 
-  const InternString* test_key = data[index];
-  while (true) {
+  size_t index = start_index;
+  do {
+    const InternString* test_key = data[index];
     if (test_key == key) {
       return true;
     }
-    else if (test_key == nullptr || test_key == Intern::TOMBSTONE) {
+    else if (test_key == nullptr) {
       return false;
     }
 
     index++;
     index %= el_capacity;
-    test_key = data[index];
-  }
+  } while(index != start_index);
+
+  return false;
 }
 
 const InternString** InternStringSet::get(const InternString* key) const {
   bool found_tombstone = false;
   size_t tombstone_index = 0;
 
-  size_t index = key->hash % el_capacity;
+  const size_t start_index = key->hash % el_capacity;
 
-  const InternString* test_key = data[index];
-  while (test_key != nullptr) {
+  size_t index = start_index;
+  do {
+    const InternString* test_key = data[index];
+
     if (key == test_key) {
       return data + index;
+    }
+    else if(test_key == nullptr) {
+      break;
     }
     else if (test_key == Intern::TOMBSTONE && !found_tombstone) {
       found_tombstone = true;
@@ -239,8 +246,7 @@ const InternString** InternStringSet::get(const InternString* key) const {
 
     index++;
     index %= el_capacity;
-    test_key = data[index];
-  }
+  } while (index != start_index);
 
   if (found_tombstone) {
     return data + tombstone_index;
@@ -300,5 +306,14 @@ void InternStringSet::insert(const InternString* const key) {
       try_extend(0);
     }
   }
+}
+
+void InternStringSet::remove(const InternString* const key) {
+  ASSERT(key != nullptr && key != Intern::TOMBSTONE);
+  ASSERT(used > 0 && el_capacity > 0);
+
+  const InternString** loc = get(key);
+  *loc = Intern::TOMBSTONE;
+  used -= 1;
 }
 }
