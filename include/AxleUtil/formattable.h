@@ -15,8 +15,7 @@ struct DisplayChar {
 };
 
 struct DisplayString {
-  const char* arr;
-  usize size;
+  Axle::ViewArr<const char> arr;
 };
 
 struct CString {
@@ -136,7 +135,7 @@ namespace Format {
   struct FormatArg<DisplayString> {
     template<Formatter F>
     constexpr static void load_string(F& res, const DisplayString& ds) {
-      for (usize i = 0; i < ds.size; ++i) {
+      for (usize i = 0; i < ds.arr.size; ++i) {
         FormatArg<DisplayChar>::load_string(res, DisplayChar{ ds.arr[i] });
       }
     }
