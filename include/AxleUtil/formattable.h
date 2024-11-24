@@ -120,6 +120,18 @@ namespace Format {
             res.load_string_lit("\\t");
             break;
           }
+        case '\'': {
+            res.load_string_lit("\\\'");
+            break;
+          }
+        case '\"': {
+            res.load_string_lit("\\\"");
+            break;
+          }
+        case '\\': {
+            res.load_string_lit("\\\\");
+            break;
+          }
         case '\0': {
             res.load_string_lit("\\0");
             break;

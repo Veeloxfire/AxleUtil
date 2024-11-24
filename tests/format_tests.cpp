@@ -26,17 +26,16 @@ TEST_FUNCTION(FormatArg, c_string) {
 }
 
 TEST_FUNCTION(FormatArg, display_char) {
+  const ViewArr<const char> expected = lit_view_arr("\\t\\r\\n\\f\\\'\\\"\\\\\\0");
   {
-    const ViewArr<const char> expected = lit_view_arr("\\t\\r\\n\\f\\0");
-    OwnedArr<const char> arr = format("{}{}{}{}{}",
-        DisplayChar{'\t'}, DisplayChar{'\r'}, DisplayChar{'\n'}, DisplayChar{'\f'}, DisplayChar{'\0'});
+    OwnedArr<const char> arr = format("{}{}{}{}{}{}{}{}",
+        DisplayChar{'\t'}, DisplayChar{'\r'}, DisplayChar{'\n'}, DisplayChar{'\f'}, DisplayChar{'\''}, DisplayChar{'\"'}, DisplayChar{'\\'}, DisplayChar{'\0'});
     
     TEST_STR_EQ(expected, arr);
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("\\t\\r\\n\\f\\0");
-    OwnedArr<const char> arr = format("{}", DisplayString{Axle::lit_view_arr("\t\r\n\f\0")});
+    OwnedArr<const char> arr = format("{}", DisplayString{Axle::lit_view_arr("\t\r\n\f\'\"\\\0")});
 
     TEST_STR_EQ(expected, arr);
   }
