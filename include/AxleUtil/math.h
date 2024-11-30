@@ -198,7 +198,7 @@ constexpr T ceil_to_n(T val, T n) {
   return raised - (raised % n);
 }
 
-template<typename T, usize N>
+template<usize N, typename T>
 constexpr T ceil_to_N(T val) {
   const T raised = val + (N - 1);
   return raised - (raised % N);
@@ -206,7 +206,7 @@ constexpr T ceil_to_N(T val) {
 
 template<typename T>
 constexpr T ceil_to_8(T val) {
-  return ceil_to_N<T, 8>(val);
+  return ceil_to_N<8>(val);
 }
 
 }

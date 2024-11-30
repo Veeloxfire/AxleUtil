@@ -489,5 +489,78 @@ template<typename T, usize N>
 struct ArraySize<T[N]> {
   constexpr static usize VAL = N;
 };
+
+template<typename RET, typename ... PARAMS>
+using FUNCTION_PTR = RET(*)(PARAMS...);
+
+template<typename T>
+struct MEMBER {
+  MEMBER() = delete;
+
+  template<typename RET, typename ... PARAMS>
+  using FUNCTION_PTR = RET(T::*)(PARAMS...);
+};
+
+template<typename T>
+using DESTRUCTOR = FUNCTION_PTR<void, T>;
+
+template<typename T>
+constexpr inline DESTRUCTOR<T> get_destructor() {
+  return &destruct_single<T>;
+}
+
+template<typename T>
+struct EXECUTE_AT_END {
+  T t;
+
+  constexpr EXECUTE_AT_END(T&& t_) : t(std::move(t_)) {}
+
+  ~EXECUTE_AT_END() noexcept(false) {
+    t();
+  }
+};
+
+template<typename T>
+EXECUTE_AT_END(T&& t) -> EXECUTE_AT_END<T>;
+
+#define DEFER(...) Axle::EXECUTE_AT_END JOIN(defer, __LINE__) = [__VA_ARGS__]() mutable ->void 
+
+#define DO_NOTHING ((void)0)
+
+template<typename T, typename U>
+struct IS_SAME_TYPE_IMPL {
+  constexpr static bool test = false;
+};
+
+template<typename T>
+struct IS_SAME_TYPE_IMPL<T, T> {
+  constexpr static bool test = true;
+};
+
+template<typename T, typename U>
+concept IS_SAME_TYPE = IS_SAME_TYPE_IMPL<T, U>::test;
+
+namespace _iMPL_A_can_cast_to_B {
+  template<typename T>
+  struct TEST_TRUE {
+    static constexpr bool val = true;
+  };
+
+  struct TEST_FALSE {
+    static constexpr bool val = false;
+  };
+
+  template<typename A, typename B>
+  auto test_overload(const B* b) -> TEST_TRUE<decltype(static_cast<const A*>(b))>;
+
+  template<typename A>
+  auto test_overload(const void* v) -> TEST_FALSE;
+}
+
+template<typename A, typename B>
+constexpr bool A_can_cast_to_B = decltype(_iMPL_A_can_cast_to_B::test_overload<A>(static_cast<const B*>(nullptr)))::val;
+
+template<typename T, typename ... Ops>
+concept OneOf = (IS_SAME_TYPE<T, Ops> || ...);
 }
 #endif
