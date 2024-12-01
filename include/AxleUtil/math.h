@@ -32,17 +32,21 @@ constexpr u64 lowest_common_multiple(u64 v1, u64 v2) {
 
 template<typename T, typename B>
 constexpr T bit_fill_lower(B bits) {
+  constexpr B U64_MAX_SHIFT = 64;
+  ASSERT(bits <= U64_MAX_SHIFT);
+
   if (bits == 0) return 0;
 
-  if (bits > sizeof(T) * 8) bits = sizeof(T) * 8;
-  constexpr uint64_t MAX_SHIFT = 64;
+  constexpr B B_MAX_BITS{sizeof(T) * 8};
+  if (bits > B_MAX_BITS) bits = B_MAX_BITS;
 
-  return static_cast<uint64_t>(-1) >> (MAX_SHIFT - bits);
+  return static_cast<uint64_t>(-1) >> (U64_MAX_SHIFT - bits);
 }
 
 template<typename T, typename B>
 constexpr T bit_fill_upper(B bits) {
-  return ~bit_fill_lower<T, B>((sizeof(T) * 8) - bits);
+  constexpr B B_MAX_BITS{sizeof(T) * 8};
+  return ~bit_fill_lower<T, B>(B_MAX_BITS - bits);
 }
 
 constexpr size_t ceil_div(size_t x, size_t y) noexcept {

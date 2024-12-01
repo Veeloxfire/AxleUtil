@@ -9,8 +9,7 @@ namespace Axle::FILES::Base {
 
   template<>
   void handle_seek_from_start<HANDLE>(HANDLE h, usize ptr) {
-    LARGE_INTEGER li = {};
-    li.QuadPart = ptr; 
+    LARGE_INTEGER li = { .QuadPart = static_cast<LONGLONG>(ptr) };
 
     SetFilePointerEx(h, li, &li, FILE_BEGIN);
 
@@ -19,7 +18,7 @@ namespace Axle::FILES::Base {
 
   template<>
   usize handle_file_size<HANDLE>(HANDLE h) {
-    LARGE_INTEGER li = { {0} };
+    LARGE_INTEGER li = { .QuadPart = 0 };
     GetFileSizeEx(h, &li);
     return li.QuadPart;
   }

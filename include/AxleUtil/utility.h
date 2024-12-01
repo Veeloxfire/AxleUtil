@@ -2,7 +2,6 @@
 #define AXLEUTIL_UTILITY_H_
 
 #include <utility>
-#include <new>
 
 #include <AxleUtil/safe_lib.h>
 #include <AxleUtil/threading.h>
@@ -746,10 +745,11 @@ template<typename T>
 struct FreelistBlockAllocator {
   struct Element {
     union {
-      Element* next = nullptr;
+      Element* next;
       T el;
     };
-    ~Element() {}
+    constexpr Element() : next(nullptr) {}
+    constexpr ~Element() {}
   };
 
   struct BLOCK {
