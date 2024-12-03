@@ -106,6 +106,7 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/files_base.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/format.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/formattable.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/hash.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/io.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/math.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/memory.h"
@@ -178,13 +179,14 @@ endforeach()
 set(TestFiles
   "${PROJECT_SOURCE_DIR}/tests/args_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/containers_tests.cpp"
-  "${PROJECT_SOURCE_DIR}/tests/format_tests.cpp"
-  "${PROJECT_SOURCE_DIR}/tests/serialize_tests.cpp"
-  "${PROJECT_SOURCE_DIR}/tests/stacktrace_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/files_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/format_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/hash_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/math_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/memory_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/option_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/serialize_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/stacktrace_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/string_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/testing_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/thread_tests.cpp"
@@ -193,5 +195,16 @@ set(TestFiles
 )
 
 target_sources(TestServer PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_server_main.cpp")
+target_sources(TestServer PRIVATE 
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES "${PROJECT_SOURCE_DIR}/tests/test_contexts.h"
+)
+
 target_sources(TestClient PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_client_main.cpp" ${TestFiles})
+target_sources(TestClient PRIVATE 
+  FILE_SET HEADERS
+  BASE_DIRS ${PROJECT_SOURCE_DIR}
+  FILES "${PROJECT_SOURCE_DIR}/tests/test_contexts.h"
+)
 

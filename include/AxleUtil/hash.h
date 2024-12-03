@@ -1,28 +1,20 @@
-#ifndef AXLEUTIL_HASHMAP_H_
-#define AXLEUTIL_HASHMAP_H_
+#ifndef AXLEUTIL_HASH_H_
+#define AXLEUTIL_HASH_H_
 
 #include <AxleUtil/memory.h>
 
 namespace Axle::Hash {
-enum class DefaultChainType {
-  Internal, External,
-};
-
 template<typename T>
 concept ValidInternalTrait = requires {
-  { T::DEFAULT_CHAIN_TYPE } -> Axle::IS_SAME_TYPE<const DefaultChainType&>;
-  typename T::storage_t;
   typename T::value_t;
   typename T::param_t;
-  { T::EMPTY } -> Axle::IS_SAME_TYPE<const typename T::storage_t&>;
-  { T::TOMBSTONE } -> Axle::IS_SAME_TYPE<const typename T::storage_t&>;
-  requires requires (const T::storage_t cs, const T::param_t k) {
-    { T::hash(cs) } -> Axle::IS_SAME_TYPE<u64>;
+  requires OneOf<const typename T::param_t, const typename T::value_t, const typename T::value_t&>;
+  
+  { T::EMPTY } -> Axle::IS_SAME_TYPE<const typename T::value_t&>;
+  { T::TOMBSTONE } -> Axle::IS_SAME_TYPE<const typename T::value_t&>;
+  requires requires (const T::param_t k) {
     { T::hash(k) } -> Axle::IS_SAME_TYPE<u64>;
-    { T::value(cs) } -> Axle::IS_SAME_TYPE<typename T::value_t>;
-    { T::eq(cs, cs) } -> Axle::IS_SAME_TYPE<bool>;
-    { T::eq(k, cs) } -> Axle::IS_SAME_TYPE<bool>;
-    { typename T::storage_t(k) } -> Axle::IS_SAME_TYPE<typename T::storage_t>; 
+    { T::eq(k, k) } -> Axle::IS_SAME_TYPE<bool>;
   };
 };
 
@@ -33,11 +25,10 @@ template<typename T, ValidInternalTrait Trait = DefaultHashmapTrait<T>>
 struct InternalHashSet {
   constexpr static float LOAD_FACTOR = 0.75;
 
-  using storage_t = typename Trait::storage_t;
   using value_t = typename Trait::value_t;
   using param_t = typename Trait::param_t;
 
-  storage_t* data = nullptr;// ptr to data in the array
+  value_t* data = nullptr;// ptr to data in the array
   usize el_capacity = 0;
   usize used = 0;
 
@@ -48,7 +39,7 @@ struct InternalHashSet {
   ~InternalHashSet();
 
   bool contains(const param_t key) const;
-  storage_t& internal_get(const param_t key) const;
+  value_t& internal_get(const param_t key) const;
   value_t get(const param_t key) const;
   void try_extend(usize num);
   void insert(const param_t key);
@@ -59,7 +50,6 @@ template<typename K, typename T, ValidInternalTrait Trait = DefaultHashmapTrait<
 struct InternalHashTable {
   constexpr static float LOAD_FACTOR = 0.75;
 
-  using storage_t = typename Trait::storage_t;
   using value_t = typename Trait::value_t;
   using param_t = typename Trait::param_t;
 
@@ -67,10 +57,12 @@ struct InternalHashTable {
     char _placeholder = '\0';
     T val;
 
-    void clear() {
+    constexpr void clear() {
       val.~T();
       _placeholder = '\0';
     }
+
+    constexpr ~val_storage_t() {}
   };
 
   u8* data = nullptr;// ptr to data in the array
@@ -83,14 +75,14 @@ struct InternalHashTable {
 
   constexpr static usize val_arr_offset(usize size) {
     return ceil_to_N<alignof(val_storage_t)>(
-        size * sizeof(storage_t));
+        size * sizeof(value_t));
   }
   
-  static inline storage_t* key_arr(u8* raw_data) {
-    return reinterpret_cast<storage_t*>(raw_data);
+  static inline value_t* key_arr(u8* raw_data) {
+    return reinterpret_cast<value_t*>(raw_data);
   }
 
-  inline storage_t* key_arr() const {
+  inline value_t* key_arr() const {
     return key_arr(data);
   }
 
@@ -109,15 +101,15 @@ struct InternalHashTable {
   void try_extend(usize num);
   T* get_val(const param_t key) const;
   void insert(const param_t key, T&& val);
-  T* get_or_create(const param_t key);
+  T* get_or_create(const param_t key) requires requires(T t) { {T()}->IS_SAME_TYPE<T>; };
 
   struct Iterator {
     InternalHashTable<K, T, Trait>* table;
     usize i;
 
     value_t key() const {
-      if (!is_valid()) return Trait::value(Trait::EMPTY);
-      return Trait::value(table->key_arr()[i]);
+      if (!is_valid()) return Trait::EMPTY;
+      return table->key_arr()[i];
     }
     T* val() const {
       if (!is_valid()) return nullptr;
@@ -133,7 +125,7 @@ struct InternalHashTable {
 
       i += 1;
 
-      storage_t* keys = table->key_arr() + i;
+      value_t* keys = table->key_arr() + i;
       while (i < table->el_capacity
         && (Trait::eq(*keys, Trait::EMPTY)
          || Trait::eq(*keys, Trait::TOMBSTONE))) {
@@ -161,7 +153,7 @@ struct InternalHashTable {
 
 template<typename T, ValidInternalTrait Trait>
 InternalHashSet<T, Trait>::~InternalHashSet() {
-  free_no_destruct<storage_t>(data);
+  free_no_destruct<value_t>(data);
 
   data = nullptr;
   el_capacity = 0;
@@ -178,7 +170,7 @@ bool InternalHashSet<T, Trait>::contains(const param_t key) const {
 
   usize index = start_index;
   do {
-    storage_t& test_key = data[index];
+    value_t& test_key = data[index];
     if (Trait::eq(key, test_key)) {
       return true;
     }
@@ -194,7 +186,7 @@ bool InternalHashSet<T, Trait>::contains(const param_t key) const {
 }
 
 template<typename T, ValidInternalTrait Trait>
-typename InternalHashSet<T, Trait>::storage_t& InternalHashSet<T, Trait>::internal_get(const param_t s_key) const {
+typename InternalHashSet<T, Trait>::value_t& InternalHashSet<T, Trait>::internal_get(const param_t s_key) const {
   bool found_tombstone = false;
   usize tombstone_index = 0;
 
@@ -202,7 +194,7 @@ typename InternalHashSet<T, Trait>::storage_t& InternalHashSet<T, Trait>::intern
 
   usize index = start_index;
   do {
-    storage_t& test_key = data[index];
+    value_t& test_key = data[index];
 
     if (Trait::eq(s_key, test_key)) {
       return data[index];
@@ -229,36 +221,36 @@ typename InternalHashSet<T, Trait>::storage_t& InternalHashSet<T, Trait>::intern
 
 template<typename T, ValidInternalTrait Trait>
 typename InternalHashSet<T, Trait>::value_t InternalHashSet<T, Trait>::get(const param_t key) const {
-  return Trait::value(get_internal(key));
+  return get_internal(key);
 }
 
 template<typename T, ValidInternalTrait Trait>
 void InternalHashSet<T, Trait>::try_extend(usize num) {
   if (needs_resize(num)) {
-    storage_t* old_data = data;
+    value_t* old_data = data;
     const usize old_el_cap = el_capacity;
 
     do {
       el_capacity <<= 1;
     } while (needs_resize(num));
 
-    data = allocate_default<storage_t>(el_capacity);
+    data = allocate_default<value_t>(el_capacity);
 
     for(usize i = 0; i < el_capacity; ++i) {
       data[i] = Trait::EMPTY;
     }
 
     for (size_t i = 0; i < old_el_cap; i++) {
-      storage_t& st = old_data[i];
+      value_t& st = old_data[i];
 
       if (!Trait::eq(Trait::EMPTY, st)
           && !Trait::eq(Trait::TOMBSTONE, st)) {
-        storage_t& loc = internal_get(st);
+        value_t& loc = internal_get(st);
         loc = st;
       }
     }
 
-    free_no_destruct<storage_t>(old_data);
+    free_no_destruct<value_t>(old_data);
   }
 }
 
@@ -270,24 +262,24 @@ void InternalHashSet<T, Trait>::insert(const param_t key) {
   if (el_capacity == 0) {
     ASSERT(used == 0);
     el_capacity = 8;
-    data = allocate_default<storage_t>(el_capacity);
+    data = allocate_default<value_t>(el_capacity);
     for(usize i = 0; i < el_capacity; ++i) {
       data[i] = Trait::EMPTY;
     }
 
-    storage_t& loc = internal_get(key);
-    loc = storage_t(key);
+    value_t& loc = internal_get(key);
+    loc = value_t(key);
     used += 1;
   }
   else {
-    storage_t& loc = internal_get(key);
+    value_t& loc = internal_get(key);
 
     if (Trait::eq(key, loc)) return;//already contained
 
     ASSERT(Trait::eq(loc, Trait::EMPTY)
         || Trait::eq(loc, Trait::TOMBSTONE));
 
-    loc = storage_t(key);
+    loc = value_t(key);
     used += 1;
     if (needs_resize(0)) {
       try_extend(0);
@@ -301,7 +293,7 @@ void InternalHashSet<T, Trait>::remove(const param_t key) {
       && !Trait::eq(key, Trait::TOMBSTONE));
   ASSERT(used > 0 && el_capacity > 0);
 
-  storage_t& loc = internal_get(key);
+  value_t& loc = internal_get(key);
   loc = Trait::TOMBSTONE;
   used -= 1;
 }
@@ -309,7 +301,7 @@ void InternalHashSet<T, Trait>::remove(const param_t key) {
 template<typename K, typename T, ValidInternalTrait Trait>
 InternalHashTable<K, T, Trait>::~InternalHashTable() {
   if(data != nullptr) {
-    storage_t* keys = key_arr();
+    value_t* keys = key_arr();
     val_storage_t* vals = val_arr();
 
     for (size_t i = 0; i < el_capacity; i++) {
@@ -319,7 +311,7 @@ InternalHashTable<K, T, Trait>::~InternalHashTable() {
       }
     }
 
-    destruct_arr<storage_t>(keys, el_capacity);
+    destruct_arr<value_t>(keys, el_capacity);
     destruct_arr<val_storage_t>(vals, el_capacity);
   }
 
@@ -336,13 +328,13 @@ bool InternalHashTable<K, T, Trait>::contains(const param_t key) const {
       && !Trait::eq(key, Trait::TOMBSTONE));
   if (el_capacity == 0) return false;
 
-  const storage_t* keys = key_arr();
+  const value_t* keys = key_arr();
 
   const usize first_index = Trait::hash(key) % el_capacity;
 
   usize index = first_index;
   do {
-    const storage_t& test_key = keys[index];
+    const value_t& test_key = keys[index];
     if (Trait::eq(key, test_key)) {
       return true;
     }
@@ -361,7 +353,7 @@ template<typename K, typename T, ValidInternalTrait Trait>
 size_t InternalHashTable<K, T, Trait>::get_soa_index(const param_t key) const {
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
-  const storage_t* const keys = key_arr();
+  const value_t* const keys = key_arr();
 
   bool found_tombstone = false;
   usize tombstone_index = 0;
@@ -370,7 +362,7 @@ size_t InternalHashTable<K, T, Trait>::get_soa_index(const param_t key) const {
   usize index = first_index;
 
   do {
-    const storage_t& test_key = keys[index];
+    const value_t& test_key = keys[index];
     if (Trait::eq(key, test_key)) {
       return index;
     }
@@ -419,10 +411,10 @@ void InternalHashTable<K, T, Trait>::try_extend(size_t num) {
     + el_capacity * sizeof(val_storage_t);
 
   data = allocate_default<uint8_t>(required_alloc_bytes);
-  new (data) storage_t[el_capacity];
+  new (data) value_t[el_capacity];
   new (data + val_arr_offset(el_capacity)) val_storage_t[el_capacity];
 
-  storage_t* keys = key_arr();
+  value_t* keys = key_arr();
 
   for(usize i = 0; i < el_capacity; ++i) {
     keys[i] = Trait::EMPTY;
@@ -432,11 +424,11 @@ void InternalHashTable<K, T, Trait>::try_extend(size_t num) {
 
     val_storage_t* values = val_arr();
 
-    storage_t* old_keys = key_arr(old_data);
+    value_t* old_keys = key_arr(old_data);
     val_storage_t* old_values = val_arr(old_data, old_el_cap);
 
     for (size_t i = 0; i < old_el_cap; i++) {
-      const storage_t& key = old_keys[i];
+      const value_t& key = old_keys[i];
 
       if (!Trait::eq(Trait::EMPTY, key)
           && !Trait::eq(Trait::TOMBSTONE, key)) {
@@ -453,7 +445,7 @@ void InternalHashTable<K, T, Trait>::try_extend(size_t num) {
 
     //Destruct and free
     {
-      destruct_arr<storage_t>(old_keys, el_capacity);
+      destruct_arr<value_t>(old_keys, el_capacity);
       destruct_arr<val_storage_t>(old_values, el_capacity);
 
       free_no_destruct<u8>(old_data);
@@ -469,7 +461,7 @@ T* InternalHashTable<K, T, Trait>::get_val(const param_t key) const {
 
   const size_t soa_index = get_soa_index(key);
 
-  storage_t& test_key = key_arr()[soa_index];
+  value_t& test_key = key_arr()[soa_index];
   if (Trait::eq(key, test_key)) return &val_arr()[soa_index].val;
   else {
     ASSERT(Trait::eq(Trait::EMPTY, test_key)
@@ -495,7 +487,7 @@ void InternalHashTable<K, T, Trait>::insert(const param_t key, T&& val) {
   else {
     const usize soa_index = get_soa_index(key);
     
-    storage_t& key_loc = key_arr()[soa_index];
+    value_t& key_loc = key_arr()[soa_index];
     if (Trait::eq(key, key_loc)) {
       val_arr()[soa_index].val = std::move(val);
       return;
@@ -515,7 +507,8 @@ void InternalHashTable<K, T, Trait>::insert(const param_t key, T&& val) {
 }
 
 template<typename K, typename T, ValidInternalTrait Trait>
-T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) {
+T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) requires requires(T t) { {T()}->IS_SAME_TYPE<T>; }
+    {
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
   if (el_capacity == 0) {
@@ -526,14 +519,14 @@ T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) {
     val_storage_t& val = val_arr()[soa_index];
 
     key_arr()[soa_index] = key;
-    val.val = T{};
+    val.val = T();
     used += 1;
     return &val.val;
   }
   else {
     const usize soa_index = get_soa_index(key);
 
-    storage_t& test_key = key_arr()[soa_index];
+    value_t& test_key = key_arr()[soa_index];
 
     if (Trait::eq(key, test_key)) {
       return &val_arr()[soa_index].val;
@@ -545,7 +538,7 @@ T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) {
     val_storage_t& val = val_arr()[soa_index];
 
     test_key = key;
-    val.val = T{};
+    val.val = T();
     used += 1;
 
     if (needs_resize(0)) {

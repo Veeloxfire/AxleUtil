@@ -1,7 +1,7 @@
 #ifndef AXLEUTIL_STRINGS_H_
 #define AXLEUTIL_STRINGS_H_
 
-#include <AxleUtil/hashmap.h>
+#include <AxleUtil/hash.h>
 #include <AxleUtil/format.h>
 
 #include <compare>
@@ -156,22 +156,16 @@ struct StringInterner {
 namespace Hash {
   template<>
   struct DefaultHashmapTrait<const InternString*> {
-    static constexpr const DefaultChainType DEFAULT_CHAIN_TYPE = DefaultChainType::Internal;
-
     using value_t = const InternString*;
     using param_t = const InternString*;
-    using storage_t = const InternString*;
 
-    static constexpr const storage_t EMPTY = nullptr;
-    static constexpr const storage_t TOMBSTONE = Intern::TOMBSTONE;
+    static constexpr const value_t EMPTY = nullptr;
+    static constexpr const value_t TOMBSTONE = Intern::TOMBSTONE;
 
-    static constexpr usize hash(storage_t s) noexcept {
+    static constexpr usize hash(param_t s) noexcept {
       return s->hash;
     }
-    static constexpr value_t value(storage_t s) noexcept {
-      return s;
-    }
-    static constexpr bool eq(storage_t s0, storage_t s1) noexcept {
+    static constexpr bool eq(param_t s0, param_t s1) noexcept {
       return s0 == s1;
     }
   };
