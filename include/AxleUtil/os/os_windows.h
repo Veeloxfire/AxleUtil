@@ -36,7 +36,7 @@
 #define NOWINOFFSETS
 #define NOCOMM
 #define NOKANJI
-#define OHELP
+#define NOHELP
 #define NOPROFILER
 #define NODEFERWINDOWPOS
 #define NOMCX
@@ -77,7 +77,7 @@
 #undef NOWINOFFSETS
 #undef NOCOMM
 #undef NOKANJI
-#undef OHELP
+#undef NOHELP
 #undef NOPROFILER
 #undef NODEFERWINDOWPOS
 #undef NOMCX
