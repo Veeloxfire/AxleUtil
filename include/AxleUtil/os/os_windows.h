@@ -13,7 +13,6 @@
 #define NOSYSCOMMANDS
 #define NORASTEROPS
 #define NOSHOWWINDOW
-#define OEMRESOURCE
 #define NOATOM
 #define NOCLIPBOARD
 #define NOCOLOR
@@ -54,7 +53,6 @@
 #undef NOSYSCOMMANDS
 #undef NORASTEROPS
 #undef NOSHOWWINDOW
-#undef OEMRESOURCE
 #undef NOATOM
 #undef NOCLIPBOARD
 #undef NOCOLOR
