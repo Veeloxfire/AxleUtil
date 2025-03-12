@@ -22,23 +22,58 @@ Axle::Array<AxleTest::UnitTest> &AxleTest::unit_tests_ref() {
   return t;
 }
 
-static AxleTest::IPC::Serialize::Report report_fail(const Axle::ViewArr<const char>& message) {
+static AxleTest::IPC::Serialize::Report report_fail(const Axle::ViewArr<const char>& message, const Axle::ViewArr<const char>& stacktrace) {
   return AxleTest::IPC::Serialize::Report{
-    AxleTest::IPC::ReportType::Failure, message
+    AxleTest::IPC::ReportType::Failure, message, stacktrace
   };
 }
 
 static AxleTest::IPC::Serialize::Report report_success(const Axle::ViewArr<const char>& message) {
   return AxleTest::IPC::Serialize::Report{
-    AxleTest::IPC::ReportType::Success, message
+    AxleTest::IPC::ReportType::Success, message, {}
   };
+}
+
+using namespace Axle::Literals;
+
+template<typename T>
+static constexpr void memfill_small(Axle::ViewArr<T>* dest, const Axle::ViewArr<const T> src) noexcept {
+  const usize s = Axle::smaller(dest->size, src.size);
+
+  Axle::memcpy_ts(Axle::view_arr(*dest, 0, s), Axle::view_arr(src, 0, s));
+
+  dest->data += s;
+  dest->size -= s;
 }
 
 static void client_panic_callback(const void* ud, const Axle::ViewArr<const char>& message) {
   using Axle::Windows::FILES::TimeoutFile;
   const TimeoutFile* rf = reinterpret_cast<const TimeoutFile*>(ud);
 
-  Axle::serialize_le(*rf, report_fail(message));
+  static constexpr usize STACKTRACE_DATA_MAX_SIZE = 2048;
+  thread_local static char stacktrace_data[STACKTRACE_DATA_MAX_SIZE] = {};
+
+  using TraceNode = Axle::Stacktrace::TraceNode;
+  const TraceNode* tn = Axle::Stacktrace::EXECUTION_TRACE;
+  if(tn != nullptr) {
+    Axle::ViewArr<char> data = { stacktrace_data, STACKTRACE_DATA_MAX_SIZE };
+    memfill_small(&data, "- "_litview);
+    memfill_small(&data, tn->name);
+
+    tn = tn->prev;
+    while(tn != nullptr) {
+      memfill_small(&data, "\n- "_litview);
+      memfill_small(&data, tn->name);
+      tn = tn->prev;
+    }
+    
+    usize size = STACKTRACE_DATA_MAX_SIZE - data.size;
+    Axle::serialize_le(*rf,
+        report_fail(message, Axle::ViewArr{ stacktrace_data, size }));
+  }
+  else {
+    Axle::serialize_le(*rf, report_fail(message, {}));
+  }
 
   // Exit before we reach `std::terminate`
   // to remove the annoying popup
@@ -82,7 +117,7 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
       const Axle::Format::FormatString<Args...>& fs, const Args& ... args
   ) {
     const Axle::OwnedArr<const char> message = Axle::format(fs, args...);
-    Axle::serialize_le(out_handle, report_fail(Axle::view_arr(message)));
+    Axle::serialize_le(out_handle, report_fail(Axle::view_arr(message), {}));
   };
 
   Axle::Panic::set_panic_callback(&out_handle, client_panic_callback);
@@ -197,7 +232,7 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
           }
         }
         if(errors.is_panic()) {
-          Axle::serialize_le(out_handle, report_fail(Axle::view_arr(errors.first_error)));
+          Axle::serialize_le(out_handle, report_fail(Axle::view_arr(errors.first_error), {}));
           return true;
         }
 
@@ -226,7 +261,7 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
                   Axle::PrintPtr{a.mem}, a.count, Axle::CString{a.type_name});
             }
 
-            Axle::serialize_le(out_handle, report_fail(fmt.view()));
+            Axle::serialize_le(out_handle, report_fail(fmt.view(), {}));
             return true;
           }
         }

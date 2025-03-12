@@ -129,6 +129,7 @@ static bool expect_valid_header(S&& serializer, IPC::Type type) {
 struct ReportMessage {
   IPC::ReportType type;
   Axle::OwnedArr<const char> message;
+  Axle::OwnedArr<const char> stacktrace_message;
 };
 
 template<typename S>
@@ -148,6 +149,11 @@ static bool expect_report(S&& serializer, ReportMessage& out) {
     return false;
   }
 
+  u32 stacktrace_message_len;
+  if(!Axle::deserialize_le<u32>(std::forward<S>(serializer), stacktrace_message_len)) {
+    return false;
+  }
+
   if(message_len > 0) {
     Axle::OwnedArr<char> m = Axle::new_arr<char>(message_len);
     Axle::ViewArr<u8> view = Axle::cast_arr<u8>(Axle::view_arr(m));
@@ -156,6 +162,16 @@ static bool expect_report(S&& serializer, ReportMessage& out) {
     }
 
     out.message = std::move(m);
+  }
+
+  if(stacktrace_message_len > 0) {
+    Axle::OwnedArr<char> m = Axle::new_arr<char>(stacktrace_message_len);
+    Axle::ViewArr<u8> view = Axle::cast_arr<u8>(Axle::view_arr(m));
+    if(!Axle::deserialize_le<Axle::ViewArr<u8>>(std::forward<S>(serializer), view)) {
+      return false;
+    }
+
+    out.stacktrace_message = std::move(m);
   }
 
   return true;
@@ -293,6 +309,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
   struct FailedResult {
     Axle::ViewArr<const char> test_name;
     Axle::OwnedArr<const char> result_message;
+    Axle::OwnedArr<const char> stacktrace_message;
   };
 
   Axle::Array<FailedResult> failed_arr;
@@ -328,7 +345,7 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       failed_arr.insert({test_name, Axle::copy_arr("Internal Error: Failed to create process")});
       continue;
     }
- 
+
     DEFER(&cp, timeout_time_ms, handle = cp.pipe_handle.h) {
       terminate_child(cp.process_handle.h, timeout_time_ms);
       DisconnectNamedPipe(handle);
@@ -353,14 +370,18 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
 
     if(outcome_message.type == IPC::ReportType::Failure) {
       IO::print("Failed\n");
-      failed_arr.insert({test_name, std::move(outcome_message.message)});
+      failed_arr.insert({
+        test_name,
+        std::move(outcome_message.message),
+        std::move(outcome_message.stacktrace_message),
+      });
     }
     else if(outcome_message.type == IPC::ReportType::Success) {
       IO::print("Success\n");
       ASSERT(outcome_message.message.size == 0);
     }
     else {
-      failed_arr.insert({test_name, Axle::format("Unexpected Report Message Type: {}", outcome_message.type)});
+      failed_arr.insert({test_name, Axle::format("Unexpected Report Message Type: {}", outcome_message.type), {}});
       continue;
     }
   }
@@ -369,10 +390,11 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     IO::err_format("\n{} / {} tests failed\n", failed_arr.size, test_info.tests.size);
     
     for (const auto &t : failed_arr) {
-      Axle::OwnedArr ts = Axle::format_type_set(Axle::view_arr(t.result_message), 2, 80);
+      Axle::OwnedArr msg = Axle::format_type_set(Axle::view_arr(t.result_message), 2, 80);
+      Axle::OwnedArr strc = Axle::format_type_set(Axle::view_arr(t.stacktrace_message), 2, 80);
 
-      IO::err_format("\n===========\n\n\"{}\" failed with errors:\n{}\n", 
-                     t.test_name, ts);
+      IO::err_format("\n===========\n\n\"{}\" failed with errors:\n{}\n\n Stacktrace:\n{}", 
+                     t.test_name, msg, strc);
     }
 
     IO::err_print("\n===========\n");

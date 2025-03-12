@@ -47,14 +47,16 @@ namespace AxleTest::IPC {
    *
    *  - Type: Report -
    *  [Header:64]
-   *  [ReportType:32]
+   *  [ReportType:8]
    *  [MessageLen:32]
+   *  [StacktraceLen:32]
    *  [Message:MessageLen]
+   *  [Stacktrace:StacktraceLen]
    *
    */
 
 
-  constexpr inline u32 VERSION = 0;
+  constexpr inline u32 VERSION = 1;
 
 #define TYPE_MOD \
 MOD(Data, 0)\
@@ -85,7 +87,7 @@ MOD(QueryContext, 4)
 MOD(Success, 0)\
 MOD(Failure, 1)\
 
-  enum struct ReportType: u32 {
+  enum struct ReportType: u8 {
 #define MOD(name, val) name = val,
     REPORT_TYPE_MOD
 #undef MOD
@@ -137,6 +139,7 @@ MOD(Failure, 1)\
       static constexpr Type MESSAGE_TYPE = Type::Report;
       ReportType report_type;
       Axle::ViewArr<const char> message;
+      Axle::ViewArr<const char> stacktrace;
     };
 
     struct QueryContext {
@@ -187,7 +190,7 @@ namespace Axle {
   struct Serializable<AxleTest::IPC::Type> : Serializable_Convert<AxleTest::IPC::Type, u32>{};
 
   template<>
-  struct Serializable<AxleTest::IPC::ReportType> : Serializable_Convert<AxleTest::IPC::ReportType, u32>{};
+  struct Serializable<AxleTest::IPC::ReportType> : Serializable_Convert<AxleTest::IPC::ReportType, u8>{};
 
   template<>
   struct Serializable<AxleTest::IPC::MessageHeader> {
@@ -303,10 +306,24 @@ namespace Axle {
     template<typename S, ByteOrder Ord>
     static constexpr void serialize(Serializer<S, Ord>& ser, const Self& u) {
       Serializable<AxleTest::IPC::MessageHeader>::serialize(ser, AxleTest::IPC::Serialize::header<Self>());
-      Serializable<u32>::serialize(ser, static_cast<u32>(u.report_type));
+      Serializable<AxleTest::IPC::ReportType>::serialize(ser, u.report_type);
       Serializable<u32>::serialize(ser, static_cast<u32>(u.message.size));
+      Serializable<u32>::serialize(ser, static_cast<u32>(u.stacktrace.size));
 
-      ser.write_bytes(cast_arr<const u8>(u.message));
+      {
+        Axle::ViewArr<const u8> m = cast_arr<const u8>(u.message);
+        if (m.size > 0xffffffff) {
+          m.size = 0xffffffff;
+        }
+        ser.write_bytes(cast_arr<const u8>(u.message));
+      }
+      if (u.stacktrace.size > 0) {
+        Axle::ViewArr<const u8> m = cast_arr<const u8>(u.stacktrace);
+        if (m.size > 0xffffffff) {
+          m.size = 0xffffffff;
+        }
+        ser.write_bytes(cast_arr<const u8>(u.stacktrace));
+      }
     }
   };
 
