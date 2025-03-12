@@ -178,16 +178,63 @@ TEST_FUNCTION(Util_Queue, Insert_Remove) {
   }
 }
 
-TEST_FUNCTION(Util, sort) {
-  Array<int> ints = {};
+static constexpr auto sort_fn = []<typename T>(const T& l, const T& r) {
+  ASSERT(&l != &r);
+  return l <=> r;
+};
 
-  for (int i : RANDOM_ARR) {
-    ints.insert(i);
+TEST_FUNCTION(Util, sort) {
+  {
+    int small_random_arr[] = {
+      65, 55, 71, 23, 92, 10
+    };
+
+    constexpr int SMALL_SORTED_RANDOM_ARR[] = {
+      10, 23, 55, 65, 71, 92
+    };
+
+    sort_view(view_arr(small_random_arr), sort_fn);
+
+    TEST_ARR_EQ(SMALL_SORTED_RANDOM_ARR, 6, small_random_arr, 6);
   }
 
-  sort_range(ints.mut_begin(), ints.mut_end(), [](int l, int r) { return l < r; });
+  {
+    int small_sorted_arr[] = {
+      10, 23, 55, 65, 71, 92
+    };
 
-  TEST_ARR_EQ(SORTED_RANDOM_ARR, RANDOM_ARR_SIZE, ints.data, ints.size);
+    constexpr int SMALL_SORTED_RANDOM_ARR[] = {
+      10, 23, 55, 65, 71, 92
+    };
+
+    sort_view(view_arr(small_sorted_arr), sort_fn);
+
+    TEST_ARR_EQ(SMALL_SORTED_RANDOM_ARR, 6, small_sorted_arr, 6);
+  }
+  {
+    int small_eq_arr[] = {
+      10, 10, 10, 10, 10, 10, 10,
+    };
+
+    constexpr int SMALL_SORTED_RANDOM_ARR[] = {
+      10, 10, 10, 10, 10, 10, 10,
+    };
+
+    sort_view(view_arr(small_eq_arr), sort_fn);
+
+    TEST_ARR_EQ(SMALL_SORTED_RANDOM_ARR, 6, small_eq_arr, 6);
+  }
+  {
+    Array<int> ints = {};
+
+    for (int i : RANDOM_ARR) {
+      ints.insert(i);
+    }
+
+    sort_view(view_arr(ints), sort_fn);
+
+    TEST_ARR_EQ(SORTED_RANDOM_ARR, RANDOM_ARR_SIZE, ints.data, ints.size);
+  }
 }
 
 TEST_FUNCTION(Util_OwnedArr, bake) {

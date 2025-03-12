@@ -108,85 +108,81 @@ constexpr u64 fnv1a_hash_u64(u64 start, u64 u) {
   return start;
 }
 
-template<typename T, typename L>
-size_t _sort_range_part(T* base, size_t lo, size_t hi, const L& pred) {
-  size_t pivot = (hi + lo) / 2llu;
+template<typename T, typename U>
+concept SortPredicate = requires(const T t, const U u0, const U u1) {
+  { t(u0, u1) } -> IS_SAME_TYPE<std::strong_ordering>;
+};
 
-  size_t i = lo;
-  size_t j = hi;
+template<typename T, SortPredicate<T> L>
+size_t _sort_range_part(const Axle::ViewArr<T>& base, size_t b, size_t e, const L& pred) {
+  STACKTRACE_FUNCTION();
+  ASSERT(e <= std::numeric_limits<size_t>::max());
+  ASSERT(e > 0);
+  ASSERT(b < e && e - b > 1);
+  size_t pivot = (e + b + 1) / 2llu;
+  ASSERT(pivot > b);
+  ASSERT(pivot < e);
 
-  while (pred(base[i], base[pivot])) {
-    i += 1;
-  }
-
-  while (pred(base[pivot], base[j])) {
-    j -= 1;
-  }
-
-  if (i >= j) return j;
-
-  //Account for the moving things
-  //means we dont have to copy
-  if (i == pivot) {
-    pivot = j;
-  }
-  else if (j == pivot) {
-    pivot = i;
-  }
-
-  {
-    T hold = std::move(base[i]);
-
-    base[i] = std::move(base[j]);
-    base[j] = std::move(hold);
-  }
+  size_t i = b;
+  size_t j = e;
 
   while (true) {
-    do {
+    while (i < e) {
+      if (i == pivot) break;
+      if (pred(base[i], base[pivot]) >= 0) break;
       i += 1;
-    } while (pred(base[i], base[pivot]));
-
-    do {
-      j -= 1;
-    } while (pred(base[pivot], base[j]));
-
-    if (i >= j) return j;
-
-    //Account for the moving things
-    //means we dont have to copy
-    if (i == pivot) {
-      pivot = j;
     }
-    else if (j == pivot) {
-      pivot = i;
+
+    while (j > b) {
+      if ((j - 1) == pivot) break;
+      if (pred(base[pivot], base[j - 1]) >= 0) break;
+      j -= 1;
+    }
+    
+    ASSERT(i < e);
+    ASSERT(j > b);
+
+    // pivoted correctly
+    if (i >= (j - 1)) {
+      return i;
     }
 
     {
+      ASSERT(i < (j - 1));
+      ASSERT(pred(base[i], base[j - 1]) >= 0);
       T hold = std::move(base[i]);
 
-      base[i] = std::move(base[j]);
-      base[j] = std::move(hold);
+      base[i] = std::move(base[j - 1]);
+      base[j - 1] = std::move(hold);
     }
+
+    // pivot value has moved
+    if (i == pivot) {
+      pivot = j - 1;
+    }
+    else if (j - 1 == pivot) {
+      pivot = i;
+    }
+
+    i += 1;
+    j -= 1;
   }
 
 }
 
-template<typename T, typename L>
-void _sort_range_impl(T* base, size_t lo, size_t hi, const L& pred) {
-  if (lo < hi) {
-    size_t p = _sort_range_part(base, lo, hi, pred);
-    _sort_range_impl(base, lo, p, pred);
-    _sort_range_impl(base, p + 1, hi, pred);
+template<typename T, SortPredicate<T> L>
+void _sort_range_impl(const ViewArr<T>& view, size_t b, size_t e, const L& pred) {
+  if (b + 1 < e) {
+    const size_t p = _sort_range_part(view, b, e, pred);
+    _sort_range_impl(view, b, p, pred);
+    _sort_range_impl(view, p, e, pred);
   }
 }
 
-template<typename T, typename L>
-void sort_range(T* start, T* end, const L& pred) {
-  size_t num = (end - start);
-
-  if (num != 0) {
-    _sort_range_impl<T, L>(start, 0, num - 1, pred);
-  }
+template<typename T, SortPredicate<T> L>
+void sort_view(const Axle::ViewArr<T>& view, const L& pred) {
+  STACKTRACE_FUNCTION();
+  _sort_range_impl<T, L>(view, 0, view.size, pred);
 }
 
 template<typename T>
