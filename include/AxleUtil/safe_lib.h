@@ -161,6 +161,12 @@ template<usize N>
   };
 }
 
+namespace Literals {
+  constexpr Axle::ViewArr<const char> operator""_litview(const char* ptr, std::size_t N) {
+    return { ptr, N };
+  }
+}
+
 template<typename T>
 constexpr inline void memcpy_ts(const ViewArr<T>& dest, const ViewArr<const T>& src) {
   ASSERT(dest.size == src.size);
