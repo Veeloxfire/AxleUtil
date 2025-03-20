@@ -7,7 +7,9 @@ Format::FloatStr Format::format_float(float f) {
   FloatStr dstr = {};
   std::to_chars_result fcr = std::to_chars(dstr.str, dstr.str + dstr.MAX, f);
   ASSERT(fcr.ec == std::errc{});
-  dstr.count = fcr.ptr - dstr.str;
+  const std::ptrdiff_t diff = fcr.ptr - dstr.str;
+  ASSERT(diff > 0);
+  dstr.count = static_cast<usize>(diff);
   return dstr;
 }
 
@@ -15,7 +17,9 @@ Format::DoubleStr Format::format_double(double f) {
   DoubleStr dstr = {};
   std::to_chars_result fcr = std::to_chars(dstr.str, dstr.str + dstr.MAX, f);
   ASSERT(fcr.ec == std::errc{});
-  dstr.count = fcr.ptr - dstr.str;
+  const std::ptrdiff_t diff = fcr.ptr - dstr.str;
+  ASSERT(diff > 0);
+  dstr.count = static_cast<usize>(diff);
   return dstr;
 }
 
@@ -45,13 +49,17 @@ OwnedArr<char> format_type_set(const ViewArr<const char>& format_in, const size_
 
   while (true) {
     if (format_i == format_end) {
-      result.concat(string, format_i - string);
+      const std::ptrdiff_t diff = format_i - string;
+      ASSERT(diff >= 0);
+      result.concat(string, static_cast<usize>(diff));
 
       return bake_arr(std::move(result));
     }
     else if (curr_length == max_width && format_i[0] != '\n' && last_space > string) {
       //Need to insert a new line
-      result.concat(string, last_space - string);
+      const std::ptrdiff_t diff = format_i - string;
+      ASSERT(diff >= 0);
+      result.concat(string, static_cast<usize>(diff));
       result.insert('\n');
       
       prepend();
@@ -61,7 +69,9 @@ OwnedArr<char> format_type_set(const ViewArr<const char>& format_in, const size_
     }
     else if (format_i[0] == '\n') {
       format_i++;
-      result.concat(string, format_i - string);
+      const std::ptrdiff_t diff = format_i - string;
+      ASSERT(diff >= 0);
+      result.concat(string, static_cast<usize>(diff));
       string = format_i;
       last_space = string;
 

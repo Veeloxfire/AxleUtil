@@ -160,8 +160,8 @@ namespace AxleTest {
                          "Expected String: {} = \"{}\"\n"
                          "Actual String: {} = \"{}\"",
                          line, errors->test_name,
-                         expected_str, Axle::DisplayString{ expected.data, expected.size },
-                         actual_str, Axle::DisplayString{ actual.data, actual.size });
+                         expected_str, Axle::DisplayString{ { expected.data, expected.size } },
+                         actual_str, Axle::DisplayString{ { actual.data, actual.size } });
     return;
   }
 

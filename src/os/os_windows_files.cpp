@@ -13,6 +13,7 @@ namespace Axle::FILES::Base {
 
     SetFilePointerEx(h, li, &li, FILE_BEGIN);
 
+    ASSERT(li.QuadPart >= 0);
     ASSERT(static_cast<usize>(li.QuadPart) == ptr);
   }
 
@@ -20,7 +21,8 @@ namespace Axle::FILES::Base {
   usize handle_file_size<HANDLE>(HANDLE h) {
     LARGE_INTEGER li = { .QuadPart = 0 };
     GetFileSizeEx(h, &li);
-    return li.QuadPart;
+    ASSERT(li.QuadPart >= 0);
+    return static_cast<usize>(li.QuadPart);
   }
 
   template<>
@@ -184,11 +186,15 @@ OwnedArr<u8> read_full_file(const NativePath& file_name) {
   LARGE_INTEGER li = {};
   GetFileSizeEx(h, &li);
 
-  u8* data = allocate_default<u8>(li.QuadPart);
-  BOOL read = ReadFile(h, data, (DWORD)li.QuadPart, NULL, NULL);
+  ASSERT(li.QuadPart >= 0);
+
+  const usize size = static_cast<usize>(li.QuadPart);
+  u8* data = allocate_default<u8>(size);
+  ASSERT(size <= std::numeric_limits<DWORD>::max());
+  BOOL read = ReadFile(h, data, static_cast<DWORD>(size), NULL, NULL);
   ASSERT(read);
 
-  return { data, static_cast<usize>(li.QuadPart) };
+  return { data, size };
 }
 
   DirectoryIterator::DirectoryIterator(DirectoryIterator&& d) noexcept : data(std::move(d.data)), find_handle(std::exchange(d.find_handle, INVALID_HANDLE_VALUE)) {}

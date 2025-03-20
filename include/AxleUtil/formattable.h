@@ -617,7 +617,9 @@ namespace Format {
       }
       else if (f.format_string[0] == '{') {
         if(f.format_string.size > 1 && f.format_string[1] == '{') {
-          const size_t num_chars = f.format_string.data + 1 - string;
+          const std::ptrdiff_t diff = (f.format_string.data + 1) - string;
+          ASSERT(diff >= 0);
+          const usize num_chars = static_cast<usize>(diff);
           if(num_chars > 0) {
             f.result.load_string(string, num_chars);
           }
@@ -626,7 +628,9 @@ namespace Format {
           string = f.format_string.data;
         }
         else if(f.format_string.size > 1 && f.format_string[1] == '}') {
-          const size_t num_chars = f.format_string.data - string;
+          const std::ptrdiff_t diff = f.format_string.data - string;
+          ASSERT(diff >= 0);
+          const usize num_chars = static_cast<usize>(diff);
           if (num_chars > 0) {
             f.result.load_string(string, num_chars);
           }
@@ -642,7 +646,9 @@ namespace Format {
       }
       else if(f.format_string[0] == '}') {
         if(f.format_string.size > 1 && f.format_string[1] == '}') {
-          const size_t num_chars = f.format_string.data + 1 - string;
+          const std::ptrdiff_t diff = (f.format_string.data + 1) - string;
+          ASSERT(diff >= 0);
+          const usize num_chars = static_cast<usize>(diff);
           if(num_chars > 0) {
             f.result.load_string(string, num_chars);
           }
@@ -681,7 +687,9 @@ namespace Format {
 
     while (true) {
       if (fstr.size == 0) {
-        const size_t num_chars = fstr.data - string;
+        const std::ptrdiff_t diff = fstr.data - string;
+        ASSERT(diff >= 0);
+        const usize num_chars = static_cast<usize>(diff);
         if (num_chars > 0) {
           result.load_string(string, num_chars);
         }
@@ -692,7 +700,9 @@ namespace Format {
       }
       else if (fstr[0] == '{') {
         if(fstr.size > 1 && fstr[1] == '{') {
-          const size_t num_chars = fstr.data + 1 - string;
+          const std::ptrdiff_t diff = (fstr.data + 1) - string;
+          ASSERT(diff >= 0);
+          const usize num_chars = static_cast<usize>(diff);
           if(num_chars > 0) {
             result.load_string(string, num_chars);
           }
@@ -709,7 +719,9 @@ namespace Format {
       }
       else if(fstr[0] == '}') {
         if(fstr.size > 1 && fstr[1] == '}') {
-          const size_t num_chars = fstr.data + 1 - string;
+          const std::ptrdiff_t diff = (fstr.data + 1) - string;
+          ASSERT(diff >= 0);
+          const usize num_chars = static_cast<usize>(diff);
           if(num_chars > 0) {
             result.load_string(string, num_chars);
           }

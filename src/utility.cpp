@@ -69,8 +69,8 @@ void SquareBitMatrix::free() {
   free_no_destruct<uint8_t>(data);
 
   data = nullptr;
-  side_length = 0;
-  capacity = 0;
+  side_length = 0u;
+  capacity = 0u;
 }
 
 bool SquareBitMatrix::test_a_intersects_b(size_t a, size_t b) const {
@@ -80,12 +80,12 @@ bool SquareBitMatrix::test_a_intersects_b(size_t a, size_t b) const {
   const size_t bytes_per_val = bytes_per_val_per_side(side_length);
   const uint8_t* a_data = data + bytes_per_val * a;
 
-  const size_t b_mod8 = b % 8;
-  const size_t b_div8 = b / 8;
+  const size_t b_mod8 = b % 8u;
+  const size_t b_div8 = b / 8u;
 
   ASSERT(a_data + b_div8 < data + capacity);
 
-  return (a_data[b_div8] & (1 << b_mod8)) > 0;
+  return (a_data[b_div8] & (1u << b_mod8)) > 0;
 }
 
 void SquareBitMatrix::set_a_intersects_b(size_t a, size_t b) {
@@ -95,12 +95,12 @@ void SquareBitMatrix::set_a_intersects_b(size_t a, size_t b) {
   const size_t bytes_per_val = bytes_per_val_per_side(side_length);
   uint8_t* a_data = data + bytes_per_val * a;
 
-  const size_t b_mod8 = b % 8;
-  const size_t b_div8 = b / 8;
+  const size_t b_mod8 = b % 8u;
+  const size_t b_div8 = b / 8u;
 
   ASSERT(a_data + b_div8 < data + capacity);
 
-  a_data[b_div8] |= (uint8_t)(1 << b_mod8);
+  a_data[b_div8] |= (uint8_t)(1u << b_mod8);
 }
 
 void SquareBitMatrix::remove_a_intersects_b(size_t a, size_t b) {
@@ -110,12 +110,12 @@ void SquareBitMatrix::remove_a_intersects_b(size_t a, size_t b) {
   const size_t bytes_per_val = bytes_per_val_per_side(side_length);
   uint8_t* a_data = data + bytes_per_val * a;
 
-  const size_t b_mod8 = b % 8;
-  const size_t b_div8 = b / 8;
+  const size_t b_mod8 = b % 8u;
+  const size_t b_div8 = b / 8u;
 
   ASSERT(a_data + b_div8 < data + capacity);
 
-  a_data[b_div8] &= ~(uint8_t)(1 << b_mod8);
+  a_data[b_div8] &= ~(uint8_t)(1u << b_mod8);
 }
 
 size_t SquareBitMatrix::new_value() {
@@ -165,19 +165,21 @@ size_t SquareBitMatrix::new_value() {
   return side_length++;
 }
 
-BitArray::BitArray(size_t length_) : data(new u8[ceil_div(length_, 8)]{ 0 }), length(length_), highest_set(0) {}
+BitArray::BitArray(size_t length_) : data(new u8[ceil_div(length_, 8)]), length(length_), highest_set(0) {
+  std::memset(data, 0, ceil_div(length_, 8));
+}
 BitArray::~BitArray() { delete[] data; }
 
 BitArray::BitArray(BitArray&& b) noexcept
   : data(std::exchange(b.data, nullptr)),
-    length(std::exchange(b.length, 0)), highest_set(std::exchange(b.highest_set, 0)) {}
+    length(std::exchange(b.length, 0u)), highest_set(std::exchange(b.highest_set, 0u)) {}
 
 BitArray& BitArray::operator=(BitArray&& b) noexcept {
   if(this == &b) return *this;
 
   data = std::exchange(b.data, nullptr);
-  length = std::exchange(b.length, 0);
-  highest_set = std::exchange(b.highest_set, 0);
+  length = std::exchange(b.length, 0u);
+  highest_set = std::exchange(b.highest_set, 0u);
 
 
   return *this;
@@ -186,23 +188,23 @@ BitArray& BitArray::operator=(BitArray&& b) noexcept {
 void BitArray::set(size_t a) {
   ASSERT(a < length);
 
-  size_t index = a / 8;
-  size_t offset = a % 8;
+  size_t index = a / 8u;
+  size_t offset = a % 8u;
 
-  data[index] |= 1 << offset;
+  data[index] |= 1u << offset;
 
   if (a > highest_set) highest_set = a;
 }
 
 constexpr bool test_bit(const u8* data, usize big, usize small) {
-  return (data[big] & (1 << small)) > 0;
+  return (data[big] & (1u << small)) > 0u;
 }
 
 bool BitArray::test(size_t a) const {
   ASSERT(a < length);
 
-  size_t index = a / 8;
-  size_t offset = a % 8;
+  size_t index = a / 8u;
+  size_t offset = a % 8u;
 
   return test_bit(data, index, offset);
 }
@@ -210,24 +212,24 @@ bool BitArray::test(size_t a) const {
 bool BitArray::intersects(const BitArray& other) const {
   ASSERT(length == other.length);
 
-  size_t blocks = ceil_div(length, 8);
+  size_t blocks = ceil_div(length, 8u);
   for (size_t i = 0; i < blocks; ++i) {
-    if ((data[i] & other.data[i]) != 0) return true;
+    if ((data[i] & other.data[i]) != 0u) return true;
   }
 
   return false;
 }
 
 bool BitArray::test_all() const {
-  if (length == 0) return true;
-  if (highest_set != length - 1) return false;
+  if (length == 0u) return true;
+  if (highest_set != length - 1u) return false;
 
-  size_t full_blocks = ceil_div(length, 8) - 1;
-  for (size_t i = 0; i < full_blocks; ++i) {
-    if (data[i] != 0xff) return false;//wasn't filled
+  size_t full_blocks = ceil_div(length, 8u) - 1u;
+  for (size_t i = 0u; i < full_blocks; ++i) {
+    if (data[i] != 0xffu) return false;//wasn't filled
   }
 
-  size_t final_size = length % 8;
+  size_t final_size = length % 8u;
 
   const u8 final_block = bit_fill_lower<u8>(final_size);
 
@@ -247,7 +249,7 @@ void BitArray::clear() {
 usize BitArray::count_set() const {
   usize count = 0;
 
-  usize top = ceil_div(length, 8);
+  usize top = ceil_div(length, 8u);
   for(usize i = 0; i < top; ++i) {
     count += std::popcount(data[i]);
   }
@@ -267,16 +269,16 @@ struct BitItr {
 };
 
 usize BitArray::UnsetBitItr::next() {
-  usize i_big = index / 8;
-  usize i_sml = index % 8;
+  usize i_big = index / 8u;
+  usize i_sml = index % 8u;
 
-  const usize l_big = length / 8;
-  const usize l_sml = length % 8;
+  const usize l_big = length / 8u;
+  const usize l_sml = length % 8u;
 
   if(i_big < l_big) {
-    while(i_sml < 8) {
+    while(i_sml < 8u) {
       if(!test_bit(data, i_big, i_sml)) {
-        const usize n = i_big * 8 + i_sml;
+        const usize n = i_big * 8u + i_sml;
         index = n + 1;
         return n;
       }
@@ -287,16 +289,16 @@ usize BitArray::UnsetBitItr::next() {
     i_sml = 0;
     i_big += 1;
     while(i_big < l_big) {
-      if(std::popcount(data[i_big]) != 8) {
+      if(std::popcount(data[i_big]) != 8u) {
         do {
           if(!test_bit(data, i_big, i_sml)) {
-            const usize n = i_big * 8 + i_sml;
+            const usize n = i_big * 8u + i_sml;
             index = n + 1;
             return n;
           }
 
           i_sml += 1;
-        } while(i_sml < 8);
+        } while(i_sml < 8u);
 
         INVALID_CODE_PATH("Popcount was not 8, but didn't find the bit");
       }
@@ -311,7 +313,7 @@ usize BitArray::UnsetBitItr::next() {
 
   while(i_sml < l_sml) {
     if(!test_bit(data, i_big, i_sml)) {
-      const usize n = i_big * 8 + i_sml;
+      const usize n = i_big * 8u + i_sml;
       index = n + 1;
       return n;
     }
@@ -324,6 +326,6 @@ usize BitArray::UnsetBitItr::next() {
 }
 
 BitArray::UnsetBitItr BitArray::unset_itr() const {
-  return {data, 0, length};
+  return {data, 0u, length};
 }
 }

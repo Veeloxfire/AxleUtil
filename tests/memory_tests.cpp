@@ -99,6 +99,14 @@ TEST_FUNCTION(GrowingMemoryPool, destruct) {
 
     struct Big {
       DeleteCounter arr[200];
+
+      Big() = default;
+      ~Big() = default;
+      
+      Big(const Big&) = delete;
+      Big(Big&&) = delete;
+      Big& operator=(const Big&) = delete;
+      Big& operator=(Big&&) = delete;
     };
 
     Big* big = pool.allocate<Big>();

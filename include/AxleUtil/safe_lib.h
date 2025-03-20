@@ -59,9 +59,10 @@ constexpr usize strlen_ts(const char* c) {
 }
 
 template<typename T>
-constexpr inline void default_init(Self<T>* const dest, const size_t dest_size) {
-  for (size_t i = 0; i < dest_size; i++) {
-    new(dest + i) T();
+constexpr inline void default_init(Self<T>* dest, const size_t dest_size) {
+  const T* const end = dest + dest_size;
+  for (; dest < end; ++dest) {
+    new(dest) T();
   }
 }
 
@@ -71,9 +72,10 @@ constexpr inline void default_init(Self<T>* const dest) {
 }
 
 template<typename T>
-constexpr inline void destruct_arr(Self<T>* const ptr, const size_t num) {
-  for (size_t i = 0; i < num; i++) {
-    ptr[i].~T();
+constexpr inline void destruct_arr(Self<T>* ptr, const size_t num) {
+  const T* const end = ptr + num;
+  for (; ptr < end; ++ptr) {
+    ptr->~T();
   }
 }
 
@@ -81,8 +83,9 @@ template<typename T>
 constexpr inline void destruct_arr_void(void* const ptr_v, const size_t num) {
   T* ptr = std::launder(reinterpret_cast<T*>(ptr_v));
 
-  for (size_t i = 0; i < num; i++) {
-    ptr[i].~T();
+  const T* const end = ptr + num;
+  for (; ptr < end; ++ptr) {
+    ptr->~T();
   }
 }
 

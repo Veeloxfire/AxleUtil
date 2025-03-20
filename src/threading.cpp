@@ -14,8 +14,8 @@ namespace Axle {
 volatile u32 thread_id_counter = 1;
 
 bool SpinLockMutex::acquire_if_free() {
-  const long res = _InterlockedCompareExchange(&held, static_cast<long>(THREAD_ID.id), 0);
-  return res == 0 || res == static_cast<long>(THREAD_ID.id);
+  const u32 res = _InterlockedCompareExchange(&held, THREAD_ID.id, 0u);
+  return res == 0 || res == static_cast<u32>(THREAD_ID.id);
 }
 
 void SpinLockMutex::acquire() {
@@ -27,7 +27,7 @@ void SpinLockMutex::acquire() {
 
 void SpinLockMutex::release() {
   STACKTRACE_FUNCTION();
-  u32 res = _InterlockedCompareExchange(&held, 0, static_cast<long>(THREAD_ID.id));
+  u32 res = _InterlockedCompareExchange(&held, 0u, THREAD_ID.id);
   ASSERT(res == THREAD_ID.id);
 }
 

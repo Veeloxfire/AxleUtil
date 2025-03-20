@@ -5,10 +5,12 @@
 
 #include <utility>
 
+#include <cstring>
+
 namespace Axle {
 Windows::NativePath Windows::get_current_directory() {
   NativePath str = {};
-  memset(str.path, 0, MAX_PATH + 1);
+  std::memset(str.path, 0, MAX_PATH + 1);
 
   GetCurrentDirectoryA(MAX_PATH + 1, str.path);
 

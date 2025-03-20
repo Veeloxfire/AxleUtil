@@ -50,7 +50,7 @@ target_compile_definitions(AxleTestServer PRIVATE AXLE_TEST_CLIENT_EXE="AxleTest
 target_include_directories(AxleUtil PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 if(MSVC)
-  target_compile_options(AxleUtil PUBLIC /W4 /WX /permissive-)
+  target_compile_options(AxleUtil PUBLIC /diagnostics:caret /Wall /WX /wd4514 /wd4582 /wd4583 /wd4623 /wd4625 /wd4626 /wd4627 /wd4820 /wd5027 /wd5039 /wd5045 /wd5220 /permissive-)
 else()
   target_compile_options(AxleUtil PUBLIC -Wall -Wextra -Wpedantic -Werror)
 endif()

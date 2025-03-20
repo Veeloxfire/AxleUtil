@@ -416,7 +416,7 @@ TEST_FUNCTION(Util_OwnedArr, destruction) {
 
 
 TEST_FUNCTION(Util_ViewArr, view_Array) {
-  Array<usize> arr = {};
+  Array<int> arr = {};
   arr.reserve_extra(RANDOM_ARR_SIZE);
 
   for (int i : RANDOM_ARR) {
@@ -424,38 +424,38 @@ TEST_FUNCTION(Util_ViewArr, view_Array) {
   }
 
   {
-    ViewArr<usize> v = view_arr(arr);
+    ViewArr<int> v = view_arr(arr);
 
     TEST_EQ(arr.data, v.data);
     TEST_EQ(arr.size, v.size);
 
-    ViewArr<const usize> v2 = v;
-    TEST_EQ((const usize*)arr.data, v2.data);
+    ViewArr<const int> v2 = v;
+    TEST_EQ((const int*)arr.data, v2.data);
     TEST_EQ(arr.size, v2.size);
   }
 
   {
-    ViewArr<usize> v = view_arr(arr, 3, 5);
+    ViewArr<int> v = view_arr(arr, 3, 5);
 
     TEST_EQ(arr.data + 3, v.data);
     TEST_EQ((usize)5, v.size);
 
-    ViewArr<const usize> v2 = v;
-    TEST_EQ((const usize*)arr.data + 3, v2.data);
+    ViewArr<const int> v2 = v;
+    TEST_EQ((const int*)arr.data + 3, v2.data);
     TEST_EQ((usize)5, v2.size);
   }
 
   {
-    ViewArr<const usize> v = const_view_arr(arr);
+    ViewArr<const int> v = const_view_arr(arr);
 
-    TEST_EQ((const usize*)arr.data, v.data);
+    TEST_EQ((const int*)arr.data, v.data);
     TEST_EQ(arr.size, v.size);
   }
 
   {
-    ViewArr<const usize> v = const_view_arr(arr, 3, 5);
+    ViewArr<const int> v = const_view_arr(arr, 3, 5);
 
-    TEST_EQ((const usize*)arr.data + 3, v.data);
+    TEST_EQ((const int*)arr.data + 3, v.data);
     TEST_EQ((usize)5, v.size);
   }
 }

@@ -587,7 +587,13 @@ namespace {
   };
 
   struct DestructCounter {
-    u64* counter;
+    u64* counter = nullptr;
+
+    DestructCounter() = default;
+    DestructCounter(u64* p) : counter(p) {}
+    DestructCounter(const DestructCounter&) = default;
+    DestructCounter& operator=(const DestructCounter&) = default;
+
     ~DestructCounter() {
       *counter += 1;
     }

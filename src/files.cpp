@@ -510,7 +510,9 @@ AllocFilePath format_file_path(const ViewArr<const char>& path_str,
 
   //Load the file name
   {
-    const size_t len = (name_end - file_p_info.begin());
+    const ptrdiff_t diff = (name_end - file_p_info.begin());
+    ASSERT(diff > 0);
+    const usize len = static_cast<usize>(diff);
     str.insert_uninit(len);
 
     memcpy_ts(str.data + str.size - len, len, file_p_info.data, len);
@@ -540,7 +542,9 @@ AllocFilePath format_file_path(const ViewArr<const char>& path_str,
       }
 
       ASSERT(e_end > e_start);
-      const size_t len = (e_end - e_start);
+      const ptrdiff_t diff = (e_end - e_start);
+      ASSERT(diff > 0);
+      const usize len = static_cast<usize>(diff);
       str.insert_uninit(len);
 
       memcpy_ts(str.data + str.size - len, len, e_start, len);

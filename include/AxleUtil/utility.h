@@ -12,13 +12,13 @@
 
 namespace Axle {
 
-constexpr inline u64 FNV1_HASH_BASE = 0xcbf29ce484222325;
-constexpr inline u64 FNV1_HASH_PRIME = 0x100000001b3;
+constexpr inline u64 FNV1_HASH_BASE = 0xcbf29ce484222325u;
+constexpr inline u64 FNV1_HASH_PRIME = 0x100000001b3u;
 
 constexpr uint64_t fnv1a_hash(const char* c, size_t size) {
   uint64_t base = FNV1_HASH_BASE;
 
-  while (size > 0) {
+  while (size > 0u) {
     base ^= *c;
     base *= FNV1_HASH_PRIME;
 
@@ -31,12 +31,12 @@ constexpr uint64_t fnv1a_hash(const char* c, size_t size) {
 
 constexpr u64 fnv1a_hash_u16(u64 start, u16 u) {
   //1
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //2
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
 
   return start;
@@ -44,22 +44,22 @@ constexpr u64 fnv1a_hash_u16(u64 start, u16 u) {
 
 constexpr u64 fnv1a_hash_u32(u64 start, u32 u) {
   //1
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //2
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //3
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //4
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
 
   return start;
@@ -67,42 +67,42 @@ constexpr u64 fnv1a_hash_u32(u64 start, u32 u) {
 
 constexpr u64 fnv1a_hash_u64(u64 start, u64 u) {
   //1
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //2
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //3
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //4
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //5
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //6
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //7
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
-  u >>= 8;
+  u >>= 8u;
 
   //8
-  start ^= (u & 0xff);
+  start ^= (u & 0xffu);
   start *= FNV1_HASH_PRIME;
 
   return start;
@@ -117,9 +117,9 @@ template<typename T, SortPredicate<T> L>
 size_t _sort_range_part(const Axle::ViewArr<T>& base, size_t b, size_t e, const L& pred) {
   STACKTRACE_FUNCTION();
   ASSERT(e <= std::numeric_limits<size_t>::max());
-  ASSERT(e > 0);
-  ASSERT(b < e && e - b > 1);
-  size_t pivot = (e + b + 1) / 2llu;
+  ASSERT(e > 0u);
+  ASSERT(b < e && e - b > 1u);
+  size_t pivot = (e + b + 1u) / 2llu;
   ASSERT(pivot > b);
   ASSERT(pivot < e);
 
@@ -130,49 +130,49 @@ size_t _sort_range_part(const Axle::ViewArr<T>& base, size_t b, size_t e, const 
     while (i < e) {
       if (i == pivot) break;
       if (pred(base[i], base[pivot]) >= 0) break;
-      i += 1;
+      i += 1u;
     }
 
     while (j > b) {
-      if ((j - 1) == pivot) break;
-      if (pred(base[pivot], base[j - 1]) >= 0) break;
-      j -= 1;
+      if ((j - 1u) == pivot) break;
+      if (pred(base[pivot], base[j - 1u]) >= 0) break;
+      j -= 1u;
     }
     
     ASSERT(i < e);
     ASSERT(j > b);
 
     // pivoted correctly
-    if (i >= (j - 1)) {
+    if (i >= (j - 1u)) {
       return i;
     }
 
     {
-      ASSERT(i < (j - 1));
-      ASSERT(pred(base[i], base[j - 1]) >= 0);
+      ASSERT(i < (j - 1u));
+      ASSERT(pred(base[i], base[j - 1u]) >= 0);
       T hold = std::move(base[i]);
 
-      base[i] = std::move(base[j - 1]);
-      base[j - 1] = std::move(hold);
+      base[i] = std::move(base[j - 1u]);
+      base[j - 1u] = std::move(hold);
     }
 
     // pivot value has moved
     if (i == pivot) {
-      pivot = j - 1;
+      pivot = j - 1u;
     }
-    else if (j - 1 == pivot) {
+    else if (j - 1u == pivot) {
       pivot = i;
     }
 
-    i += 1;
-    j -= 1;
+    i += 1u;
+    j -= 1u;
   }
 
 }
 
 template<typename T, SortPredicate<T> L>
 void _sort_range_impl(const ViewArr<T>& view, size_t b, size_t e, const L& pred) {
-  if (b + 1 < e) {
+  if (b + 1u < e) {
     const size_t p = _sort_range_part(view, b, e, pred);
     _sort_range_impl(view, b, p, pred);
     _sort_range_impl(view, p, e, pred);
@@ -182,14 +182,14 @@ void _sort_range_impl(const ViewArr<T>& view, size_t b, size_t e, const L& pred)
 template<typename T, SortPredicate<T> L>
 void sort_view(const Axle::ViewArr<T>& view, const L& pred) {
   STACKTRACE_FUNCTION();
-  _sort_range_impl<T, L>(view, 0, view.size, pred);
+  _sort_range_impl<T, L>(view, 0u, view.size, pred);
 }
 
 template<typename T>
 struct Array {
   T* data = nullptr;// ptr to data in the array
-  size_t size = 0;// used size
-  size_t capacity = 0;
+  size_t size = 0u;// used size
+  size_t capacity = 0u;
 
   [[nodiscard]] constexpr T& operator[](size_t index) const {
     ASSERT(index < size);
@@ -203,8 +203,8 @@ struct Array {
   constexpr Array(Array&& arr) noexcept : data(arr.data), size(arr.size), capacity(arr.capacity)
   {
     arr.data = nullptr;
-    arr.size = 0;
-    arr.capacity = 0;
+    arr.size = 0u;
+    arr.capacity = 0u;
   }
 
   //Array(size_t s) noexcept : data(allocate_default<T>(s)), size(s), capacity(s) {}
@@ -214,8 +214,8 @@ struct Array {
     free();
 
     data = std::exchange(arr.data, nullptr);
-    size = std::exchange(arr.size, 0);
-    capacity = std::exchange(arr.capacity, 0);
+    size = std::exchange(arr.size, 0u);
+    capacity = std::exchange(arr.capacity, 0u);
 
     return *this;
   }
@@ -223,8 +223,8 @@ struct Array {
   void free() {
     free_destruct_n<T>(data, size);
     data = nullptr;
-    size = 0;
-    capacity = 0;
+    size = 0u;
+    capacity = 0u;
   }
 
   ~Array() noexcept {
@@ -234,7 +234,7 @@ struct Array {
   constexpr const T* begin() const { return data; }
   constexpr const T* end() const { return data + size; }
 
-  constexpr T* back() { return data + size - 1; }
+  constexpr T* back() { return data + size - 1u; }
 
   constexpr T* mut_begin() { return data; }
   constexpr T* mut_end() { return data + size; }
@@ -244,8 +244,8 @@ struct Array {
 
     T t = std::move(data[index]);
 
-    for (size_t i = index; i < size - 1; i++) {
-      data[i] = std::move(data[i + 1]);
+    for (size_t i = index; i < size - 1u; i++) {
+      data[i] = std::move(data[i + 1u]);
     }
     size--;
     return t;
@@ -253,11 +253,11 @@ struct Array {
 
   void insert_at_internal(const size_t index, T t) {
     ASSERT(index <= size);
-    reserve_extra(1);
+    reserve_extra(1u);
 
     size++;
-    for (size_t i = size; (i - 1) > index; i--) {
-      data[i - 1] = std::move(data[i - 2]);
+    for (size_t i = size; (i - 1u) > index; i--) {
+      data[i - 1] = std::move(data[i - 2u]);
     }
 
     data[index] = std::move(t);
@@ -269,15 +269,15 @@ struct Array {
 
   template<typename L>
   void remove_if(L&& lambda) {
-    size_t num_removed = 0;
+    size_t num_removed = 0u;
 
-    for (size_t i = 0; i < size; i++) {
+    for (size_t i = 0u; i < size; i++) {
       if (lambda(data[i])) {
         [[maybe_unused]]T removed = std::move(data[i]);
         num_removed++;
       }
       else {
-        if (num_removed > 0) {
+        if (num_removed > 0u) {
           data[i - num_removed] = std::move(data[i]);
         }
       }
@@ -314,7 +314,7 @@ struct Array {
   }
 
   constexpr void replace_a_with_b(const T& a, const T& b) {
-    for (size_t i = 0; i < size; i++) {
+    for (size_t i = 0u; i < size; i++) {
       if (data[i] == a) {
         data[i] = b;
       }
@@ -322,7 +322,7 @@ struct Array {
   }
 
   void insert_internal(T t) noexcept {
-    try_reserve_next(size + 1);
+    try_reserve_next(size + 1u);
 
     new(data + size) T(std::move(t));
     size++;
@@ -339,7 +339,7 @@ struct Array {
   }
 
   //TODO: rename intert_default
-  void insert_uninit(const size_t num = 1) noexcept {
+  void insert_uninit(const size_t num = 1u) noexcept {
     if (num > 0) {
       reserve_extra(num);
 
@@ -364,8 +364,8 @@ struct Array {
     const size_t prev = capacity;
 
     //Min capacity should be 8
-    if (total_required < 8) {
-      capacity = 8;
+    if (total_required < 8u) {
+      capacity = 8u;
     }
     else {
       capacity = ceil_to_pow_2(total_required);
@@ -395,17 +395,17 @@ struct Array {
       i->~T();
     }
 
-    size = 0;
+    size = 0u;
   }
 
   void pop() noexcept {
-    ASSERT(size > 0);
+    ASSERT(size > 0u);
     size--;
     (data + size)->~T();
   }
 
   T take() noexcept {
-    T t = std::move(data[size - 1]);
+    T t = std::move(data[size - 1u]);
     pop();
     return t;
   }
@@ -415,7 +415,7 @@ struct Array {
     const auto* old_end = data + size;
 
     if (num > size) {
-      size = 0;
+      size = 0u;
     }
     else {
       size -= num;
@@ -446,10 +446,10 @@ struct Array {
     reserve_extra(N);
 
     T* start = data + size;
-    for(usize i = 0; i < N; ++i) {
+    for(usize i = 0u; i < N; ++i) {
       *start = std::move(*arr);
-      start += 1;
-      arr += 1;
+      start += 1u;
+      arr += 1u;
     }
 
     size += N;
@@ -466,10 +466,10 @@ struct Array {
 
     T* start = data + size;
 
-    for (usize i = 0; i < N; ++i) {
+    for (usize i = 0u; i < N; ++i) {
       *start = *arr;
-      start += 1;
-      arr += 1;
+      start += 1u;
+      arr += 1u;
     }
 
     size += N;
@@ -525,7 +525,7 @@ void copy_arr_to(const Array<T>& from, Array<T>& to) noexcept {
   to.clear();
   to.reserve_total(from.size);
 
-  for (size_t i = 0; i < from.size; i++) {
+  for (size_t i = 0u; i < from.size; i++) {
     to.data[i] = from.data[i];
   }
 
@@ -546,7 +546,7 @@ void combine_unique(const Array<T>& from, Array<T>& to) noexcept {
 
   const size_t initial_size = to.size;
   for (; i < end; i++) {
-    for (size_t i_to = 0; i_to < initial_size; i_to++) {
+    for (size_t i_to = 0u; i_to < initial_size; i_to++) {
       if (*i == to.data[i_to]) {
         goto NEXT_COMBINE;
       }
@@ -564,7 +564,7 @@ void reverse_array(Array<T>& arr) noexcept {
   if (arr.size == 0) { return; }
 
   auto* i_beg = arr.data;
-  auto* i_back = arr.data + arr.size - 1;
+  auto* i_back = arr.data + arr.size - 1u;
 
   //Swap first with back - then step inwards
   while (i_beg < i_back) {
@@ -584,20 +584,20 @@ struct BucketArray {
       char _unused;
       T el;
 
-      EL() : _unused(0) {}
+      EL() : _unused() {}
       ~EL() {}
     };
 
     constexpr static size_t BLOCK_SIZE = 64;
 
-    size_t filled = 0;
+    size_t filled = 0u;
     BLOCK* next = nullptr;
 
     EL data[BLOCK_SIZE];
   };
 
   struct Iter {
-    size_t index = 0;
+    size_t index = 0u;
     BLOCK* block = nullptr;
     
     constexpr void next() {
@@ -605,7 +605,7 @@ struct BucketArray {
 
       index++;
       if (index >= block->filled) {
-        index = 0;
+        index = 0u;
         block = block->next;
       }
     }
@@ -640,7 +640,7 @@ struct BucketArray {
   };
 
   struct ConstIter {
-    size_t index = 0;
+    size_t index = 0u;
     const BLOCK* block = nullptr;
 
     constexpr void next() {
@@ -648,7 +648,7 @@ struct BucketArray {
 
       index++;
       if (index >= block->filled) {
-        index = 0;
+        index = 0u;
         block = block->next;
       }
     }
@@ -682,7 +682,7 @@ struct BucketArray {
   };
 
   Iter mut_begin() {
-    return { 0, first };
+    return { 0u, first };
   }
 
   Iter mut_end() {
@@ -690,7 +690,7 @@ struct BucketArray {
   }
 
   ConstIter begin() const {
-    return { 0, first };
+    return { 0u, first };
   }
 
   ConstIter end() const {
@@ -704,7 +704,7 @@ struct BucketArray {
     BLOCK* b = first;
     while(b != nullptr) {
       BLOCK* next = b->next;
-      for(usize i = 0; i < b->filled; ++i) {
+      for(usize i = 0u; i < b->filled; ++i) {
         b->data[i].el.~T();
       }
       free_destruct_single<BLOCK>(b);
@@ -719,14 +719,14 @@ struct BucketArray {
       last = first;
 
       first->next = nullptr;
-      first->filled = 0;
+      first->filled = 0u;
     }
     else if (last->filled == BLOCK::BLOCK_SIZE) {
       last->next = allocate_default<BLOCK>();
       last = last->next;
 
       last->next = nullptr;
-      last->filled = 0;
+      last->filled = 0u;
     }
 
     T* el = &last->data[last->filled].el;
@@ -746,14 +746,23 @@ struct FreelistBlockAllocator {
     };
     constexpr Element() : next(nullptr) {}
     constexpr ~Element() {}
+
+    constexpr Element(const Element&) = delete;
+    constexpr Element& operator=(const Element&) = delete;
   };
 
   struct BLOCK {
-    constexpr static size_t BLOCK_SIZE = 32;
+    constexpr static size_t BLOCK_SIZE = 32u;
 
     //size_t filled = 0;
     BLOCK* prev = nullptr;
     Element data[BLOCK_SIZE] = {};
+    
+    constexpr BLOCK() = default;
+    constexpr ~BLOCK() = default;
+    
+    constexpr BLOCK(const BLOCK&) = delete;
+    constexpr BLOCK& operator=(const BLOCK&) = delete;
   };
 
   BLOCK* top = nullptr;
@@ -786,14 +795,14 @@ struct FreelistBlockAllocator {
     new_b->prev = top;
     top = new_b;
 
-    top->data[0].next = top->data + 1;
+    top->data[0u].next = top->data + 1u;
 
     for (usize i = 1; i < BLOCK::BLOCK_SIZE - 1; i++) {
       Element& e = top->data[i];
-      e.next = top->data + i + 1;
+      e.next = top->data + i + 1u;
     }
 
-    top->data[BLOCK::BLOCK_SIZE - 1].next = alloc_list;
+    top->data[BLOCK::BLOCK_SIZE - 1u].next = alloc_list;
 
     alloc_list = top->data;
   }
@@ -825,7 +834,7 @@ struct FreelistBlockAllocator {
       const u8* block_top = reinterpret_cast<const u8*>(b->data + BLOCK::BLOCK_SIZE);
 
       const u8* t_base = reinterpret_cast<const u8*>(t);
-      const u8* t_top = reinterpret_cast<const u8*>(t + 1);
+      const u8* t_top = reinterpret_cast<const u8*>(t + 1u);
       if (block_base <= t_base && t_top <= block_top) return true;
 
       b = b->prev;
@@ -835,14 +844,14 @@ struct FreelistBlockAllocator {
   }
 
   bool _debug_all_are_free() const {
-    usize actual = 0;
+    usize actual = 0u;
     const Element* e = alloc_list;
     while (e != nullptr) {
-      actual += 1;
+      actual += 1u;
       e = e->next;
     }
 
-    usize expected = 0;
+    usize expected = 0u;
     const BLOCK* b = top;
     while (b != nullptr) {
       expected += BLOCK::BLOCK_SIZE;
@@ -873,8 +882,8 @@ struct SquareBitMatrix {
   //each bit corresponds to its equivalent value at that bit index
 
   uint8_t* data = nullptr;
-  size_t side_length = 0;
-  size_t capacity = 0;
+  size_t side_length = 0u;
+  size_t capacity = 0u;
 
   void free();
 
@@ -887,8 +896,8 @@ struct SquareBitMatrix {
   SquareBitMatrix(const SquareBitMatrix&) = delete;
 
   constexpr static size_t bytes_per_val_per_side(size_t side_length) {
-    return side_length == 0 ? 0
-      : ((side_length - 1) / 8) + 1;
+    return side_length == 0llu ? 0llu
+      : ((side_length - 1llu) / 8llu) + 1llu;
   }
 
   bool test_a_intersects_b(size_t a, size_t b) const;
@@ -903,7 +912,7 @@ struct BitArray {
   size_t length;
   size_t highest_set;
 
-  constexpr BitArray() : data(nullptr), length(0), highest_set(0) {}
+  constexpr BitArray() : data(nullptr), length(0u), highest_set(0u) {}
   BitArray(size_t length);
   BitArray(BitArray&&) noexcept;
   BitArray& operator=(BitArray&&) noexcept;
@@ -949,9 +958,9 @@ struct Queue {
   Queue(Queue&& q) noexcept : holder(q.holder), start(q.start), size(q.size), capacity(q.capacity)
   {
     q.holder = nullptr;
-    q.start = 0;
-    q.size = 0;
-    q.capacity = 0;
+    q.start = 0u;
+    q.size = 0u;
+    q.capacity = 0u;
   }
 
   Queue() noexcept = default;
@@ -961,9 +970,9 @@ struct Queue {
     free();
 
     holder = std::exchange(q.holder, nullptr);
-    start = std::exchange(q.start, 0);
-    size = std::exchange(q.size, 0);
-    capacity = std::exchange(q.capacity, 0);
+    start = std::exchange(q.start, 0u);
+    size = std::exchange(q.size, 0u);
+    capacity = std::exchange(q.capacity, 0u);
 
     return *this;
   }
@@ -980,9 +989,9 @@ struct Queue {
 
     free_no_destruct<T>(holder);
     holder = nullptr;
-    start = 0;
-    size = 0;
-    capacity = 0;
+    start = 0u;
+    size = 0u;
+    capacity = 0u;
   }
 
   ~Queue() noexcept {
@@ -999,8 +1008,8 @@ struct Queue {
       extend();
     }
 
-    if (start == 0) {
-      start = capacity - 1;
+    if (start == 0u) {
+      start = capacity - 1u;
     }
     else {
       start--;
@@ -1011,7 +1020,7 @@ struct Queue {
   }
 
   T pop_front() {
-    ASSERT(size > 0);
+    ASSERT(size > 0u);
 
     T val = std::move(holder[start]);
     start++;
@@ -1042,7 +1051,7 @@ struct Queue {
   }
 
   T pop_back() {
-    ASSERT(size > 0);
+    ASSERT(size > 0u);
 
     size--;
     T val = std::move(holder[_ptr_index(size)]);
@@ -1051,18 +1060,18 @@ struct Queue {
   }
 
   void extend() {
-    if (capacity == 0) {
-      holder = allocate_default<T>(8);
-      capacity = 8;
+    if (capacity == 0u) {
+      holder = allocate_default<T>(8u);
+      capacity = 8u;
       return;
     }
 
-    usize new_cap = capacity << 1;
+    usize new_cap = capacity << 1u;
 
     T* new_holder = allocate_default<T>(new_cap);
 
-    usize i = 0;
-    usize end_i = size + 1;
+    usize i = 0u;
+    usize end_i = size + 1u;
     for (; i < end_i; i++) {
       new_holder[i] = std::move(holder[_ptr_index(i)]);
     }
@@ -1071,11 +1080,11 @@ struct Queue {
     holder = new_holder;
     capacity = new_cap;
 
-    start = 0;
+    start = 0u;
   }
 
   void shrink() {
-    if (size == 0) {
+    if (size == 0u) {
       free();
       return;
     }
@@ -1084,8 +1093,8 @@ struct Queue {
 
     T* new_holder = allocate_default<T>(new_cap);
 
-    usize i = 0;
-    usize end_i = size + 1;
+    usize i = 0u;
+    usize end_i = size + 1u;
     for (; i < end_i; i++) {
       new_holder[i] = std::move(holder[_ptr_index(i)]);
     }
@@ -1094,7 +1103,7 @@ struct Queue {
     holder = new_holder;
     capacity = new_cap;
 
-    start = 0;
+    start = 0u;
   }
 
   void clear() {
@@ -1107,8 +1116,8 @@ struct Queue {
       destruct_arr<T>(holder + start, size);
     }
 
-    start = 0;
-    size = 0;
+    start = 0u;
+    size = 0u;
   }
 };
 
@@ -1138,9 +1147,9 @@ struct AtomicQueue {
 
     free_no_destruct<T>(holder);
     holder = nullptr;
-    start = 0;
-    size = 0;
-    capacity = 0;
+    start = 0u;
+    size = 0u;
+    capacity = 0u;
   }
 
   ~AtomicQueue() noexcept {
@@ -1157,12 +1166,12 @@ struct AtomicQueue {
     bool acquired = mutex.acquire_if_free();
     if (!acquired) return false;
 
-    if (size == 0) {
+    if (size == 0u) {
       mutex.release();
       return false;
     }
 
-    size -= 1;
+    size -= 1u;
     *out_t = std::move(holder[start]);
     start++;
     start %= capacity;
@@ -1184,18 +1193,18 @@ struct AtomicQueue {
   }
 
   void extend() {
-    if (capacity == 0) {
-      holder = allocate_default<T>(8);
-      capacity = 8;
+    if (capacity == 0u) {
+      holder = allocate_default<T>(8u);
+      capacity = 8u;
       return;
     }
 
-    usize new_cap = capacity << 1;
+    usize new_cap = capacity << 1u;
 
     T* new_holder = allocate_default<T>(new_cap);
 
-    usize i = 0;
-    usize end_i = size + 1;
+    usize i = 0u;
+    usize end_i = size + 1u;
     for (; i < end_i; i++) {
       new_holder[i] = std::move(holder[_ptr_index(i)]);
     }
@@ -1204,20 +1213,20 @@ struct AtomicQueue {
     holder = new_holder;
     capacity = new_cap;
 
-    start = 0;
+    start = 0u;
   }
 };
 
 template<typename T>
 struct OwnedArr {
   T* data = nullptr;
-  usize size = 0;
+  usize size = 0u;
 
   constexpr OwnedArr() noexcept = default;
   constexpr OwnedArr(T* t, usize s) noexcept : data(t), size(s) {}
   constexpr OwnedArr(OwnedArr&& arr) noexcept
     : data(std::exchange(arr.data, nullptr)),
-    size(std::exchange(arr.size, 0))
+    size(std::exchange(arr.size, 0u))
   {}
 
   OwnedArr(const OwnedArr& arr) = delete;
@@ -1226,7 +1235,7 @@ struct OwnedArr {
   void free() {
     free_destruct_n<T>(data, size);
     data = nullptr;
-    size = 0;
+    size = 0u;
   }
 
   ~OwnedArr() noexcept {
@@ -1238,7 +1247,7 @@ struct OwnedArr {
     free();
 
     data = std::exchange(arr.data, nullptr);
-    size = std::exchange(arr.size, 0);
+    size = std::exchange(arr.size, 0u);
 
     return *this;
   }
@@ -1257,18 +1266,18 @@ struct OwnedArr {
 template<typename T>
 struct OwnedArr<const T> {
   const T* data = nullptr;
-  usize size = 0;
+  usize size = 0u;
 
   constexpr OwnedArr() noexcept = default;
   constexpr OwnedArr(const T* t, usize s) noexcept : data(t), size(s) {}
   constexpr OwnedArr(OwnedArr<const T>&& arr) noexcept
     : data(std::exchange(arr.data, nullptr)),
-    size(std::exchange(arr.size, 0))
+    size(std::exchange(arr.size, 0u))
   {}
 
   constexpr OwnedArr(OwnedArr<T>&& arr) noexcept
     : data(std::exchange(arr.data, nullptr)),
-    size(std::exchange(arr.size, 0))
+    size(std::exchange(arr.size, 0u))
   {}
 
   OwnedArr(const OwnedArr& arr) = delete;
@@ -1277,7 +1286,7 @@ struct OwnedArr<const T> {
   void free() {
     free_destruct_n<const T>(data, size);
     data = nullptr;
-    size = 0;
+    size = 0u;
   }
 
   ~OwnedArr() noexcept {
@@ -1289,7 +1298,7 @@ struct OwnedArr<const T> {
     free();
 
     data = std::exchange(arr.data, nullptr);
-    size = std::exchange(arr.size, 0);
+    size = std::exchange(arr.size, 0u);
 
     return *this;
   }
@@ -1299,7 +1308,7 @@ struct OwnedArr<const T> {
     free();
 
     data = std::exchange(arr.data, nullptr);
-    size = std::exchange(arr.size, 0);
+    size = std::exchange(arr.size, 0u);
 
     return *this;
   }
@@ -1352,7 +1361,7 @@ template<typename T>
 OwnedArr<T> copy_arr(const T* source, usize n) {
   T* arr = allocate_default<T>(n);
 
-  for (usize i = 0; i < n; ++i) {
+  for (usize i = 0u; i < n; ++i) {
     arr[i] = source[i];
   }
   return OwnedArr<T>(arr, n);
@@ -1362,7 +1371,7 @@ template<typename T, usize N>
 OwnedArr<T> copy_arr(const T(&source)[N]) {
   T* arr = allocate_default<T>(N);
 
-  for (usize i = 0; i < N; ++i) {
+  for (usize i = 0u; i < N; ++i) {
     arr[i] = source[i];
   }
   return OwnedArr<T>(arr, N);
@@ -1388,8 +1397,8 @@ OwnedArr<T> bake_arr(Array<T>&& arr) {
   arr.shrink();
 
   T* d = std::exchange(arr.data, nullptr);
-  usize s = std::exchange(arr.size, 0);
-  arr.capacity = 0;
+  usize s = std::exchange(arr.size, 0u);
+  arr.capacity = 0u;
 
   return OwnedArr<T>(d, s);
 }
@@ -1399,8 +1408,8 @@ OwnedArr<const T> bake_const_arr(Array<T>&& arr) {
   arr.shrink();
 
   T* d = std::exchange(arr.data, nullptr);
-  usize s = std::exchange(arr.size, 0);
-  arr.capacity = 0;
+  usize s = std::exchange(arr.size, 0u);
+  arr.capacity = 0u;
 
   return OwnedArr<const T>(d, s);
 }
@@ -1408,9 +1417,9 @@ OwnedArr<const T> bake_const_arr(Array<T>&& arr) {
 template<typename T, typename U>
 OwnedArr<T> cast_arr(OwnedArr<U>&& arr) {
   static_assert(std::is_trivial_v<T> && std::is_trivial_v<U>);
-  static_assert(sizeof(T) % sizeof(U) == 0);
+  static_assert(sizeof(T) % sizeof(U) == 0llu);
   return { reinterpret_cast<T*>(std::exchange(arr.data, nullptr)), 
-           std::exchange(arr.size, 0) / sizeof(U) };
+           std::exchange(arr.size, 0u) / sizeof(U) };
 }
 
 
@@ -1426,8 +1435,8 @@ struct ArrayMax {
   {}
   constexpr ArrayMax(ArrayMax&& arr) noexcept
     : data(std::exchange(arr.data, nullptr)),
-    size(std::exchange(arr.size, 0)),
-    capacity(std::exchange(arr.capacity, 0))
+    size(std::exchange(arr.size, 0u)),
+    capacity(std::exchange(arr.capacity, 0u))
   {}
 
   ArrayMax(const ArrayMax& arr) = delete;
@@ -1436,8 +1445,8 @@ struct ArrayMax {
   void free() {
     free_destruct_n<T>(data, size);
     data = nullptr;
-    size = 0;
-    capacity = 0;
+    size = 0u;
+    capacity = 0u;
   }
 
   ~ArrayMax() noexcept {
@@ -1449,8 +1458,8 @@ struct ArrayMax {
     free();
 
     data = std::exchange(arr.data, nullptr);
-    size = std::exchange(arr.size, 0);
-    capacity = std::exchange(arr.capacity, 0);
+    size = std::exchange(arr.size, 0u);
+    capacity = std::exchange(arr.capacity, 0u);
 
     return *this;
   }
@@ -1476,7 +1485,7 @@ struct ArrayMax {
   }
 
   //TODO: rename intert_default
-  constexpr void insert_uninit(const size_t num = 1) {
+  constexpr void insert_uninit(const size_t num = 1u) {
     if (num > 0) {
       ASSERT(size + num <= capacity);
 
@@ -1502,15 +1511,15 @@ struct ArrayMax {
 
     T t = std::move(data[index]);
 
-    for (size_t i = index; i < size - 1; i++) {
-      data[i] = std::move(data[i + 1]);
+    for (size_t i = index; i < size - 1u; i++) {
+      data[i] = std::move(data[i + 1u]);
     }
     size--;
     return t;
   }
 
   constexpr void pop() {
-    ASSERT(size > 0);
+    ASSERT(size > 0u);
     size--;
     (data + size)->~T();
   }
@@ -1520,7 +1529,7 @@ struct ArrayMax {
     const T* old_end = data + size;
 
     if (num > size) {
-      size = 0;
+      size = 0u;
     }
     else {
       size -= num;
@@ -1534,7 +1543,7 @@ struct ArrayMax {
   }
 
   constexpr T take() {
-    T t = std::move(data[size - 1]);
+    T t = std::move(data[size - 1u]);
     pop();
     return t;
   }
@@ -1547,7 +1556,7 @@ struct ArrayMax {
       i->~T();
     }
 
-    size = 0;
+    size = 0u;
   }
 
   constexpr const T* begin() const { return data; }
@@ -1556,21 +1565,21 @@ struct ArrayMax {
   constexpr T* mut_end() { return data + size; }
 
   constexpr T* back() const {
-    ASSERT(size > 0);
-    return data + (size - 1);
+    ASSERT(size > 0u);
+    return data + (size - 1u);
   }
 
   template<typename L>
   constexpr void remove_if(L&& lambda) {
-    size_t num_removed = 0;
+    size_t num_removed = 0u;
 
-    for (size_t i = 0; i < size; i++) {
+    for (size_t i = 0u; i < size; i++) {
       if (lambda(data[i])) {
         [[maybe_unused]]T removed = std::move(data[i]);
         num_removed++;
       }
       else {
-        if (num_removed > 0) {
+        if (num_removed > 0u) {
           data[i - num_removed] = std::move(data[i]);
         }
       }
@@ -1583,7 +1592,7 @@ template<typename T>
 ArrayMax<T> new_arr_max(usize capacity) {
   return {
     allocate_default<T>(capacity),
-    0,
+    0u,
     capacity,
   };
 }

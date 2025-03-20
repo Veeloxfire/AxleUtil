@@ -273,6 +273,7 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
 
       case AxleTest::IPC::Type::Data:
       case AxleTest::IPC::Type::Report:
+      case AxleTest::IPC::Type::QueryContext:
       default: {
         formatted_error("Invalid IPC input type: {}", static_cast<u32>(header.type));
         return false;

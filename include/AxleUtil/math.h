@@ -46,7 +46,7 @@ constexpr T bit_fill_lower(B bits) {
 template<typename T, typename B>
 constexpr T bit_fill_upper(B bits) {
   constexpr B B_MAX_BITS{sizeof(T) * 8};
-  return ~bit_fill_lower<T, B>(B_MAX_BITS - bits);
+  return static_cast<T>(~bit_fill_lower<T, B>(B_MAX_BITS - bits));
 }
 
 constexpr size_t ceil_div(size_t x, size_t y) noexcept {
@@ -198,14 +198,14 @@ constexpr inline uint64_t small_log_2_ceil(uint64_t v) {
 
 template<typename T>
 constexpr T ceil_to_n(T val, T n) {
-  const T raised = val + (n - 1);
-  return raised - (raised % n);
+  const T raised = static_cast<T>(val + (n - 1));
+  return static_cast<T>(raised - (raised % n));
 }
 
 template<usize N, typename T>
 constexpr T ceil_to_N(T val) {
-  const T raised = val + (N - 1);
-  return raised - (raised % N);
+  const T raised = static_cast<T>(val + (N - 1));
+  return static_cast<T>(raised - (raised % N));
 }
 
 template<typename T>

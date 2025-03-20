@@ -67,13 +67,13 @@ const InternString** Table::find_empty(uint64_t hash) const {
 }
 
 void Table::try_resize() {
-  if (num_full >= size * LOAD_FACTOR) {
+  if (num_full >= static_cast<usize>(static_cast<float>(size) * LOAD_FACTOR)) {
     const size_t old_size = size;
     const InternString** const old_data = data;
 
     do {
       size <<= 1;
-    } while (num_full >= size * LOAD_FACTOR);
+    } while (num_full >= static_cast<usize>(static_cast<float>(size) * LOAD_FACTOR));
     data = allocate_default<const InternString*>(size);
 
     {

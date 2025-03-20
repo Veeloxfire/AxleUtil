@@ -144,7 +144,7 @@ namespace Format {
       else {
         if (LOCAL_ARR_SIZE - static_cast<usize>(local_arr.size) == 0) {
           Array<char> arr = {};
-          arr.reserve_total(local_arr.size + 1);
+          arr.reserve_total(local_arr.size + 1u);
 
           arr.concat(local_arr.arr, local_arr.size);
           arr.insert('\0');
@@ -158,7 +158,7 @@ namespace Format {
         }
         else {
           local_arr.arr[local_arr.size] = '\0';
-          local_arr.size += 1;
+          local_arr.size += 1u;
         }
       }
     }
@@ -172,7 +172,7 @@ namespace Format {
       else {
         if (LOCAL_ARR_SIZE - static_cast<usize>(local_arr.size) == 0) {
           Array<char> arr = {};
-          arr.reserve_total(local_arr.size + 1);
+          arr.reserve_total(local_arr.size + 1u);
 
           arr.concat(local_arr.arr, local_arr.size);
           arr.insert(c);
@@ -186,7 +186,7 @@ namespace Format {
         }
         else {
           local_arr.arr[local_arr.size] = c;
-          local_arr.size += 1;
+          local_arr.size += 1u;
         }
       }
     }

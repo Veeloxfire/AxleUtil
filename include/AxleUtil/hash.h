@@ -33,7 +33,7 @@ struct InternalHashSet {
   usize used = 0;
 
   constexpr bool needs_resize(usize extra) const {
-    return (el_capacity * LOAD_FACTOR) <= (used + extra);
+    return static_cast<usize>(static_cast<float>(el_capacity) * LOAD_FACTOR) <= (used + extra);
   }
 
   ~InternalHashSet();
@@ -70,7 +70,7 @@ struct InternalHashTable {
   usize used = 0;
 
   constexpr bool needs_resize(size_t extra) const {
-    return (el_capacity * LOAD_FACTOR) <= (used + extra);
+    return static_cast<usize>(static_cast<float>(el_capacity) * LOAD_FACTOR) <= (used + extra);
   }
 
   constexpr static usize val_arr_offset(usize size) {
