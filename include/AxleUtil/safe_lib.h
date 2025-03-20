@@ -51,11 +51,11 @@ constexpr bool streq_ts(const char* str1, const char* str2) {
   return str1[0] == str2[0];//both are ended
 }
 
-constexpr size_t strlen_ts(const char* c) {
-  const char* const base = c;
-  while (*c != '\0') { c++; }
+constexpr usize strlen_ts(const char* c) {
+  usize counter = 0;
+  while (*c != '\0') { c++; counter++; }
 
-  return c - base;
+  return counter;
 }
 
 template<typename T>
