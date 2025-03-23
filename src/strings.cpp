@@ -95,14 +95,14 @@ void Table::try_resize() {
 
 static void destroy_is(void* is) {
   InternString* i = reinterpret_cast<InternString*>(is);
-  destruct_arr<char>(i->string, i->len + 1);
+  destruct_arr<const char>(i->string, i->len + 1);
   destruct_single<InternString>(i);
 }
 
 static void destroy_is_big(void* is) {
   InternString* i = reinterpret_cast<InternString*>(is);
   usize original_size = sizeof(InternString) * i->len + 1;
-  destruct_arr<char>(i->string, i->len + 1);
+  destruct_arr<const char>(i->string, i->len + 1);
   destruct_single<InternString>(i);
 
   free_destruct_n<u8>(reinterpret_cast<u8*>(is), original_size);
@@ -153,7 +153,8 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
 
   const InternString* el = *place;
   if (el == nullptr || el == Intern::TOMBSTONE) {
-    InternString* new_el; 
+    InternString* new_el;
+    char* string_data;
     
     {
       usize alloc_size = sizeof(InternString) + length + 1;
@@ -170,18 +171,21 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
       
       new_el = new(mem) InternString();
 
-      new_el->string = new(reinterpret_cast<u8*>(mem) + sizeof(InternString)) char[length + 1];
+
+      string_data = new(reinterpret_cast<u8*>(mem) + sizeof(InternString)) char[length + 1];
+      new_el->string = string_data;
 
       dl->data = new_el;
     }
 
     new_el->hash = hash;
     new_el->len = length;
-
-    memcpy_ts(new_el->string, length + 1, string, length);
+  
+    ASSERT(new_el->string == string_data);
+    memcpy_ts(string_data, length + 1, string, length);
+    string_data[length] = '\0';
+    
     *place = new_el;
-
-    new_el->string[length] = '\0';
 
     table.num_full++;
     table.try_resize();

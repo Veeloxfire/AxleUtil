@@ -72,17 +72,17 @@ return lit_view_arr(ErrorCodeString :: NAME);
   
     F file_handle;
 
-    usize real_file_ptr;
-    usize real_file_size;
+    usize real_file_ptr = 0;
+    usize real_file_size = 0;
 
-    usize abstract_file_ptr;
-    usize abstract_file_size;
+    usize abstract_file_ptr = 0;
+    usize abstract_file_size = 0;
 
-    usize real_buffer_ptr;
+    usize real_buffer_ptr = 0;
 
-    bool in_sync;
-    u32 buffer_size;
-    u8 buffer[BUFFER_SIZE];
+    bool in_sync = true;
+    u32 buffer_size = 0;
+    u8 buffer[BUFFER_SIZE] = {};
 
     FileData(F f) noexcept;
     ~FileData() noexcept;
@@ -115,9 +115,9 @@ return lit_view_arr(ErrorCodeString :: NAME);
   }
 
   struct BufferRange {
-    usize ptr_start;
-    u32 buffer_start;
-    u32 size;
+    usize ptr_start = 0;
+    u32 buffer_start = 0;
+    u32 size = 0;
   };
 
   template<typename T>
@@ -230,14 +230,9 @@ return lit_view_arr(ErrorCodeString :: NAME);
     real_file_size = handle_file_size(h);
 
     handle_seek_from_start(h, 0);
-    real_file_ptr = 0;
 
     abstract_file_ptr = real_file_ptr;
     abstract_file_size = real_file_size;
-
-    real_buffer_ptr = 0;
-    buffer_size = 0;
-    in_sync = true;
   }
 
   template<typename T>
@@ -288,8 +283,8 @@ return lit_view_arr(ErrorCodeString :: NAME);
 
   template<typename T>
   struct OpenedFile {
-    ScopedFile<T> file;
-    ErrorCode error_code;
+    ScopedFile<T> file = {};
+    ErrorCode error_code = ErrorCode::OK;
   };
 
 

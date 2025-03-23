@@ -57,7 +57,7 @@ struct AtomicLock {
 template<typename T>
 struct AtomicPtr {
   mutable SpinLockMutex _mutex;
-  T* _ptr;
+  T* _ptr = nullptr;
 
   void set(T* t) {
     _mutex.acquire();

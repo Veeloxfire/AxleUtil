@@ -309,14 +309,13 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
   {
     const ViewArr<const char> expected = lit_view_arr("hello world");
     
-    const auto actual_v = arrfm.view();
+    const ViewArr<const char> actual_v = arrfm.view();
     TEST_STR_EQ(expected, actual_v);
 
-    const auto actual_o = arrfm.take();
+    const OwnedArr<char> actual_o = std::move(arrfm).bake();
     TEST_STR_EQ(expected, actual_o);
+    TEST_EQ(static_cast<usize>(0), arrfm.view().size);
   }
-  
-  TEST_EQ(static_cast<usize>(0), arrfm.view().size);
 
   Format::format_to(arrfm, "hello world");
   Format::format_to(arrfm, "hello world");
@@ -325,14 +324,41 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
   arrfm.null_terminate();
 
   {
-    const auto actual_v = arrfm.view();
+    const ViewArr<const char> actual_v = arrfm.view();
     TEST_STR_EQ(expected_final, actual_v);
 
-    const auto actual_o = arrfm.take();
+    const OwnedArr<char> actual_o = std::move(arrfm).bake();
     TEST_STR_EQ(expected_final, actual_o);
+    TEST_EQ(static_cast<usize>(0), arrfm.view().size);
   }
 
-  TEST_EQ(static_cast<usize>(0), arrfm.view().size);
+  Format::format_to(arrfm, "hello world");
+
+  {
+    const ViewArr<const char> expected = lit_view_arr("hello world");
+    
+    const ViewArr<const char> actual_v = arrfm.view();
+    TEST_STR_EQ(expected, actual_v);
+
+    const Array<char> actual_o = std::move(arrfm).take_array();
+    TEST_STR_EQ(expected, actual_o);
+    TEST_EQ(static_cast<usize>(0), arrfm.view().size);
+  }
+
+  Format::format_to(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
+  Format::format_to(arrfm, "hello world");
+
+  arrfm.null_terminate();
+
+  {
+    const ViewArr<const char> actual_v = arrfm.view();
+    TEST_STR_EQ(expected_final, actual_v);
+
+    const Array<char> actual_o = std::move(arrfm).take_array();
+    TEST_STR_EQ(expected_final, actual_o);
+    TEST_EQ(static_cast<usize>(0), arrfm.view().size);
+  }
 
   while(!arrfm.is_heap) { 
     Format::format_to(arrfm, "hello world");

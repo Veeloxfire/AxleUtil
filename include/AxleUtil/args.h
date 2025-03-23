@@ -8,8 +8,8 @@ namespace clArg {
   using Axle::ViewArr;
 
   struct ArgsList {
-    usize argc;
-    const char** args;
+    usize argc = 0;
+    const char** args = nullptr;
 
     const char** begin() const { return args; }
     const char** end() const { return args + argc; }

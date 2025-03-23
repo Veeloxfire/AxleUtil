@@ -67,7 +67,7 @@ namespace FILES {
   DirectoryIterator directory_iterator(const ViewArr<const char>& name) noexcept;
 
   struct FileFormatter {
-    FileHandle handle;
+    FileHandle handle = {};
     ErrorCode errors = ErrorCode::OK;
 
     constexpr bool is_ok() { return errors == ErrorCode::OK; }
@@ -140,13 +140,13 @@ struct InternString;
 struct StringInterner;
 
 struct Directory {
-  const InternString* directory;
+  const InternString* directory = nullptr;
 };
 
 struct FileLocation {
-  const InternString* directory;
-  const InternString* extension;
-  const InternString* full_name;
+  const InternString* directory = nullptr;
+  const InternString* extension = nullptr;
+  const InternString* full_name = nullptr;
 
   constexpr bool operator== (const FileLocation& a) const {
     return full_name == a.full_name;
@@ -154,12 +154,12 @@ struct FileLocation {
 };
 
 struct AllocFilePath {
-  OwnedArr<const char> raw;
-  usize directory_size;
-  usize file_name_start;
-  usize file_name_size;
-  usize extension_start;
-  usize extension_size;
+  OwnedArr<const char> raw = {};
+  usize directory_size = 0;
+  usize file_name_start = 0;
+  usize file_name_size = 0;
+  usize extension_start = 0;
+  usize extension_size = 0;
 };
 
 AllocFilePath format_file_path(const ViewArr<const char>& path_str,

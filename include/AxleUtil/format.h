@@ -8,8 +8,8 @@ namespace Axle {
 namespace Format {
   struct ArrayFormatter {
     struct HeapArr {
-      bool is_heap;
-      Array<char> arr;
+      bool is_heap = true;
+      Array<char> arr = {};
     };
 
     struct LocalArr {
@@ -79,7 +79,7 @@ namespace Format {
 
     }
 
-    OwnedArr<char> take() {
+    OwnedArr<char> bake() && {
       if (is_heap) {
         OwnedArr<char> c = bake_arr(std::move(heap_arr.arr));
 
@@ -90,6 +90,23 @@ namespace Format {
       }
       else {
         OwnedArr<char> c = copy_arr(local_arr.arr, static_cast<usize>(local_arr.size));
+        local_arr.size = 0;
+        return c;
+      }
+    }
+
+    Array<char> take_array() && {
+      if (is_heap) {
+        Array<char> c = std::move(heap_arr.arr);
+
+        heap_arr.~HeapArr();
+        new (&local_arr) LocalArr{};
+
+        return c;
+      }
+      else {
+        Array<char> c;
+        c.concat(local_arr.arr, static_cast<usize>(local_arr.size));
         local_arr.size = 0;
         return c;
       }
@@ -193,8 +210,8 @@ namespace Format {
   };
 
   struct ViewFormatter {
-    ViewArr<char> view;
-    usize capacity;
+    ViewArr<char> view = {};
+    usize capacity = 0;
 
     constexpr ViewFormatter(const ViewArr<char>& view)
       : view{view.data, 0}, capacity{view.size} {}
@@ -263,7 +280,7 @@ OwnedArr<char> format(const Format::FormatString<T...>& format, const T& ... ts)
 
   Format::format_to(result, format, ts...);
 
-  return result.take();
+  return std::move(result).bake();
 }
 
 OwnedArr<char> format_type_set(const ViewArr<const char>& format, size_t prepend_spaces, size_t max_width);

@@ -419,7 +419,7 @@ struct Serializer<const u8[N], Ord> {
 };
 
 struct SerializeZeros {
-  usize num;
+  usize num = 0;
 };
 
 template<>

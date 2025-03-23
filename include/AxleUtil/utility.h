@@ -908,11 +908,11 @@ struct SquareBitMatrix {
 };
 
 struct BitArray {
-  uint8_t* data;
-  size_t length;
-  size_t highest_set;
+  uint8_t* data = nullptr;
+  size_t length = 0u;
+  size_t highest_set = 0u;
 
-  constexpr BitArray() : data(nullptr), length(0u), highest_set(0u) {}
+  constexpr BitArray() = default;
   BitArray(size_t length);
   BitArray(BitArray&&) noexcept;
   BitArray& operator=(BitArray&&) noexcept;
@@ -933,9 +933,9 @@ struct BitArray {
 
 
   struct UnsetBitItr {
-    const u8* data;
-    usize index;
-    usize length;
+    const u8* data = nullptr;
+    usize index = 0;
+    usize length = 0;
 
     usize next();
   };  
@@ -947,10 +947,10 @@ struct BitArray {
 
 template<typename T>
 struct Queue {
-  T* holder;
-  usize start;
-  usize size;
-  usize capacity;
+  T* holder = nullptr;
+  usize start = 0;
+  usize size = 0;
+  usize capacity = 0;
 
   //No copy!
   Queue(const Queue&) = delete;
@@ -1125,10 +1125,10 @@ template<typename T>
 struct AtomicQueue {
   SpinLockMutex mutex;
 
-  T* holder;
-  usize start;
-  usize size;
-  usize capacity;
+  T* holder = nullptr;
+  usize start = 0;
+  usize size = 0;
+  usize capacity = 0;
 
   //No copy!
   AtomicQueue(const AtomicQueue&) = delete;
@@ -1425,9 +1425,9 @@ OwnedArr<T> cast_arr(OwnedArr<U>&& arr) {
 
 template<typename T>
 struct ArrayMax {
-  T* data;
-  usize size;
-  usize capacity;
+  T* data = nullptr;
+  usize size = 0;
+  usize capacity = 0;
 
   constexpr ArrayMax() = default;
   constexpr ArrayMax(T* data_, usize size_, usize capacity_) noexcept 

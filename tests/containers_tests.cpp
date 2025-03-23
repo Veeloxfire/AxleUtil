@@ -18,6 +18,12 @@ static constexpr int SORTED_RANDOM_ARR[] = {
 };
 
 static constexpr usize RANDOM_ARR_SIZE = array_size(RANDOM_ARR);
+TEST_FUNCTION(Util_Array, Default) {
+  Array<int> a;
+  TEST_EQ((usize)0, a.size);
+  TEST_EQ((usize)0, a.capacity);
+  TEST_EQ((int*)nullptr, a.data);
+}
 
 TEST_FUNCTION(Util_Array, Insert_Remove) {
   Array<usize> a = {};
@@ -83,6 +89,14 @@ TEST_FUNCTION(Util_Array, Insert_Remove) {
   }
 
   TEST_EQ((usize)0, a.size);
+}
+
+TEST_FUNCTION(Util_ArrayMax, Default) {
+  ArrayMax<int> a;
+
+  TEST_EQ((usize)0, a.size);
+  TEST_EQ((usize)0, a.capacity);
+  TEST_EQ((int*)nullptr, a.data);
 }
 
 TEST_FUNCTION(Util_ArrayMax, Insert_Remove) {
@@ -234,6 +248,21 @@ TEST_FUNCTION(Util, sort) {
     sort_view(view_arr(ints), sort_fn);
 
     TEST_ARR_EQ(SORTED_RANDOM_ARR, RANDOM_ARR_SIZE, ints.data, ints.size);
+  }
+}
+
+TEST_FUNCTION(Util_OwnedArr, Default) {
+  {
+    OwnedArr<int> a;
+
+    TEST_EQ((usize)0, a.size);
+    TEST_EQ((int*)nullptr, a.data);
+  }
+  {
+    OwnedArr<const int> a;
+
+    TEST_EQ((usize)0, a.size);
+    TEST_EQ((const int*)nullptr, a.data);
   }
 }
 
@@ -414,6 +443,20 @@ TEST_FUNCTION(Util_OwnedArr, destruction) {
   }
 }
 
+TEST_FUNCTION(Util_ViewArr, Default) {
+  {
+    ViewArr<int> a;
+
+    TEST_EQ((usize)0, a.size);
+    TEST_EQ((int*)nullptr, a.data);
+  }
+  {
+    ViewArr<const int> a;
+
+    TEST_EQ((usize)0, a.size);
+    TEST_EQ((const int*)nullptr, a.data);
+  }
+}
 
 TEST_FUNCTION(Util_ViewArr, view_Array) {
   Array<int> arr = {};

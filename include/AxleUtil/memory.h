@@ -18,11 +18,11 @@ void free_heap_check(T* ptr, size_t num_bytes) {
 
 struct ALLOC_COUNTER {
   struct Allocation {
-    bool static_lifetime;
-    const char* type_name;
-    const void* mem;
-    size_t element_size;
-    size_t count;
+    bool static_lifetime = false;
+    const char* type_name = nullptr;
+    const void* mem = nullptr;
+    size_t element_size = 0;
+    size_t count = 0;
   };
 
   bool main_program_runtime = false;
@@ -306,9 +306,9 @@ void free_no_destruct(Self<T>* ptr) {
 
 //TODO: Anything allocated via this memory will not be destroyed
 struct MemoryPool {
-  u8* mem;
-  usize total;
-  usize top;
+  u8* mem = nullptr;
+  usize total = 0;
+  usize top = 0;
 
   u8* push_alloc_bytes(usize size, usize align);
 
@@ -335,22 +335,22 @@ template<usize BLOCK_SIZE>
 struct GrowingMemoryPool {
   using DeleterS = void(*)(void*);
   struct Destructlist {
-    Destructlist* prev;
-    void* data;
-    DeleterS deleter;
+    Destructlist* prev = nullptr;
+    void* data = nullptr;
+    DeleterS deleter = nullptr;
   };
   
   using DeleterN = void(*)(void*, usize);
   struct DestructlistN {
-    DestructlistN* prev;
-    void* data;
-    usize n;
-    DeleterN deleter;
+    DestructlistN* prev = nullptr;
+    void* data = nullptr;
+    usize n = 0;
+    DeleterN deleter = nullptr;
   };
 
   struct Block {
     Block* prev = nullptr;
-    u8 mem[BLOCK_SIZE];
+    u8 mem[BLOCK_SIZE] = {};
   };
 
   template<typename T>

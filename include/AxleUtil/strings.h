@@ -8,9 +8,9 @@
 
 namespace Axle {
 struct InternString {
-  uint64_t hash;
-  size_t len;
-  char* string;
+  uint64_t hash = 0;
+  size_t len = 0;
+  const char* string = nullptr;
 
   constexpr bool operator==(const InternString& i)const {
     return i.hash == hash && i.len == len

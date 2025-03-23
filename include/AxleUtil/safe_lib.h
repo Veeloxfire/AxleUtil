@@ -393,7 +393,7 @@ template<typename T, typename U>
 
 template<typename T, size_t size>
 struct ConstArray {
-  T data[size];
+  T data[size] = {};
 
   template<typename ... U>
   [[nodiscard]] constexpr static auto create(U&& ... u) {

@@ -5,8 +5,8 @@
 
 namespace Axle::Stacktrace {
   struct TraceNode {
-    const TraceNode* prev;
-    ViewArr<const char> name; 
+    const TraceNode* prev = nullptr;
+    ViewArr<const char> name = {}; 
   };
 
   inline thread_local const TraceNode* EXECUTION_TRACE = nullptr;
