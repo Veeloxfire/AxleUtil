@@ -950,7 +950,6 @@ struct ConstBitArray {
   static_assert(N > 0);
   constexpr static usize ARRAY_SIZE = ceil_div(N, 8u);
   uint8_t data[ARRAY_SIZE] = {};
-  size_t highest_set = 0u;
 
   constexpr void set(size_t a) noexcept {
     ASSERT(a < N);
@@ -959,8 +958,14 @@ struct ConstBitArray {
     size_t offset = a % 8u;
 
     data[index] |= 1u << offset;
+  }
+  constexpr void unset(size_t a) noexcept {
+    ASSERT(a < N);
 
-    if (a > highest_set) highest_set = a;
+    size_t index = a / 8u;
+    size_t offset = a % 8u;
+
+    data[index] &= ~(1u << offset);
   }
 
   static constexpr bool internal_test_bit(const u8 (&data)[ARRAY_SIZE], usize big, usize small) noexcept {
@@ -977,9 +982,6 @@ struct ConstBitArray {
   }
 
   constexpr bool test_all() const noexcept {
-    ASSERT(highest_set < N);
-    if (highest_set != N - 1u) return false;
-
     static_assert(ARRAY_SIZE >= 1);
     constexpr size_t full_blocks = ARRAY_SIZE - 1u;
     for (size_t i = 0u; i < full_blocks; ++i) {
@@ -1076,13 +1078,9 @@ struct ConstBitArray {
   }
 
   constexpr void clear() noexcept {
-    size_t highest_block = ceil_div(highest_set, 8);
-
-    for (size_t i = 0; i < highest_block; ++i) {
+    for (size_t i = 0; i < ARRAY_SIZE; ++i) {
       data[i] = 0;
     }
-
-    highest_set = 0;
   }
 };
 
