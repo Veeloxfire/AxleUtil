@@ -945,6 +945,147 @@ struct BitArray {
   void clear();
 };
 
+template<usize N>
+struct ConstBitArray {
+  static_assert(N > 0);
+  constexpr static usize ARRAY_SIZE = ceil_div(N, 8u);
+  uint8_t data[ARRAY_SIZE] = {};
+  size_t highest_set = 0u;
+
+  constexpr void set(size_t a) noexcept {
+    ASSERT(a < N);
+
+    size_t index = a / 8u;
+    size_t offset = a % 8u;
+
+    data[index] |= 1u << offset;
+
+    if (a > highest_set) highest_set = a;
+  }
+
+  static constexpr bool internal_test_bit(const u8 (&data)[ARRAY_SIZE], usize big, usize small) noexcept {
+    return (data[big] & (1u << small)) > 0u;
+  }
+
+  constexpr bool test(size_t a) const noexcept {
+    ASSERT(a < N);
+
+    size_t index = a / 8u;
+    size_t offset = a % 8u;
+
+    return internal_test_bit(data, index, offset);
+  }
+
+  constexpr bool test_all() const noexcept {
+    ASSERT(highest_set < N);
+    if (highest_set != N - 1u) return false;
+
+    static_assert(ARRAY_SIZE >= 1);
+    constexpr size_t full_blocks = ARRAY_SIZE - 1u;
+    for (size_t i = 0u; i < full_blocks; ++i) {
+      if (data[i] != 0xffu) return false;//wasn't filled
+    }
+
+    constexpr size_t final_size = N % 8u;
+    constexpr u8 final_block = bit_fill_lower<u8>(final_size);
+
+    return data[full_blocks] == final_block;
+  }
+
+  constexpr usize count_set() const noexcept {
+    usize count = 0;
+
+    for(usize i = 0; i < ARRAY_SIZE; ++i) {
+      // std::popcount
+      // but I don't want to include bit.h at the moment
+      count += __popcnt(static_cast<u32>(data[i]));
+    }
+
+    return count;
+  }
+
+  constexpr usize count_unset() const noexcept {
+    return N - count_set();
+  }
+
+  struct UnsetBitItr {
+    const u8 (*data)[ARRAY_SIZE] = nullptr;
+    usize index = 0;
+
+    constexpr usize next() noexcept {
+      usize i_big = index / 8u;
+      usize i_sml = index % 8u;
+
+      constexpr usize l_big = N / 8u;
+      constexpr usize l_sml = N % 8u;
+
+      if(i_big < l_big) {
+        while(i_sml < 8u) {
+          if(!internal_test_bit(*data, i_big, i_sml)) {
+            const usize n = i_big * 8u + i_sml;
+            index = n + 1;
+            return n;
+          }
+
+          i_sml += 1;
+        }
+
+        i_sml = 0;
+        i_big += 1;
+        while(i_big < l_big) {
+          if(__popcnt(static_cast<u32>((*data)[i_big])) != 8u) {
+            do {
+              if(!internal_test_bit(*data, i_big, i_sml)) {
+                const usize n = i_big * 8u + i_sml;
+                index = n + 1;
+                return n;
+              }
+
+              i_sml += 1;
+            } while(i_sml < 8u);
+
+            INVALID_CODE_PATH("Popcount was not 8, but didn't find the bit");
+          }
+
+          i_big += 1;
+        }
+
+        ASSERT(i_sml == 0);
+      }
+
+      ASSERT(i_big == l_big);
+
+      while(i_sml < l_sml) {
+        if(!internal_test_bit(*data, i_big, i_sml)) {
+          const usize n = i_big * 8u + i_sml;
+          index = n + 1;
+          return n;
+        }
+
+        i_sml += 1;
+      }
+
+      index = N;
+      return index;
+    }
+
+  };  
+
+  constexpr UnsetBitItr unset_itr() const noexcept {
+    return {&data, 0u};
+  }
+
+  constexpr void clear() noexcept {
+    size_t highest_block = ceil_div(highest_set, 8);
+
+    for (size_t i = 0; i < highest_block; ++i) {
+      data[i] = 0;
+    }
+
+    highest_set = 0;
+  }
+};
+
 template<typename T>
 struct Queue {
   T* holder = nullptr;
