@@ -66,7 +66,7 @@ namespace clArg {
   }
 
   template<typename E, typename T>
-  bool parse_arg(E& err, const ArgsList& args, const ViewArr<const char>& name, T& t) {
+  bool parse_opt_arg(E& err, const ArgsList& args, const ViewArr<const char>& name, T& t) {
     FOR(args, it) {
       ViewArr<const char> v = arg_val(*it, name);
       if (v.data == nullptr) continue;
@@ -75,8 +75,17 @@ namespace clArg {
       if (r) return true;
     }
 
-    err.report_error("Did not find argument: {}", name);
     return false;
+  }
+
+  template<typename E, typename T>
+  bool parse_arg(E& err, const ArgsList& args, const ViewArr<const char>& name, T& t) {
+    bool found = parse_opt_arg(err, args, name, t);
+    if (!found) {
+      err.report_error("Did not find argument: {}", name);
+    }
+
+    return found;
   }
 }
 
