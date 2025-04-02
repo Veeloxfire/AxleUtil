@@ -556,6 +556,44 @@ TEST_FUNCTION(Hash, InternString_HashTable) {
   }
 }
 
+
+TEST_FUNCTION(Hash, InternString_HashTable_Multiple) {
+  StringInterner interner = {};
+
+  const InternString* str1 = interner.intern("hello", 5);
+  const InternString* str2 = interner.intern("world", 5);
+  const InternString* str3 = interner.intern("a", 1);
+  const InternString* str4 = interner.intern("ab", 2);
+  const InternString* str5 = interner.intern("abc", 3);
+  const InternString* str6 = interner.intern("abcd", 4);
+  const InternString* str7 = interner.intern("abcde", 5);
+
+  InternHashTable<int> set = {};
+
+  set.insert(str1, 0);
+  set.insert(str2, 1);
+
+  {
+    const ConstArray<int*, 3> found = set.get_val_multiple({ str1, str2, str3 });
+
+    TEST_NEQ(static_cast<int*>(nullptr), found[0]);
+    TEST_EQ(0, *(found[0]));
+
+    TEST_NEQ(static_cast<int*>(nullptr), found[1]);
+    TEST_EQ(1, *(found[1]));
+
+    TEST_EQ(static_cast<int*>(nullptr), found[2]);
+  }
+
+  {
+    const ConstArray<int*, 5> created = set.get_or_create_multiple({ str3, str4, str5, str6, str7 });
+    for(int* i : created) {
+      TEST_NEQ(static_cast<int*>(nullptr), i);
+      TEST_EQ(0, *i);
+    }
+  }
+}
+
 namespace {
   struct FakeKey {
     u64 i;

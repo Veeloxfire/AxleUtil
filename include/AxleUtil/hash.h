@@ -103,6 +103,12 @@ struct InternalHashTable {
   void insert(const param_t key, T&& val);
   T* get_or_create(const param_t key) requires requires(T t) { {T()}->IS_SAME_TYPE<T>; };
 
+  template<usize N>
+  ConstArray<T*, N> get_val_multiple(const param_t (&arr)[N]) const;
+  
+  template<usize N>
+  ConstArray<T*, N> get_or_create_multiple(const param_t (&arr)[N]) requires requires(T t) { {T()}->IS_SAME_TYPE<T>; };
+
   struct Iterator {
     InternalHashTable<K, T, Trait>* table;
     usize i;
@@ -471,6 +477,16 @@ T* InternalHashTable<K, T, Trait>::get_val(const param_t key) const {
 }
 
 template<typename K, typename T, ValidInternalTrait Trait>
+template<usize N>
+ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_val_multiple(const param_t (&key)[N]) const {
+  ConstArray<T*, N> out = {};
+  for (usize i = 0; i < N; ++i) {
+    out[i] = get_val(key[i]);
+  }
+  return out;
+}
+
+template<typename K, typename T, ValidInternalTrait Trait>
 void InternalHashTable<K, T, Trait>::insert(const param_t key, T&& val) {
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
@@ -555,6 +571,51 @@ T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) requires req
     }
   }
 }
+
+
+template<typename K, typename T, ValidInternalTrait Trait>
+template<usize N>
+ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_or_create_multiple(const param_t (&keys)[N]) requires requires(T t) { {T()}->IS_SAME_TYPE<T>; }
+{
+  {
+    ConstArray<T*, N> found = get_val_multiple(keys);
+
+    usize unfound_count = 0;
+    for (T* f: found) {
+      unfound_count += (f == nullptr);
+    }
+
+    if (unfound_count == 0) return found;
+
+    if (needs_resize(unfound_count)) {
+      try_extend(unfound_count);
+    }
+  }
+
+  {
+    ConstArray<T*, N> found{};
+
+    for (usize i = 0; i < N; ++i) {
+      param_t key = keys[i];
+      const usize soa_index = get_soa_index(key);
+
+      value_t& test_key = key_arr()[soa_index];
+      val_storage_t& val = val_arr()[soa_index];
+
+      if (!Trait::eq(key, test_key)) {
+        ASSERT(Trait::eq(Trait::EMPTY, test_key)
+            || Trait::eq(Trait::TOMBSTONE, test_key));
+        test_key = key;
+        val.val = T();
+      }
+      
+      found[i] = &val.val;
+    }
+
+    return found;
+  }
+}
+
 }
 
 #endif

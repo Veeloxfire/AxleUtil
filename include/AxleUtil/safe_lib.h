@@ -404,6 +404,16 @@ struct ConstArray {
 
   [[nodiscard]] constexpr const T* begin() const { return data; }
   [[nodiscard]] constexpr const T* end() const { return data + size; }
+
+  [[nodiscard]] constexpr T& operator[](const usize idx) noexcept {
+    ASSERT(idx < size);
+    return data[idx];
+  }
+
+  [[nodiscard]] constexpr const T& operator[](const usize idx) const noexcept {
+    ASSERT(idx < size);
+    return data[idx];
+  }
 };
 
 template<typename T, size_t size>
