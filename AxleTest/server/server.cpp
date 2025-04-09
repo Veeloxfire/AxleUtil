@@ -38,7 +38,7 @@ void terminate_child(HANDLE cp, u32 timeout) {
 
 ChildProcess start_test_executable(const Axle::ViewArr<const char>& self, 
                                    const Axle::ViewArr<const char>& exe) {
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
   
   Windows::OwnedHandle pipe;
 
@@ -134,7 +134,7 @@ struct ReportMessage {
 
 template<typename S>
 static bool expect_report(S&& serializer, ReportMessage& out) {
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
   
   if(!expect_valid_header(std::forward<S>(serializer), IPC::Type::Report)) {
     return false;
@@ -189,7 +189,7 @@ struct TestInfo {
 
 template<typename S>
 static bool expect_test_info(S&& serializer, TestInfo& out) {
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
   
   u32 test_count;
   {
@@ -266,7 +266,7 @@ static bool expect_test_info(S&& serializer, TestInfo& out) {
 bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
                                 const Axle::ViewArr<const AxleTest::IPC::OpaqueContext>& contexts,
                                 u32 timeout_time_ms) {
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
   Axle::Windows::NativePath self_dir_holder;
   DWORD self_path_len = GetModuleFileNameA(NULL, self_dir_holder.path, MAX_PATH);

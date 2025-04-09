@@ -1,9 +1,6 @@
 #include <AxleUtil/strings.h>
 #include <AxleUtil/safe_lib.h>
-
-#ifdef AXLE_TRACING
-#include <Tracer/trace.h>
-#endif
+#include <AxleUtil/tracing_wrapper.h>
 
 namespace Axle {
 Table::Table() : data(allocate_default<const InternString*>(8)), size(8) {}
@@ -109,10 +106,7 @@ static void destroy_is_big(void* is) {
 }
 
 const InternString* StringInterner::find(const char* string, const size_t length) const {
-#ifdef AXLE_TRACING
-  TRACING_FUNCTION();
-#endif
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
   if(string == nullptr || length == 0) {
     ASSERT(string == 0 && length == 0);
@@ -135,10 +129,7 @@ const InternString* StringInterner::find(const char* string, const size_t length
 }
 
 const InternString* StringInterner::intern(const char* string, const size_t length) {
-#ifdef AXLE_TRACING
-  TRACING_FUNCTION();
-#endif
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
   
   if(string == nullptr || length == 0) {
     ASSERT(string == 0 && length == 0);

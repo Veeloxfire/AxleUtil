@@ -2,18 +2,14 @@
 #include <AxleUtil/strings.h>
 #include <AxleUtil/os/os_windows_files.h>
 
-#include <shellapi.h>
+#include <AxleUtil/tracing_wrapper.h>
 
-#ifdef AXLE_TRACING
-#include <Tracer/trace.h>
-#endif
+#include <shellapi.h>
 
 namespace Axle {
 FILES::OpenedFile FILES::open(const ViewArr<const char>& name,
                               OPEN_MODE open_mode) {
- #ifdef AXLE_TRACING
-  TRACING_FUNCTION();
-#endif
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
   Windows::NativePath path = name;
   OpenedFile of;
@@ -23,9 +19,7 @@ FILES::OpenedFile FILES::open(const ViewArr<const char>& name,
 
 FILES::OpenedFile FILES::create(const ViewArr<const char>& name,
                                 OPEN_MODE open_mode) {
- #ifdef AXLE_TRACING
-  TRACING_FUNCTION();
-#endif
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
   Windows::NativePath path = name;
   OpenedFile of;
@@ -35,9 +29,7 @@ FILES::OpenedFile FILES::create(const ViewArr<const char>& name,
 
 FILES::OpenedFile FILES::replace(const ViewArr<const char>& name,
                                  OPEN_MODE open_mode) {
-#ifdef AXLE_TRACING
-  TRACING_FUNCTION();
-#endif
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
   Windows::NativePath path = name;
   OpenedFile of;
@@ -46,9 +38,7 @@ FILES::OpenedFile FILES::replace(const ViewArr<const char>& name,
 }
 
 FILES::ErrorCode FILES::create_empty_directory(const ViewArr<const char>& name) {
-#ifdef AXLE_TRACING
-  TRACING_FUNCTION();
-#endif
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
   Windows::NativePath path = name;
   return Windows::FILES::create_empty_directory(path);  
@@ -90,9 +80,7 @@ bool FILES::exists(const ViewArr<const char>& name) {
 }
 
 void FILES::close(FileHandle file) {
-#ifdef AXLE_TRACING
-  TRACING_FUNCTION();
-#endif
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
   free_destruct_single<FileData>(file.data);
 }
@@ -157,9 +145,7 @@ size_t FILES::size_of_file(FileHandle file) {
 }
 
 OwnedArr<u8> FILES::read_full_file(const ViewArr<const char>& file_name) {
-#ifdef AXLE_TRACING
-  TRACING_FUNCTION();
-#endif
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
   Windows::NativePath path = file_name;
   return Windows::FILES::read_full_file(path);
@@ -279,17 +265,6 @@ FILES::DirectoryIterator FILES::directory_iterator(const ViewArr<const char>& na
     itr.find_next();
   }
   return itr;
-}
-
-constexpr static bool is_character(char c) {
-  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'z');
-}
-
-constexpr static bool is_absolute_path(const ViewArr<const char>& r) {
-  return (r.size >= 3)
-    && is_character(r.data[0])
-    && r.data[1] == ':'
-    && (r.data[2] == '\\' || r.data[2] == '/');
 }
 
 static void append_single_to_path(Array<ViewArr<const char>>& path, const ViewArr<const char>& dir) {

@@ -59,7 +59,7 @@ target_compile_definitions(AxleUtil PUBLIC STACKTRACE_ENABLE)
 
 option(AxleTRACING "Enable execution tracing" OFF)
 if(AxleTRACING)
-  target_compile_definitions(AxleUtil PUBLIC TRACING_ENABLE AXLE_TRACING)
+  target_compile_definitions(AxleUtil PUBLIC AXLE_UTIL_TRACING_ENABLE)
   if(NOT DEFINED TracerINCLUDE)
     message(FATAL_ERROR "Requires TracerINCLUDE to compile with tracing enabled")
   endif()
@@ -118,6 +118,7 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/stacktrace.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/strings.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/threading.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/tracing_wrapper.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/utility.h"
 
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/stdext/compare.h"

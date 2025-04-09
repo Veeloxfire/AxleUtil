@@ -82,7 +82,7 @@ static void client_panic_callback(const void* ud, const Axle::ViewArr<const char
 }
 
 bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
 
 
 #ifdef AXLE_COUNT_ALLOC
@@ -125,7 +125,7 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
   const auto& unit_tests = AxleTest::unit_tests_ref();
   
   {
-    STACKTRACE_SCOPE("Communication layer");
+    AXLE_UTIL_TELEMETRY_SCOPE("Communication layer");
 
     AxleTest::IPC::MessageHeader header;
     if(!Axle::deserialize_le<AxleTest::IPC::MessageHeader>(in_handle, header)) {
@@ -140,7 +140,7 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
 
     switch(header.type) {
       case AxleTest::IPC::Type::QueryTestInfo: {
-        STACKTRACE_SCOPE("QueryTestInfo");
+        AXLE_UTIL_TELEMETRY_SCOPE("QueryTestInfo");
 
         const u32 size = static_cast<u32>(unit_tests.size);
           Axle::serialize_le(out_handle, AxleTest::IPC::Serialize::DataT<u32>{ size });
@@ -162,7 +162,7 @@ bool AxleTest::IPC::client_main(const Axle::ViewArr<const char>& runtime_dir) {
       }
 
       case AxleTest::IPC::Type::Execute: {
-        STACKTRACE_SCOPE("Execute");
+        AXLE_UTIL_TELEMETRY_SCOPE("Execute");
 
         AxleTest::TestErrors errors;
 

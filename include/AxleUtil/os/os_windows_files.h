@@ -40,6 +40,17 @@ namespace Axle::Windows::FILES {
 
   bool exists(const NativePath& name);
 
+  constexpr bool is_absolute_path(const ViewArr<const char>& r) {
+    constexpr auto is_character = [](char c) {
+      return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'z');
+    };
+
+    return (r.size >= 3)
+      && is_character(r.data[0])
+      && r.data[1] == ':'
+      && (r.data[2] == '\\' || r.data[2] == '/');
+  }
+
   struct RawFile {
     HANDLE handle;
   };

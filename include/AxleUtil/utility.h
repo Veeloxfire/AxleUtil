@@ -115,7 +115,7 @@ concept SortPredicate = requires(const T t, const U u0, const U u1) {
 
 template<typename T, SortPredicate<T> L>
 size_t _sort_range_part(const Axle::ViewArr<T>& base, size_t b, size_t e, const L& pred) {
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
   ASSERT(e <= std::numeric_limits<size_t>::max());
   ASSERT(e > 0u);
   ASSERT(b < e && e - b > 1u);
@@ -181,7 +181,7 @@ void _sort_range_impl(const ViewArr<T>& view, size_t b, size_t e, const L& pred)
 
 template<typename T, SortPredicate<T> L>
 void sort_view(const Axle::ViewArr<T>& view, const L& pred) {
-  STACKTRACE_FUNCTION();
+  AXLE_UTIL_TELEMETRY_FUNCTION();
   _sort_range_impl<T, L>(view, 0u, view.size, pred);
 }
 

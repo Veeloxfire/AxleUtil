@@ -3,10 +3,7 @@
 
 #include <AxleUtil/safe_lib.h>
 #include <AxleUtil/stacktrace.h>
-
-#ifdef AXLE_TRACE
-#include <Tracer/trace.h>
-#endif
+#include <AxleUtil/tracing_wrapper.h>
 
 namespace Axle {
 //For printing character as it appears in code
@@ -669,10 +666,7 @@ namespace Format {
   //Doesnt null terminate!
   template<Formatter F, typename ... T>
   constexpr void format_to(F& result, const FormatString<T...>& format, const T& ... ts) {
-  #ifdef AXLE_TRACING
-    TRACING_FUNCTION();
-  #endif
-    STACKTRACE_FUNCTION();
+    AXLE_UTIL_TELEMETRY_FUNCTION();
 
     ViewArr<const char> fstr = format.str;
 

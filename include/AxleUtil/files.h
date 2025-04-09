@@ -162,6 +162,10 @@ struct AllocFilePath {
   usize extension_size = 0;
 };
 
+constexpr bool is_absolute_path(const ViewArr<const char>& r) {
+  return Windows::FILES::is_absolute_path(r);
+}
+
 AllocFilePath format_file_path(const ViewArr<const char>& path_str,
                                const ViewArr<const char>& file_str,
                                const ViewArr<const char>& extension);
