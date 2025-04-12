@@ -55,7 +55,7 @@ OwnedArr<char> format_type_set(const ViewArr<const char>& format_in, const size_
     }
     else if (curr_length == max_width && format_i[0] != '\n' && last_space > string) {
       //Need to insert a new line
-      const std::ptrdiff_t diff = format_i - string;
+      const std::ptrdiff_t diff = last_space - string;
       ASSERT(diff >= 0);
       result.concat(string, static_cast<usize>(diff));
       result.insert('\n');
