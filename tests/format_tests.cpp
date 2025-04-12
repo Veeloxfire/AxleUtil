@@ -2,24 +2,25 @@
 
 #include <AxleTest/unit_tests.h>
 using namespace Axle;
+using namespace Axle::Literals;
 
 TEST_FUNCTION(Formatters, syntax) {
-  const ViewArr<const char> expected = lit_view_arr("hello {} world {}");
-  OwnedArr<const char> arr = format("hello {{}} {} {{}}", lit_view_arr("world"));
+  const ViewArr<const char> expected = "hello {} world {}"_litview;
+  OwnedArr<const char> arr = format("hello {{}} {} {{}}", "world"_litview);
 
   TEST_STR_EQ(expected, arr);
 
 }
 
 TEST_FUNCTION(FormatArg, strings) {
-  const ViewArr<const char> expected = lit_view_arr("hello world");
-  OwnedArr<const char> arr = format("hello {}", lit_view_arr("world"));
+  const ViewArr<const char> expected = "hello world"_litview;
+  OwnedArr<const char> arr = format("hello {}", "world"_litview);
 
   TEST_STR_EQ(expected, arr);
 }
 
 TEST_FUNCTION(FormatArg, c_string) {
-  const ViewArr<const char> expected = lit_view_arr("hello world");
+  const ViewArr<const char> expected = "hello world"_litview;
   OwnedArr<const char> arr = format("hello {}", CString{"world"});
 
   TEST_STR_EQ(expected, arr);
@@ -97,7 +98,7 @@ void test_all_valid_unsigned_ints(AxleTest::TestErrors* test_errors, const ViewA
 
 TEST_FUNCTION(FormatArg, ints) {
   {
-    const ViewArr<const char> expected = lit_view_arr("0");
+    const ViewArr<const char> expected = "0"_litview;
     test_all_valid_signed_ints(test_errors, expected, 0);
     if (test_errors->is_panic()) return;
 
@@ -106,7 +107,7 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("1");
+    const ViewArr<const char> expected = "1"_litview;
     test_all_valid_signed_ints(test_errors, expected, 1);
     if (test_errors->is_panic()) return;
 
@@ -115,13 +116,13 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("-1");
+    const ViewArr<const char> expected = "-1"_litview;
     test_all_valid_signed_ints(test_errors, expected, -1);
     if (test_errors->is_panic()) return;
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("123");
+    const ViewArr<const char> expected = "123"_litview;
     test_all_valid_signed_ints(test_errors, expected, 123);
     if (test_errors->is_panic()) return;
 
@@ -130,43 +131,43 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("-123");
+    const ViewArr<const char> expected = "-123"_litview;
     test_all_valid_signed_ints(test_errors, expected, -123);
     if (test_errors->is_panic()) return;
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("-128");
+    const ViewArr<const char> expected = "-128"_litview;
     test_all_valid_signed_ints(test_errors, expected, -128);
     if (test_errors->is_panic()) return;
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("-32768");
+    const ViewArr<const char> expected = "-32768"_litview;
     test_all_valid_signed_ints(test_errors, expected, -32768);
     if (test_errors->is_panic()) return;
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("-32768");
+    const ViewArr<const char> expected = "-32768"_litview;
     test_all_valid_signed_ints(test_errors, expected, -32768);
     if (test_errors->is_panic()) return;
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("-2147483648");
+    const ViewArr<const char> expected = "-2147483648"_litview;
     test_all_valid_signed_ints(test_errors, expected, -2147483647 - 1);
     if (test_errors->is_panic()) return;
   }
   
   {
-    const ViewArr<const char> expected = lit_view_arr("-9223372036854775808");
+    const ViewArr<const char> expected = "-9223372036854775808"_litview;
     test_all_valid_signed_ints(test_errors, expected, -9223372036854775807i64 - 1);
     if (test_errors->is_panic()) return;
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("127");
+    const ViewArr<const char> expected = "127"_litview;
     test_all_valid_signed_ints(test_errors, expected, 127);
     if (test_errors->is_panic()) return;
     test_all_valid_unsigned_ints(test_errors, expected, 127);
@@ -174,7 +175,7 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("255");
+    const ViewArr<const char> expected = "255"_litview;
     test_all_valid_signed_ints(test_errors, expected, 255);
     if (test_errors->is_panic()) return;
     test_all_valid_unsigned_ints(test_errors, expected, 255);
@@ -182,7 +183,7 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("327687");
+    const ViewArr<const char> expected = "327687"_litview;
     test_all_valid_signed_ints(test_errors, expected, 327687);
     if (test_errors->is_panic()) return;
     test_all_valid_unsigned_ints(test_errors, expected, 327687);
@@ -190,7 +191,7 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("65535");
+    const ViewArr<const char> expected = "65535"_litview;
     test_all_valid_signed_ints(test_errors, expected, 65535);
     if (test_errors->is_panic()) return;
     test_all_valid_unsigned_ints(test_errors, expected, 65535);
@@ -198,7 +199,7 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("2147483647");
+    const ViewArr<const char> expected = "2147483647"_litview;
     test_all_valid_signed_ints(test_errors, expected, 2147483647);
     if (test_errors->is_panic()) return;
     test_all_valid_unsigned_ints(test_errors, expected, 2147483647);
@@ -206,7 +207,7 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("4294967295");
+    const ViewArr<const char> expected = "4294967295"_litview;
     test_all_valid_signed_ints(test_errors, expected, 4294967295);
     if (test_errors->is_panic()) return;
     test_all_valid_unsigned_ints(test_errors, expected, 4294967295);
@@ -214,7 +215,7 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("9223372036854775807");
+    const ViewArr<const char> expected = "9223372036854775807"_litview;
     test_all_valid_signed_ints(test_errors, expected, 9223372036854775807i64);
     if (test_errors->is_panic()) return;
     test_all_valid_unsigned_ints(test_errors, expected, 9223372036854775807i64);
@@ -222,7 +223,7 @@ TEST_FUNCTION(FormatArg, ints) {
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("18446744073709551615");
+    const ViewArr<const char> expected = "18446744073709551615"_litview;
     test_all_valid_unsigned_ints(test_errors, expected, 18446744073709551615ui64);
     if (test_errors->is_panic()) return;
   }
@@ -230,25 +231,25 @@ TEST_FUNCTION(FormatArg, ints) {
 
 TEST_FUNCTION(FormatArg, HexInt) {
   {
-    const ViewArr<const char> expected = lit_view_arr("0xAB");
+    const ViewArr<const char> expected = "0xAB"_litview;
     OwnedArr<const char> actual = format("{}", Format::Hex<u8>{0xab});
     TEST_STR_EQ(expected, actual);
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("0xAB03");
+    const ViewArr<const char> expected = "0xAB03"_litview;
     OwnedArr<const char> actual = format("{}", Format::Hex<u16>{0xab03});
     TEST_STR_EQ(expected, actual);
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("0xF05E9A32");
+    const ViewArr<const char> expected = "0xF05E9A32"_litview;
     OwnedArr<const char> actual = format("{}", Format::Hex<u32>{0xf05e9a32});
     TEST_STR_EQ(expected, actual);
   }
 
   {
-    const ViewArr<const char> expected = lit_view_arr("0xABAB03CDF05E9A32");
+    const ViewArr<const char> expected = "0xABAB03CDF05E9A32"_litview;
     OwnedArr<const char> actual = format("{}", Format::Hex<u64>{0xabab03cdf05e9a32llu});
     TEST_STR_EQ(expected, actual);
   }
@@ -257,14 +258,14 @@ TEST_FUNCTION(FormatArg, HexInt) {
 TEST_FUNCTION(FormatArg, Floats) {
   {
     float f = 0.0f;
-    const ViewArr<const char> expected = lit_view_arr("0");
+    const ViewArr<const char> expected = "0"_litview;
     
     OwnedArr<const char> actual = format("{}", f);
     TEST_STR_EQ(expected, actual);
   }
   {
     float f = -1.23456735e-36f;
-    const ViewArr<const char> expected = lit_view_arr("-1.23456735e-36");
+    const ViewArr<const char> expected = "-1.23456735e-36"_litview;
       
     OwnedArr<const char> actual = format("{}", f);
     TEST_STR_EQ(expected, actual);
@@ -274,14 +275,14 @@ TEST_FUNCTION(FormatArg, Floats) {
 TEST_FUNCTION(FormatArg, Double) {
   {
     double d = 0.0;
-    const ViewArr<const char> expected = lit_view_arr("0");
+    const ViewArr<const char> expected = "0"_litview;
     
     OwnedArr<const char> actual = format("{}", d);
     TEST_STR_EQ(expected, actual);
   }
   {
     double d = -1.23456735e-36;
-    const ViewArr<const char> expected = lit_view_arr("-1.23456735e-36");
+    const ViewArr<const char> expected = "-1.23456735e-36"_litview;
     
     OwnedArr<const char> actual = format("{}", d);
     TEST_STR_EQ(expected, actual);
@@ -289,7 +290,7 @@ TEST_FUNCTION(FormatArg, Double) {
   {
     double d = -1.2345678901234567e-100;
     const ViewArr<const char> expected
-      = lit_view_arr("-1.2345678901234567e-100");
+      = "-1.2345678901234567e-100"_litview;
     
     OwnedArr<const char> actual = format("{}", d);
     TEST_STR_EQ(expected, actual);
@@ -298,7 +299,7 @@ TEST_FUNCTION(FormatArg, Double) {
 
 TEST_FUNCTION(Formatters, ArrayFormatter) {
   constexpr ViewArr<const char> expected_final 
-      = lit_view_arr("hello worldhello worldhello world\0");
+      = "hello worldhello worldhello world\0"_litview;
 
   //This is required to make sure we actually stop using the local array
   static_assert(sizeof(Format::ArrayFormatter::LocalArr::arr) < expected_final.size);
@@ -307,7 +308,7 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
   Format::format_to(arrfm, "hello world");
 
   {
-    const ViewArr<const char> expected = lit_view_arr("hello world");
+    const ViewArr<const char> expected = "hello world"_litview;
     
     const ViewArr<const char> actual_v = arrfm.view();
     TEST_STR_EQ(expected, actual_v);
@@ -335,7 +336,7 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
   Format::format_to(arrfm, "hello world");
 
   {
-    const ViewArr<const char> expected = lit_view_arr("hello world");
+    const ViewArr<const char> expected = "hello world"_litview;
     
     const ViewArr<const char> actual_v = arrfm.view();
     TEST_STR_EQ(expected, actual_v);
@@ -373,7 +374,7 @@ TEST_FUNCTION(Formatters, ArrayFormatter) {
 
 TEST_FUNCTION(Formatters, ViewFormatter) {
   constexpr ViewArr<const char> expected_final
-      = lit_view_arr("hello worldhello worldhello worldhello world\0");
+      = "hello worldhello worldhello worldhello world\0"_litview;
 
   char array[expected_final.size];
 
@@ -385,7 +386,7 @@ TEST_FUNCTION(Formatters, ViewFormatter) {
   Format::format_to(arrfm, "hello world");
 
   {
-    const ViewArr<const char> expected = lit_view_arr("hello world");
+    const ViewArr<const char> expected = "hello world"_litview;
     
     TEST_STR_EQ(expected, arrfm.view);
   }
@@ -397,4 +398,49 @@ TEST_FUNCTION(Formatters, ViewFormatter) {
 
   TEST_EQ(expected_final.size, arrfm.view.size);
   TEST_STR_EQ(expected_final, arrfm.view);
+}
+
+TEST_FUNCTION(Format, typeset) {
+  constexpr ViewArr<const char> input = 
+    "abcdefg hijklmnop qrs tuv wx y z"_litview;
+
+  {
+    OwnedArr<char> out = format_type_set(input, 0, 1);
+    constexpr ViewArr<const char> expected = 
+    "abcdefg\nhijklmnop\nqrs\ntuv\nwx\ny\nz"_litview;
+
+    TEST_STR_EQ(expected, view_arr(out));
+  }
+
+  {
+    OwnedArr<char> out = format_type_set(input, 2, 1);
+    constexpr ViewArr<const char> expected = 
+    "  abcdefg\n  hijklmnop\n  qrs\n  tuv\n  wx\n  y\n  z"_litview;
+
+    TEST_STR_EQ(expected, view_arr(out));
+  }
+
+  {
+    OwnedArr<char> out = format_type_set(input, 0, 7);
+    constexpr ViewArr<const char> expected = 
+    "abcdefg\nhijklmnop\nqrs tuv\nwx y z"_litview;
+
+    TEST_STR_EQ(expected, view_arr(out));
+  }
+  
+  {
+    OwnedArr<char> out = format_type_set(input, 0, 5);
+    constexpr ViewArr<const char> expected = 
+    "abcdefg\nhijklmnop\nqrs\ntuv\nwx y\nz"_litview;
+
+    TEST_STR_EQ(expected, view_arr(out));
+  }
+  
+  {
+    OwnedArr<char> out = format_type_set(input, 2, 7);
+    constexpr ViewArr<const char> expected = 
+    "  abcdefg\n  hijklmnop\n  qrs\n  tuv\n  wx y\n  z"_litview;
+
+    TEST_STR_EQ(expected, view_arr(out));
+  }
 }

@@ -26,15 +26,13 @@ Format::DoubleStr Format::format_double(double f) {
 
 OwnedArr<char> format_type_set(const ViewArr<const char>& format_in, const size_t prepend_spaces, const size_t max_width) {
   AXLE_UTIL_TELEMETRY_FUNCTION();
+  ASSERT(max_width > 0);
   
   Array<char> result = {};
   result.reserve_extra(format_in.size);
 
   const char* format_i = format_in.begin();
-  const char* format_end = format_in.end();
-  const char* string = format_i;
-  const char* last_space = format_i;
-  size_t curr_length = 0;
+  const char* const format_end = format_in.end();
 
   const auto prepend = [&] {
     result.reserve_extra(prepend_spaces);
@@ -43,46 +41,92 @@ OwnedArr<char> format_type_set(const ViewArr<const char>& format_in, const size_
     }
   };
 
+  const auto get_content = [&] {
+    const char* start = format_i;
+    usize size = 0;
+
+    while (format_i != format_end
+        && *format_i != ' '
+        && *format_i != '\n'
+        && *format_i != '\r'
+        && *format_i != '\t') {
+      format_i++;
+      size++;
+    }
+
+    return ViewArr<const char>{ start, size };
+  };
+
+  struct Gap {
+    u32 num_newlines;
+    Axle::ViewArr<const char> remaining_gap;
+  };
+
+  const auto get_gap = [&] {
+    const char* start = format_i;
+    usize size = 0;
+    u32 num_newlines = 0;
+
+    while (format_i != format_end
+        && (*format_i == ' '
+        || *format_i == '\n'
+        || *format_i == '\r'
+        || *format_i == '\t')) {
+      if (*format_i == '\n') {
+        num_newlines += 1;
+
+        format_i++;
+        size = 0;
+      }
+      else {
+        format_i++;
+        size++;
+      }
+    }
+
+    return Gap{ num_newlines, { start, size } };
+  };
+
   prepend();
 
+  size_t curr_length = 0;
+
   while (true) {
-    if (format_i == format_end) {
-      const std::ptrdiff_t diff = format_i - string;
-      ASSERT(diff >= 0);
-      result.concat(string, static_cast<usize>(diff));
+    auto gap = get_gap();
 
-      return bake_arr(std::move(result));
-    }
-    else if (curr_length == max_width && format_i[0] != '\n' && last_space > string) {
-      //Need to insert a new line
-      const std::ptrdiff_t diff = last_space - string;
-      ASSERT(diff >= 0);
-      result.concat(string, static_cast<usize>(diff));
-      result.insert('\n');
-      
-      prepend();
-      curr_length = prepend_spaces;
+    if (format_i == format_end) break;
 
-      string = last_space + 1;
-    }
-    else if (format_i[0] == '\n') {
-      format_i++;
-      const std::ptrdiff_t diff = format_i - string;
-      ASSERT(diff >= 0);
-      result.concat(string, static_cast<usize>(diff));
-      string = format_i;
-      last_space = string;
+    if (gap.num_newlines > 0) {
+      result.reserve_extra(gap.num_newlines);
+      for (u32 i = 0; i < gap.num_newlines; ++i) {
+        result.insert('\n');
+      }
 
       prepend();
-      curr_length = prepend_spaces;
-      continue;
-    }
-    else if (format_i[0] == ' ') {
-      last_space = format_i;
+      curr_length = 0;
     }
 
-    format_i++;
-    curr_length++;
+    ASSERT(format_i != format_end);
+    auto content = get_content();
+    ASSERT(content.size > 0);
+
+    if (gap.remaining_gap.size + content.size + curr_length + prepend_spaces > max_width) {
+      if (curr_length > 0) {
+        result.insert('\n');
+        prepend();
+      }
+      result.concat(content);
+      curr_length = content.size;
+    }
+    else {
+      result.concat(gap.remaining_gap);
+      result.concat(content);
+      curr_length += gap.remaining_gap.size + content.size;
+    }
+
+    if (format_i == format_end) break;
   }
+
+  return bake_arr(std::move(result));
 }
 }
