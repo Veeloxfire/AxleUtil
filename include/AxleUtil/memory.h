@@ -368,12 +368,6 @@ struct GrowingMemoryPool {
   static_assert(BLOCK_SIZE >= sizeof(Destructlist));
   static_assert(BLOCK_SIZE >= sizeof(DestructlistN));
 
-  usize curr_top = 0;
-  Block* curr = nullptr;
-  Block* curr_big = nullptr;
-  Destructlist* dl_top = nullptr;
-  DestructlistN* dln_top = nullptr;
-
   constexpr static bool is_big_alloc(usize N) {
     return N > BLOCK_SIZE;
   }
@@ -385,7 +379,7 @@ struct GrowingMemoryPool {
 
     curr_top = 0;
   }
- 
+
   void* alloc_internal(usize size, usize align) {
     ASSERT(!is_big_alloc(size));
 
@@ -416,7 +410,7 @@ struct GrowingMemoryPool {
     return top_p;
   }
 
-  void* alloc_raw(usize size, usize align) {
+  void* alloc_raw_no_delete(usize size, usize align) {
     if(size == 0) {
       return nullptr;
     }
@@ -451,21 +445,39 @@ struct GrowingMemoryPool {
 
   template<typename T>
   T* allocate() {
-    Destructlist* dl = alloc_destruct_element();
-
-    if constexpr(is_big_alloc(sizeof(T))) {
-      T* t = Axle::allocate_default<T>();
-      dl->deleter = &delete_big_alloc<T>;
-      dl->data = t;
-      return t;
+    if constexpr(std::is_trivially_destructible_v<T>) {
+      if constexpr(is_big_alloc(sizeof(T))) {
+        Destructlist* dl = alloc_destruct_element();
+        
+        T* t = Axle::allocate_default<T>();
+        dl->deleter = &delete_big_alloc<T>;
+        dl->data = t;
+        return t;
+      }
+      else {
+        // Don't need a deleter here
+        void* t_space = alloc_internal(sizeof(T), alignof(T));
+        T* t = new (t_space) T();
+        return t;
+      }
     }
     else {
-      void* t_space = alloc_internal(sizeof(T), alignof(T));
-      dl->deleter = &destruct_single_void<T>;
+      Destructlist* dl = alloc_destruct_element();
 
-      T* t = new (t_space) T();
-      dl->data = t;
-      return t;
+      if constexpr(is_big_alloc(sizeof(T))) {
+        T* t = Axle::allocate_default<T>();
+        dl->deleter = &delete_big_alloc<T>;
+        dl->data = t;
+        return t;
+      }
+      else {
+        void* t_space = alloc_internal(sizeof(T), alignof(T));
+        dl->deleter = &destruct_single_void<T>;
+
+        T* t = new (t_space) T();
+        dl->data = t;
+        return t;
+      }
     }
   }
 
@@ -473,31 +485,48 @@ struct GrowingMemoryPool {
   T* allocate_n(usize n) {
     if(n == 0) return nullptr;
 
-    DestructlistN* dl = alloc_destruct_element_N();
+    if constexpr (std::is_trivially_destructible_v<T>) {
+      if (is_big_alloc(sizeof(T) * n)) {
+        DestructlistN* dl = alloc_destruct_element_N();
+        
+        T* t = Axle::allocate_default<T>(n);
+        dl->deleter = &delete_big_alloc_arr<T>;
+        dl->n = n;
+        dl->data = t;
+        return t;
+      }
+      else {
+        void* t_space = alloc_internal(sizeof(T) * n, alignof(T));
 
-    if (is_big_alloc(sizeof(T) * n)) {
-      T* t = Axle::allocate_default<T>(n);
-      dl->deleter = &delete_big_alloc_arr<T>;
-      dl->n = n;
-      dl->data = t;
-      return t;
+        T* t = new(t_space)T[n];
+
+        return t;
+      }
     }
     else {
-      void* t_space = alloc_internal(sizeof(T) * n, alignof(T));
-      dl->deleter = &destruct_arr_void<T>;
-      dl->n = n;
+      DestructlistN* dl = alloc_destruct_element_N();
 
-      T* t = new(t_space)T[n];
+      if (is_big_alloc(sizeof(T) * n)) {
+        T* t = Axle::allocate_default<T>(n);
+        dl->deleter = &delete_big_alloc_arr<T>;
+        dl->n = n;
+        dl->data = t;
+        return t;
+      }
+      else {
+        void* t_space = alloc_internal(sizeof(T) * n, alignof(T));
+        dl->deleter = &destruct_arr_void<T>;
+        dl->n = n;
 
-      dl->data = t;
-      return t;
+        T* t = new(t_space)T[n];
+
+        dl->data = t;
+        return t;
+      }
     }
   }
 
-  GrowingMemoryPool() = default;
-  GrowingMemoryPool(const GrowingMemoryPool&) = delete;
-  GrowingMemoryPool(GrowingMemoryPool&&) = delete;
-  ~GrowingMemoryPool() {
+  void free() {
     while(dl_top != nullptr) {
       ASSERT(dl_top->deleter != nullptr);
       ASSERT(dl_top->data != nullptr);
@@ -524,6 +553,41 @@ struct GrowingMemoryPool {
 
       curr = save;
     }
+
+    curr_top = 0;
+    ASSERT(curr == nullptr);
+    ASSERT(dl_top == nullptr);
+    ASSERT(dln_top == nullptr);
+  }
+
+  usize curr_top = 0;
+  Block* curr = nullptr;
+  Destructlist* dl_top = nullptr;
+  DestructlistN* dln_top = nullptr;
+
+  constexpr GrowingMemoryPool() = default;
+  GrowingMemoryPool(const GrowingMemoryPool&) = delete;
+
+  constexpr GrowingMemoryPool(GrowingMemoryPool&& gp) noexcept
+    : curr_top(std::exchange(gp.curr_top, static_cast<usize>(0))),
+      curr(std::exchange(gp.curr, nullptr)),
+      dl_top(std::exchange(gp.dl_top, nullptr)),
+      dln_top(std::exchange(gp.dln_top, nullptr))
+  {}
+
+  GrowingMemoryPool& operator=(GrowingMemoryPool&& gp)
+  {
+    free();// clear current memory
+    curr_top = std::exchange(gp.curr_top, static_cast<usize>(0));
+    curr = std::exchange(gp.curr, nullptr);
+    dl_top = std::exchange(gp.dl_top, nullptr);
+    dln_top = std::exchange(gp.dln_top, nullptr);
+
+    return *this;
+  }
+
+  ~GrowingMemoryPool() {
+    free();
   }
 };
 

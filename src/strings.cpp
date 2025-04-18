@@ -157,7 +157,7 @@ const InternString* StringInterner::intern(const char* string, const size_t leng
         dl->deleter = &destroy_is;
       }
 
-      void* mem = allocs.alloc_raw(alloc_size, alignof(InternString));
+      void* mem = allocs.alloc_raw_no_delete(alloc_size, alignof(InternString));
       mem = std::assume_aligned<alignof(InternString)>(mem);
       
       new_el = new(mem) InternString();

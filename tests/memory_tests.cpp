@@ -120,6 +120,8 @@ TEST_FUNCTION(GrowingMemoryPool, destruct) {
   TEST_EQ(static_cast<usize>(256 * 2 + 200), counter);
 }
 
+static constexpr usize BIG_DELETE_COUNTER_N = 200;
+
 TEST_FUNCTION(GrowingMemoryPool, destruct_n) {
   usize counter = 0;
 
@@ -139,15 +141,106 @@ TEST_FUNCTION(GrowingMemoryPool, destruct_n) {
       }
     }
 
-    auto* big = pool.allocate_n<DeleteCounter>(200);
-    for(usize i = 0; i < 200; ++i) {
-      big[i].i = &counter;
+    {
+      static_assert(pool.is_big_alloc(sizeof(DeleteCounter) * BIG_DELETE_COUNTER_N));
+      auto* big = pool.allocate_n<DeleteCounter>(BIG_DELETE_COUNTER_N);
+      for(usize i = 0; i < BIG_DELETE_COUNTER_N; ++i) {
+        big[i].i = &counter;
+      }
     }
 
     TEST_EQ(static_cast<usize>(0), counter);
+    pool.free();
+
+    TEST_EQ(static_cast<decltype(pool.curr_top)>(0), pool.curr_top);
+    TEST_EQ(static_cast<decltype(pool.curr)>(nullptr), pool.curr);
+    TEST_EQ(static_cast<decltype(pool.dl_top)>(nullptr), pool.dl_top);
+    TEST_EQ(static_cast<decltype(pool.dln_top)>(nullptr), pool.dln_top);
+  
+    TEST_EQ(static_cast<usize>(25 * 10 + 25 * 5 + BIG_DELETE_COUNTER_N), counter);
+
+    for(usize i = 0; i < 25; ++i) {
+      auto* dc = pool.allocate_n<DeleteCounter>(10);
+      auto* dc2 = pool.allocate_n<DeleteCounter2>(5);
+
+      for(usize j = 0; j < 10; ++j) {
+        dc[j].i = &counter;
+      }
+
+      for(usize j = 0; j < 5; ++j) {
+        dc2[j].i = &counter;
+      }
+    }
+
+    {
+      static_assert(pool.is_big_alloc(sizeof(DeleteCounter) * BIG_DELETE_COUNTER_N));
+      
+      auto* big = pool.allocate_n<DeleteCounter>(BIG_DELETE_COUNTER_N);
+      for(usize i = 0; i < BIG_DELETE_COUNTER_N; ++i) {
+        big[i].i = &counter;
+      }
+    }
+
+    TEST_EQ(static_cast<usize>(25 * 10 + 25 * 5 + BIG_DELETE_COUNTER_N), counter);
   }
 
-  TEST_EQ(static_cast<usize>(25 * 10 + 25 * 5 + 200), counter);
+  TEST_EQ(static_cast<usize>(25 * 10 + 25 * 5 + BIG_DELETE_COUNTER_N) * 2, counter);
+}
+
+
+TEST_FUNCTION(GrowingMemoryPool, destruct_n) {
+  usize counter = 0;
+
+  {
+    Axle::GrowingMemoryPool<128> pool;
+
+    for(usize i = 0; i < 25; ++i) {
+      auto* dc = pool.allocate_n<DeleteCounter>(10);
+      auto* dc2 = pool.allocate_n<DeleteCounter2>(5);
+
+      for(usize j = 0; j < 10; ++j) {
+        dc[j].i = &counter;
+      }
+
+      for(usize j = 0; j < 5; ++j) {
+        dc2[j].i = &counter;
+      }
+    }
+
+    {
+      static_assert(pool.is_big_alloc(sizeof(DeleteCounter) * BIG_DELETE_COUNTER_N));
+      auto* big = pool.allocate_n<DeleteCounter>(BIG_DELETE_COUNTER_N);
+      for(usize i = 0; i < BIG_DELETE_COUNTER_N; ++i) {
+        big[i].i = &counter;
+      }
+    }
+
+    TEST_EQ(static_cast<usize>(0), counter);
+    Axle::GrowingMemoryPool<128> pool2 = std::move(pool);
+
+    TEST_EQ(static_cast<decltype(pool.curr_top)>(0), pool.curr_top);
+    TEST_EQ(static_cast<decltype(pool.curr)>(nullptr), pool.curr);
+    TEST_EQ(static_cast<decltype(pool.dl_top)>(nullptr), pool.dl_top);
+    TEST_EQ(static_cast<decltype(pool.dln_top)>(nullptr), pool.dln_top);
+    
+    TEST_EQ(static_cast<usize>(0), counter);
+
+    Axle::GrowingMemoryPool<128> pool3 = {};
+    pool3 = std::move(pool2);
+
+    TEST_EQ(static_cast<decltype(pool.curr_top)>(0), pool.curr_top);
+    TEST_EQ(static_cast<decltype(pool.curr)>(nullptr), pool.curr);
+    TEST_EQ(static_cast<decltype(pool.dl_top)>(nullptr), pool.dl_top);
+    TEST_EQ(static_cast<decltype(pool.dln_top)>(nullptr), pool.dln_top);
+    TEST_EQ(static_cast<decltype(pool2.curr_top)>(0), pool2.curr_top);
+    TEST_EQ(static_cast<decltype(pool2.curr)>(nullptr), pool2.curr);
+    TEST_EQ(static_cast<decltype(pool2.dl_top)>(nullptr), pool2.dl_top);
+    TEST_EQ(static_cast<decltype(pool2.dln_top)>(nullptr), pool2.dln_top);
+    
+    TEST_EQ(static_cast<usize>(0), counter);
+  }
+
+  TEST_EQ(static_cast<usize>(25 * 10 + 25 * 5 + BIG_DELETE_COUNTER_N), counter);
 }
 
 TEST_FUNCTION(DenseBlockAllocator, allocate) {
