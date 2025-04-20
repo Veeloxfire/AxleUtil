@@ -1,8 +1,16 @@
 cmake_minimum_required(VERSION 3.10)
-project(AxleUtil)
+
+project(AxleUtilProj
+  VERSION 0.1)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+if (DEFINED CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND DEFINED ENV{CMAKE_INSTALL_PREFIX})
+  set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE $ENV{CMAKE_INSTALL_PREFIX})
+endif()
+
+message("Install Prefix: ${CMAKE_INSTALL_PREFIX}")
 
 # Add Static Configs
 set(new_config_types "")
@@ -32,51 +40,51 @@ foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
   set("CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper}" "${PROJECT_BINARY_DIR}/out")
 endforeach()
 
-add_library(AxleUtil STATIC)
-set_target_properties(AxleUtil PROPERTIES OUTPUT_NAME "AxleUtil$<CONFIG>")
+add_library(Core STATIC)
+set_target_properties(Core PROPERTIES OUTPUT_NAME "AxleUtil$<CONFIG>")
 
-add_library(AxleTestServer STATIC)
-set_target_properties(AxleTestServer PROPERTIES OUTPUT_NAME "AxleTestServer$<CONFIG>")
+add_library(TestServer STATIC)
+set_target_properties(TestServer PROPERTIES OUTPUT_NAME "AxleTestServer$<CONFIG>")
 
-add_library(AxleTestClient STATIC)
-set_target_properties(AxleTestClient PROPERTIES OUTPUT_NAME "AxleTestClient$<CONFIG>")
+add_library(TestClient STATIC)
+set_target_properties(TestClient PROPERTIES OUTPUT_NAME "AxleTestClient$<CONFIG>")
 
-target_link_libraries(AxleTestServer AxleUtil)
-target_link_libraries(AxleTestClient AxleUtil)
-add_dependencies(AxleTestServer AxleTestClient) # Client must be up to date
+target_link_libraries(TestServer Core)
+target_link_libraries(TestClient Core)
+add_dependencies(TestServer TestClient) # Client must be up to date
 
-target_compile_definitions(AxleTestServer PRIVATE AXLE_TEST_CLIENT_EXE="AxleTestClient$<CONFIG>.exe")
-
-target_include_directories(AxleUtil PUBLIC "${PROJECT_SOURCE_DIR}/include")
+target_include_directories(Core PUBLIC 
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
+  $<INSTALL_INTERFACE:AxleUtil/include/>)
 
 if(MSVC)
-  target_compile_options(AxleUtil PUBLIC /diagnostics:caret /Wall /WX /wd4514 /wd4582 /wd4583 /wd4623 /wd4625 /wd4626 /wd4627 /wd4710 /wd4711 /wd4820 /wd5027 /wd5039 /wd5045 /wd5220 /permissive-)
+  target_compile_options(Core PUBLIC /diagnostics:caret /Wall /WX /wd4514 /wd4582 /wd4583 /wd4623 /wd4625 /wd4626 /wd4627 /wd4710 /wd4711 /wd4820 /wd5027 /wd5039 /wd5045 /wd5220 /permissive-)
 else()
-  target_compile_options(AxleUtil PUBLIC -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(Core PUBLIC -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-target_compile_definitions(AxleUtil PUBLIC STACKTRACE_ENABLE)
+target_compile_definitions(Core PUBLIC STACKTRACE_ENABLE)
 
 option(AxleTRACING "Enable execution tracing" OFF)
 if(AxleTRACING)
-  target_compile_definitions(AxleUtil PUBLIC AXLE_UTIL_TRACING_ENABLE)
+  target_compile_definitions(Core PUBLIC AXLE_UTIL_TRACING_ENABLE)
   if(NOT DEFINED TracerINCLUDE)
     message(FATAL_ERROR "Requires TracerINCLUDE to compile with tracing enabled")
   endif()
   
-  target_include_directories(AxleUtil PUBLIC ${TracerINCLUDE})
+  target_include_directories(Core PUBLIC ${TracerINCLUDE})
 
   if(NOT DEFINED TracerBIN)
     message(FATAL_ERROR "Requires TracerBIN to compile with tracing enabled")
   endif()
 
-  target_link_libraries(AxleUtil "${TracerBIN}/Tracer.lib")
+  target_link_libraries(Core "${TracerBIN}/Tracer.lib")
 endif()
 
 option(AxleTestSANITY "Enable Sanity Tests" OFF)
 if(AxleTestSANITY)
   message("Enabled: sanity checks")
-  target_compile_definitions(AxleTestClient PUBLIC AXLE_TEST_SANITY)
+  target_compile_definitions(TestClient PUBLIC AXLE_TEST_SANITY)
 endif()
 
 set(UtilSourceFiles
@@ -132,44 +140,44 @@ set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleTest/ipc.h"
 )
 
-target_sources(AxleUtil PRIVATE ${UtilSourceFiles})
-target_sources(AxleUtil PRIVATE 
+target_sources(Core PRIVATE ${UtilSourceFiles})
+target_sources(Core PRIVATE 
   FILE_SET HEADERS
   BASE_DIRS ${PROJECT_SOURCE_DIR}
   FILES ${CppHeaders}
 )
 
-target_sources(AxleTestServer PRIVATE ${TestServerFiles})
-target_sources(AxleTestServer PRIVATE 
+target_sources(TestServer PRIVATE ${TestServerFiles})
+target_sources(TestServer PRIVATE 
   FILE_SET HEADERS
   BASE_DIRS ${PROJECT_SOURCE_DIR}
   FILES ${CppHeaders}
 )
 
-target_sources(AxleTestClient PRIVATE ${TestClientFiles})
-target_sources(AxleTestClient PRIVATE
+target_sources(TestClient PRIVATE ${TestClientFiles})
+target_sources(TestClient PRIVATE
   FILE_SET HEADERS
   BASE_DIRS ${PROJECT_SOURCE_DIR}
   FILES ${CppHeaders}
 )
 
-#### Unit tests
+#### Unit tests ####
 
-add_executable(TestServer)
-add_executable(TestClient)
+add_executable(UnitTestServer)
+add_executable(UnitTestClient)
 
-set_target_properties(TestServer PROPERTIES OUTPUT_NAME "TestServer$<CONFIG>")
-set_target_properties(TestClient PROPERTIES OUTPUT_NAME "TestClient$<CONFIG>")
+set_target_properties(UnitTestServer PROPERTIES OUTPUT_NAME "TestServer$<CONFIG>")
+set_target_properties(UnitTestClient PROPERTIES OUTPUT_NAME "TestClient$<CONFIG>")
 
-target_link_libraries(TestServer AxleTestServer)
-target_link_libraries(TestClient AxleTestClient)
-add_dependencies(TestServer TestClient)
+target_link_libraries(UnitTestServer TestServer)
+target_link_libraries(UnitTestClient TestClient)
+add_dependencies(UnitTestServer UnitTestClient)
 
-target_compile_definitions(TestServer PRIVATE AXLE_TEST_CLIENT_EXE="TestClient$<CONFIG>.exe")
+target_compile_definitions(UnitTestServer PRIVATE AXLE_TEST_CLIENT_EXE="TestClient$<CONFIG>.exe")
 
 foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
   string(TOUPPER ${config_type} config_upper)
-  set_target_properties(TestServer TestClient
+  set_target_properties(UnitTestServer UnitTestClient
       PROPERTIES
       "ARCHIVE_OUTPUT_DIRECTORY_${config_upper}" "${PROJECT_BINARY_DIR}/out/test"
       "LIBRARY_OUTPUT_DIRECTORY_${config_upper}" "${PROJECT_BINARY_DIR}/out/test"
@@ -195,17 +203,64 @@ set(TestFiles
   "${PROJECT_SOURCE_DIR}/tests/stdext/vector.cpp"
 )
 
-target_sources(TestServer PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_server_main.cpp")
-target_sources(TestServer PRIVATE 
+target_sources(UnitTestServer PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_server_main.cpp")
+target_sources(UnitTestServer PRIVATE 
   FILE_SET HEADERS
   BASE_DIRS ${PROJECT_SOURCE_DIR}
   FILES "${PROJECT_SOURCE_DIR}/tests/test_contexts.h"
 )
 
-target_sources(TestClient PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_client_main.cpp" ${TestFiles})
-target_sources(TestClient PRIVATE 
+target_sources(UnitTestClient PRIVATE "${PROJECT_SOURCE_DIR}/tests/test_client_main.cpp" ${TestFiles})
+target_sources(UnitTestClient PRIVATE 
   FILE_SET HEADERS
   BASE_DIRS ${PROJECT_SOURCE_DIR}
   FILES "${PROJECT_SOURCE_DIR}/tests/test_contexts.h"
 )
 
+#### install ####
+
+install(
+  TARGETS Core
+  EXPORT AxleUtilTargets
+  DESTINATION AxleUtil/lib/
+)
+
+install(
+  TARGETS TestServer
+  EXPORT AxleUtilTargets
+  DESTINATION AxleUtil/lib/
+)
+
+install(
+  TARGETS TestClient
+  EXPORT AxleUtilTargets
+  DESTINATION AxleUtil/lib/
+)
+
+install(
+  EXPORT AxleUtilTargets
+  NAMESPACE AxleUtil::
+  DESTINATION AxleUtil/
+)
+
+install(DIRECTORY include DESTINATION AxleUtil)
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file( 
+  "Config.cmake.in" 
+  "AxleUtilConfig.cmake"
+  INSTALL_DESTINATION AxleUtil/
+)
+
+write_basic_package_version_file(
+  "AxleUtilConfigVersion.cmake"
+  COMPATIBILITY ExactVersion
+)
+
+install(
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/AxleUtilConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/AxleUtilConfigVersion.cmake"
+  DESTINATION AxleUtil
+)
