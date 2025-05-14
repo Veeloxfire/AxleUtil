@@ -9,7 +9,6 @@ TEST_FUNCTION(Formatters, syntax) {
   OwnedArr<const char> arr = format("hello {{}} {} {{}}", "world"_litview);
 
   TEST_STR_EQ(expected, arr);
-
 }
 
 TEST_FUNCTION(FormatArg, strings) {
@@ -293,6 +292,21 @@ TEST_FUNCTION(FormatArg, Double) {
       = "-1.2345678901234567e-100"_litview;
     
     OwnedArr<const char> actual = format("{}", d);
+    TEST_STR_EQ(expected, actual);
+  }
+}
+
+TEST_FUNCTION(FormatArg, Optional) {
+  {
+    const ViewArr<const char> expected = ""_litview;
+    
+    OwnedArr<const char> actual = format("{}", Axle::Format::PrintOptional<int>{ false, 1 });
+    TEST_STR_EQ(expected, actual);
+  }
+  {
+    const ViewArr<const char> expected = "1"_litview;
+    
+    OwnedArr<const char> actual = format("{}", Axle::Format::PrintOptional<int>{ true, 1 });
     TEST_STR_EQ(expected, actual);
   }
 }

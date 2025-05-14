@@ -56,6 +56,12 @@ namespace Format {
   template<typename T>
   Hex(const T& t) -> Hex<T>;
 
+  template<typename T>
+  struct PrintOptional {
+    bool format_arg;
+    const T& arg;
+  };
+
   template<typename F>
   concept Formatter = requires(F & f, char c, const char* ptr, usize n,
                                const char(&arr1)[1], const char(&arr2)[10], const char(&arr3)[100])
@@ -431,6 +437,16 @@ namespace Format {
     template<Formatter F>
     constexpr static void load_string(F& res, Hex<u64> hu64) { 
       return load_unsigned_hex(res, hu64.t, 8);
+    }
+  };
+
+  template<typename T>
+  struct FormatArg<Format::PrintOptional<T>> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, const Format::PrintOptional<T>& opt) { 
+      if (opt.format_arg) {
+        FormatArg<T>::load_string(res, opt.arg);
+      }
     }
   };
 
