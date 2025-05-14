@@ -40,14 +40,23 @@ foreach(config_type ${CMAKE_CONFIGURATION_TYPES})
   set("CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper}" "${PROJECT_BINARY_DIR}/out")
 endforeach()
 
+if(MSVC)
+  set(CxxFlags /diagnostics:caret /Wall /WX /wd4514 /wd4582 /wd4583 /wd4623 /wd4625 /wd4626 /wd4627 /wd4710 /wd4711 /wd4820 /wd5027 /wd5039 /wd5045 /wd5220 /permissive-)
+else()
+  set(CxxFlags -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 add_library(Core STATIC)
 set_target_properties(Core PROPERTIES OUTPUT_NAME "AxleUtil$<CONFIG>")
+target_compile_options(Core PRIVATE ${CxxFlags})
 
 add_library(TestServer STATIC)
 set_target_properties(TestServer PROPERTIES OUTPUT_NAME "AxleTestServer$<CONFIG>")
+target_compile_options(TestServer PRIVATE ${CxxFlags})
 
 add_library(TestClient STATIC)
 set_target_properties(TestClient PROPERTIES OUTPUT_NAME "AxleTestClient$<CONFIG>")
+target_compile_options(TestClient PRIVATE ${CxxFlags})
 
 target_link_libraries(TestServer Core)
 target_link_libraries(TestClient Core)
@@ -56,12 +65,6 @@ add_dependencies(TestServer TestClient) # Client must be up to date
 target_include_directories(Core PUBLIC 
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
   $<INSTALL_INTERFACE:AxleUtil/include/>)
-
-if(MSVC)
-  target_compile_options(Core PUBLIC /diagnostics:caret /Wall /WX /wd4514 /wd4582 /wd4583 /wd4623 /wd4625 /wd4626 /wd4627 /wd4710 /wd4711 /wd4820 /wd5027 /wd5039 /wd5045 /wd5220 /permissive-)
-else()
-  target_compile_options(Core PUBLIC -Wall -Wextra -Wpedantic -Werror)
-endif()
 
 target_compile_definitions(Core PUBLIC STACKTRACE_ENABLE)
 
@@ -165,6 +168,8 @@ target_sources(TestClient PRIVATE
 
 add_executable(UnitTestServer)
 add_executable(UnitTestClient)
+target_compile_options(UnitTestServer PRIVATE ${CxxFlags})
+target_compile_options(UnitTestClient PRIVATE ${CxxFlags})
 
 set_target_properties(UnitTestServer PROPERTIES OUTPUT_NAME "TestServer$<CONFIG>")
 set_target_properties(UnitTestClient PROPERTIES OUTPUT_NAME "TestClient$<CONFIG>")
