@@ -380,7 +380,7 @@ struct GrowingMemoryPool {
     curr_top = 0;
   }
 
-  void* alloc_internal(usize size, usize align) {
+  void* alloc_small_internal(usize size, usize align) {
     ASSERT(!is_big_alloc(size));
 
     ASSERT(curr_top <= BLOCK_SIZE);
@@ -419,12 +419,12 @@ struct GrowingMemoryPool {
       return Axle::allocate_default<u8>(size);
     }
     else {
-      return alloc_internal(size, align);
+      return alloc_small_internal(size, align);
     }
   }
 
   Destructlist* alloc_destruct_element() {
-    void* dl_space = alloc_internal(sizeof(Destructlist), alignof(Destructlist));
+    void* dl_space = alloc_small_internal(sizeof(Destructlist), alignof(Destructlist));
     Destructlist* dl = new(dl_space) Destructlist();
     dl->prev = dl_top;
     dl->data = nullptr;
@@ -434,13 +434,33 @@ struct GrowingMemoryPool {
   }
 
   DestructlistN* alloc_destruct_element_N() {
-    void* dl_space = alloc_internal(sizeof(DestructlistN), alignof(DestructlistN));
+    void* dl_space = alloc_small_internal(sizeof(DestructlistN), alignof(DestructlistN));
     DestructlistN* dl = new(dl_space) DestructlistN();
     dl->prev = dln_top;
     dl->data = nullptr;
     dl->deleter = nullptr;
     dln_top = dl;
     return dl;
+  }
+
+  void* alloc_raw(usize size, usize align) {
+    if(size == 0) {
+      return nullptr;
+    }
+    else if(is_big_alloc(size)) {
+      ASSERT(align <= 8);
+      void* data = Axle::allocate_default<u8>(size);
+
+      DestructlistN* dl = alloc_destruct_element_N();
+      dl->data = data;
+      dl->n = size;
+      dl->deleter = &delete_big_alloc_arr<u8>;
+
+      return data;
+    }
+    else {
+      return alloc_small_internal(size, align);
+    }
   }
 
   template<typename T>
@@ -456,7 +476,7 @@ struct GrowingMemoryPool {
       }
       else {
         // Don't need a deleter here
-        void* t_space = alloc_internal(sizeof(T), alignof(T));
+        void* t_space = alloc_small_internal(sizeof(T), alignof(T));
         T* t = new (t_space) T();
         return t;
       }
@@ -471,7 +491,7 @@ struct GrowingMemoryPool {
         return t;
       }
       else {
-        void* t_space = alloc_internal(sizeof(T), alignof(T));
+        void* t_space = alloc_small_internal(sizeof(T), alignof(T));
         dl->deleter = &destruct_single_void<T>;
 
         T* t = new (t_space) T();
@@ -496,7 +516,7 @@ struct GrowingMemoryPool {
         return t;
       }
       else {
-        void* t_space = alloc_internal(sizeof(T) * n, alignof(T));
+        void* t_space = alloc_small_internal(sizeof(T) * n, alignof(T));
 
         T* t = new(t_space)T[n];
 
@@ -514,7 +534,7 @@ struct GrowingMemoryPool {
         return t;
       }
       else {
-        void* t_space = alloc_internal(sizeof(T) * n, alignof(T));
+        void* t_space = alloc_small_internal(sizeof(T) * n, alignof(T));
         dl->deleter = &destruct_arr_void<T>;
         dl->n = n;
 
