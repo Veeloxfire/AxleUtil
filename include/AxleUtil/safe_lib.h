@@ -391,7 +391,7 @@ template<typename T, typename U>
   }
 }
 
-template<typename T, size_t size>
+template<typename T, usize size>
 struct ConstArray {
   T data[size] = {};
 
@@ -402,8 +402,10 @@ struct ConstArray {
     return ConstArray{ {std::forward<U>(u)...} };
   }
 
-  [[nodiscard]] constexpr const T* begin() const { return data; }
-  [[nodiscard]] constexpr const T* end() const { return data + size; }
+  [[nodiscard]] constexpr const T* begin() const noexcept { return data; }
+  [[nodiscard]] constexpr const T* end() const noexcept { return data + size; }
+  [[nodiscard]] constexpr T* mut_begin() noexcept { return data; }
+  [[nodiscard]] constexpr T* mut_end() noexcept { return data + size; }
 
   [[nodiscard]] constexpr T& operator[](const usize idx) noexcept {
     ASSERT(idx < size);
@@ -434,6 +436,14 @@ it != JOIN(__end, __LINE__); ++it)
 for(auto it = (name).mut_begin(), JOIN(__end, __LINE__) = (name).mut_end(); \
 it != JOIN(__end, __LINE__); ++it)
 
+template<typename T, usize size>
+[[nodiscard]] constexpr ConstArray<T, size> fill_array(const T& t) {
+  ConstArray<T, size> arr;
+  FOR_MUT(arr, it) {
+    *it = t;
+  }
+  return arr;
+}
 
 [[nodiscard]] constexpr uint8_t absolute(int8_t i) {
   if (i == INT8_MIN) {
@@ -496,17 +506,22 @@ template<typename T>
   return t1 < t2 ? t1 : t2;
 }
 
-template<typename T, size_t N>
-[[nodiscard]] constexpr size_t array_size(T(&)[N]) {
-  return N;
-}
-
 template<typename A>
 struct ArraySize;
 
+template<typename T>
+[[nodiscard]] constexpr usize array_size(const T&) noexcept {
+  return ArraySize<T>::SIZE;
+}
+
 template<typename T, usize N>
 struct ArraySize<T[N]> {
-  constexpr static usize VAL = N;
+  constexpr static usize SIZE = N;
+};
+
+template<typename T, usize N>
+struct ArraySize<ConstArray<T, N>> {
+  constexpr static usize SIZE = N;
 };
 
 template<typename RET, typename ... PARAMS>

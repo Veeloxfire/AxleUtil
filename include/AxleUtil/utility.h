@@ -1172,21 +1172,18 @@ struct Queue {
     return val;
   }
 
-  void _internal_push_back(T u) {
+  T& front() {
+    ASSERT(size > 0u);
+    return holder[start];
+  }
+
+  void push_back(T u) {
     if (size == capacity) {
       extend();
     }
 
     new(holder + _ptr_index(size)) T(std::move(u));
     size++;
-  }
-
-  void push_back(const T& t) {
-    _internal_push_back(t);
-  }
-
-  void push_back(T&& t) {
-    _internal_push_back(std::move(t));
   }
 
   T pop_back() {
@@ -1196,6 +1193,11 @@ struct Queue {
     T val = std::move(holder[_ptr_index(size)]);
 
     return val;
+  }
+
+  T& back() {
+    ASSERT(size > 0u);
+    return holder[_ptr_index(size)];
   }
 
   void extend() {

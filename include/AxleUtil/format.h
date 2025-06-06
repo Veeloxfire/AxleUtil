@@ -20,7 +20,7 @@ namespace Format {
       constexpr ~LocalArr() = default;
     };
 
-    constexpr static usize LOCAL_ARR_SIZE = ArraySize<decltype(LocalArr::arr)>::VAL;
+    constexpr static usize LOCAL_ARR_SIZE = ArraySize<decltype(LocalArr::arr)>::SIZE;
 
     static_assert(sizeof(HeapArr) == sizeof(LocalArr));
     static_assert(sizeof(LocalArr) < UINT8_MAX);//uses a u8 to determine size

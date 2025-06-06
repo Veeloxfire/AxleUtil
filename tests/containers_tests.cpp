@@ -18,6 +18,45 @@ static constexpr int SORTED_RANDOM_ARR[] = {
 };
 
 static constexpr usize RANDOM_ARR_SIZE = array_size(RANDOM_ARR);
+
+TEST_FUNCTION(Util_ArraySize, array_sizes) {
+
+  static_assert(ArraySize<int[3]>::SIZE == 3);
+
+  {
+    constexpr int arr[3] { 0,0,0 };
+    static_assert(Axle::array_size(arr) == 3);
+  }
+
+  {
+    int arr[3];
+    TEST_EQ(static_cast<usize>(3), Axle::array_size(arr));
+  }
+
+  static_assert(ArraySize<ConstArray<int, 5>>::SIZE == 5);
+
+  {
+    constexpr ConstArray<int, 5> arr { {0,0,0,0,0} };
+    static_assert(Axle::array_size(arr) == 5);
+  }
+
+  {
+    ConstArray<int, 5> arr;
+    TEST_EQ(static_cast<usize>(5), Axle::array_size(arr));
+    TEST_EQ(static_cast<usize>(5), Axle::array_size(arr.data));
+  }
+}
+
+TEST_FUNCTION(Util_ConstArray, fill) {
+  Axle::ConstArray arr = fill_array<int, 4>(12);
+  
+  TEST_EQ(static_cast<usize>(4), Axle::array_size(arr));
+  TEST_EQ(12, arr[0]);
+  TEST_EQ(12, arr[1]);
+  TEST_EQ(12, arr[2]);
+  TEST_EQ(12, arr[3]);
+}
+
 TEST_FUNCTION(Util_Array, Default) {
   Array<int> a;
   TEST_EQ((usize)0, a.size);
