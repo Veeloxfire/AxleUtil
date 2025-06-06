@@ -77,6 +77,11 @@ namespace AxleTest {
   TestFormat(const T&)->TestFormat<T>;
 
   template<typename T>
+  struct TestFormatList {
+    Axle::ViewArr<const T> arr;
+  };
+
+  template<typename T>
   void test_eq(TestErrors* errors, usize line,
                const Axle::ViewArr<const char>& expected_str, const T& expected,
                const Axle::ViewArr<const char>& actual_str, const T& actual) {
@@ -131,8 +136,8 @@ namespace AxleTest {
                          "Expected Array: {} = {}\n"
                          "Actual Array: {} = {}",
                          line, errors->test_name, esize_str, e_size, asize_str, a_size,
-                         expected_str, Axle::PrintListCF{expected, e_size, t_format},
-                         actual_str, Axle::PrintListCF{actual, a_size, t_format});
+                         expected_str, TestFormatList<T>{{expected, e_size}},
+                         actual_str, TestFormatList<T>{{actual, a_size}});
     return;
   }
 
@@ -160,8 +165,8 @@ namespace AxleTest {
                          "Expected String: {} = \"{}\"\n"
                          "Actual String: {} = \"{}\"",
                          line, errors->test_name,
-                         expected_str, Axle::DisplayString{ { expected.data, expected.size } },
-                         actual_str, Axle::DisplayString{ { actual.data, actual.size } });
+                         expected_str, Axle::Format::DisplayString{ { expected.data, expected.size } },
+                         actual_str, Axle::Format::DisplayString{ { actual.data, actual.size } });
     return;
   }
 
@@ -189,6 +194,24 @@ namespace Axle::Format {
     template<Formatter F>
     constexpr static void load_string(F& res, AxleTest::TestFormat<T*> tf) {
       Format::FormatArg<PrintPtr>::load_string(res, {tf.t});
+    }
+  };
+
+  template<typename T>
+  struct FormatArg<AxleTest::TestFormatList<T>> {
+    template<Formatter F>
+    constexpr static void load_string(F& res, AxleTest::TestFormatList<T> arr) {
+      using AxleTest::TestFormat;
+
+      usize i = 0;
+      if (i < arr.arr.size) {
+        FormatArg<TestFormat<T>>::load_string(res, TestFormat{ arr.arr[i] });
+        ++i;
+        for (; i < arr.arr.size; ++i) {
+          res.load_string_lit(", ");
+          FormatArg<TestFormat<T>>::load_string(res, TestFormat{ arr.arr[i] });
+        }
+      }
     }
   };
 }

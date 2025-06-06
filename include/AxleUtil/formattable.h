@@ -6,48 +6,37 @@
 #include <AxleUtil/tracing_wrapper.h>
 
 namespace Axle {
-//For printing character as it appears in code
-struct DisplayChar {
-  char c;
-};
-
-struct DisplayString {
-  Axle::ViewArr<const char> arr;
-};
-
-struct CString {
-  const char* str;
-};
-
-struct PrintPtr {
-  const void* ptr;
-};
-
-struct MagicNumber {
-  uint16_t num;
-};
-
-struct ByteArray {
-  const u8* ptr;
-  usize size;
-};
-
-template<typename T>
-struct PrintList {
-  const T* arr;
-  usize size;
-};
-
-template<typename T, typename L>
-struct PrintListCF {
-  const T* arr;
-  usize size;
-
-  const L& format;
-};
-
-
 namespace Format {
+  //For printing character as it appears in code
+  struct DisplayChar {
+    char c;
+  };
+
+  struct DisplayString {
+    Axle::ViewArr<const char> arr;
+  };
+
+  struct CString {
+    const char* str;
+  };
+
+  struct PrintPtr {
+    const void* ptr;
+  };
+
+  struct MagicNumber {
+    uint16_t num;
+  };
+
+  struct ByteArray {
+    ViewArr<const u8> arr;
+  };
+
+  template<typename T>
+  struct PrintList {
+    ViewArr<const T> arr;
+  };
+
   template<typename T>  
   struct Hex {
     const T& t;
@@ -456,18 +445,21 @@ namespace Format {
     constexpr static void load_string(F& res, const ByteArray& arr) {
       char as_string[] = ", 0x00";
 
-      const u8* i = arr.ptr;
-      const u8* end = i + arr.size;
+      const u8* i = arr.arr.begin();
+      const u8* end = arr.arr.end();
 
       if (i < end) {
-        as_string[4] = hex_char(((*i) >> 4) & 0xf);
+        // only need to write over the last characters
+        // top half of the bytes first
+        as_string[4] = hex_char(((*i) >> 4) & 0x0f);
         as_string[5] = hex_char((*i) & 0x0f);
 
+        // + 2, 4 -> skip the `, `
         res.load_string(as_string + 2, 4);
         i += 1;
 
         while (i < end) {
-          as_string[4] = hex_char(((*i) >> 4) & 0xf);
+          as_string[4] = hex_char(((*i) >> 4) & 0x0f);
           as_string[5] = hex_char((*i) & 0x0f);
           res.load_string(as_string, 6);
           i += 1;
@@ -481,35 +473,16 @@ namespace Format {
     template<Formatter F>
     constexpr static void load_string(F& res, const PrintList<T>& arr) {
       usize i = 0;
-      if (i < arr.size) {
+      if (i < arr.arr.size) {
         FormatArg<T>::load_string(res, arr.arr[i]);
         ++i;
-        for (; i < arr.size; ++i) {
+        for (; i < arr.arr.size; ++i) {
           res.load_string_lit(", ");
           FormatArg<T>::load_string(res, arr.arr[i]);
         }
       }
     }
   };
-
-
-  template<typename T, typename L>
-  struct FormatArg<PrintListCF<T, L>> {
-    template<Formatter F>
-    constexpr static void load_string(F& res, const PrintListCF<T, L>& arr) {
-      usize i = 0;
-      if (i < arr.size) {
-        arr.format(res, arr.arr[i]);
-        ++i;
-        for (; i < arr.size; ++i) {
-          res.load_string_lit(", ");
-          arr.format(res, arr.arr[i]);
-        }
-      }
-    }
-  };
-
-
 
   template<usize N>
   struct FormatArg<const char[N]> {

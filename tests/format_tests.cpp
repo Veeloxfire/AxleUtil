@@ -20,7 +20,32 @@ TEST_FUNCTION(FormatArg, strings) {
 
 TEST_FUNCTION(FormatArg, c_string) {
   const ViewArr<const char> expected = "hello world"_litview;
-  OwnedArr<const char> arr = format("hello {}", CString{"world"});
+  OwnedArr<const char> arr = format("hello {}", Format::CString{"world"});
+
+  TEST_STR_EQ(expected, arr);
+}
+
+TEST_FUNCTION(FormatArg, pointer) {
+  const ViewArr<const char> expected = "0x0011223344556677"_litview;
+  OwnedArr<const char> arr = format("{}", Format::PrintPtr{ reinterpret_cast<const void*>(0x0011223344556677) });
+
+  TEST_STR_EQ(expected, arr);
+}
+
+TEST_FUNCTION(FormatArg, MagicNumber) {
+  Axle::Format::MagicNumber mn = { 0xabcd };
+
+  const ViewArr<const char> expected = "cdab"_litview;
+  OwnedArr<const char> arr = format("{}", mn);
+
+  TEST_STR_EQ(expected, arr);
+}
+
+TEST_FUNCTION(FormatArg, byte_array) {
+  const u8 in[] = { 1,2,3,4,5 };
+
+  const ViewArr<const char> expected = "0x01, 0x02, 0x03, 0x04, 0x05"_litview;
+  OwnedArr<const char> arr = format("{}", Format::ByteArray{view_arr(in)});
 
   TEST_STR_EQ(expected, arr);
 }
@@ -29,13 +54,13 @@ TEST_FUNCTION(FormatArg, display_char) {
   const ViewArr<const char> expected = lit_view_arr("\\t\\r\\n\\f\\\'\\\"\\\\\\0");
   {
     OwnedArr<const char> arr = format("{}{}{}{}{}{}{}{}",
-        DisplayChar{'\t'}, DisplayChar{'\r'}, DisplayChar{'\n'}, DisplayChar{'\f'}, DisplayChar{'\''}, DisplayChar{'\"'}, DisplayChar{'\\'}, DisplayChar{'\0'});
+        Format::DisplayChar{'\t'}, Format::DisplayChar{'\r'}, Format::DisplayChar{'\n'}, Format::DisplayChar{'\f'}, Format::DisplayChar{'\''}, Format::DisplayChar{'\"'}, Format::DisplayChar{'\\'}, Format::DisplayChar{'\0'});
     
     TEST_STR_EQ(expected, arr);
   }
 
   {
-    OwnedArr<const char> arr = format("{}", DisplayString{Axle::lit_view_arr("\t\r\n\f\'\"\\\0")});
+    OwnedArr<const char> arr = format("{}", Format::DisplayString{Axle::lit_view_arr("\t\r\n\f\'\"\\\0")});
 
     TEST_STR_EQ(expected, arr);
   }
@@ -308,6 +333,24 @@ TEST_FUNCTION(FormatArg, Optional) {
     
     OwnedArr<const char> actual = format("{}", Axle::Format::PrintOptional<int>{ true, 1 });
     TEST_STR_EQ(expected, actual);
+  }
+}
+
+
+TEST_FUNCTION(FormatArg, PrintList) {
+  {
+      const ViewArr<const char> expected = ""_litview;
+
+      OwnedArr<const char> actual = format("{}", Axle::Format::PrintList<int>{});
+      TEST_STR_EQ(expected, actual);
+  }
+
+  {
+      const ViewArr<const char> expected = "1, 2, 3"_litview;
+
+      const int in[] { 1, 2, 3 };
+      OwnedArr<const char> actual = format("{}", Axle::Format::PrintList{ Axle::view_arr(in) });
+      TEST_STR_EQ(expected, actual);
   }
 }
 
