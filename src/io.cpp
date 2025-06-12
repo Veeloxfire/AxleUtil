@@ -4,7 +4,7 @@
 
 #include <cstdio>
 namespace Axle {
-static SpinLockMutex io_mutex = {};
+static Mutex io_mutex = {};
 
 void IO_Single::lock() {
   AXLE_UTIL_TELEMETRY_FUNCTION();

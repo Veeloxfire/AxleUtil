@@ -9,26 +9,40 @@ struct ThreadID {
 };
 inline thread_local ThreadID THREAD_ID = {1};
 
-struct SpinLockMutex {
+struct Mutex {
   volatile u32 held = 0;
+  u32 try_hold() noexcept;
 
-  void acquire();
-  bool acquire_if_free();
-  void release();
+  void acquire() noexcept;
+  bool acquire_if_free() noexcept;
+  void release() noexcept;
+
+  bool is_free() noexcept;
+  void wait_until_free() noexcept;
 };
 
 struct Signal {
   mutable volatile char held = 0;
 
-  void set();
-  void unset();
+  void set() noexcept;
+  void unset() noexcept;
 
-  bool test() const;
+  bool test() const noexcept;
+};
+
+struct WriteMutex {
+  Mutex write;
+  volatile u32 readers = 0;
+
+  void acquire_read() noexcept;
+  void release_read() noexcept;
+  void acquire_write() noexcept;
+  void release_write() noexcept;
 };
 
 template<typename T>
 struct AtomicLock {
-  SpinLockMutex* _mutex = nullptr;
+  Mutex* _mutex = nullptr;
   T* _ptr = nullptr;
 
   T* operator->() const {
@@ -56,7 +70,7 @@ struct AtomicLock {
 
 template<typename T>
 struct AtomicPtr {
-  mutable SpinLockMutex _mutex;
+  mutable Mutex _mutex;
   T* _ptr = nullptr;
 
   void set(T* t) {

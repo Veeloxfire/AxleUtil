@@ -7,7 +7,7 @@ TEST_FUNCTION(Threading, DefaultID) {
 }
 
 TEST_FUNCTION(Threading, Mutex) {
-  Axle::SpinLockMutex mutex = {};
+  Axle::Mutex mutex = {};
 
   TEST_EQ(static_cast<u32>(0), static_cast<u32>(mutex.held));
 
@@ -48,6 +48,40 @@ TEST_FUNCTION(Threading, Signal) {
   TEST_EQ(true, signal.test());
   signal.unset();
   TEST_EQ(false, signal.test());
+}
+
+TEST_FUNCTION(Threading, WriteMutex) {
+  Axle::WriteMutex wm;
+
+  TEST_EQ(0u, static_cast<u32>(wm.readers));
+  TEST_EQ(true, wm.write.is_free());
+  
+  // 1 writer
+  wm.acquire_write();
+  TEST_EQ(Axle::THREAD_ID.id, static_cast<u32>(wm.write.held));
+  wm.release_write();
+  
+  TEST_EQ(0u, static_cast<u32>(wm.readers));
+  TEST_EQ(true, wm.write.is_free());
+
+  // should be able to have lots of readers
+  wm.acquire_read();//1
+  wm.acquire_read();//2
+  wm.acquire_read();//3
+  wm.acquire_read();//4
+  TEST_EQ(4u, static_cast<u32>(wm.readers));
+  wm.release_read();//4
+  wm.release_read();//3
+  wm.release_read();//2
+  wm.release_read();//1
+  
+  TEST_EQ(0u, static_cast<u32>(wm.readers));
+  TEST_EQ(true, wm.write.is_free());
+
+  // 1 writer
+  wm.acquire_write();
+  TEST_EQ(Axle::THREAD_ID.id, static_cast<u32>(wm.write.held));
+  wm.release_write();
 }
 
 struct Shared {

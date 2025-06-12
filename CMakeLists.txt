@@ -50,6 +50,9 @@ add_library(Core STATIC)
 set_target_properties(Core PROPERTIES OUTPUT_NAME "AxleUtil$<CONFIG>")
 target_compile_options(Core PRIVATE ${CxxFlags})
 
+# for wait functions
+target_link_libraries(Core PRIVATE Synchronization.lib)
+
 add_library(TestServer STATIC)
 set_target_properties(TestServer PROPERTIES OUTPUT_NAME "AxleTestServer$<CONFIG>")
 target_compile_options(TestServer PRIVATE ${CxxFlags})

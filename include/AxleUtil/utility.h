@@ -1264,7 +1264,7 @@ struct Queue {
 
 template<typename T>
 struct AtomicQueue {
-  SpinLockMutex mutex;
+  Mutex mutex;
 
   T* holder = nullptr;
   usize start = 0;
