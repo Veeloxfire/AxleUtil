@@ -94,6 +94,7 @@ if(AxleTestSANITY)
 endif()
 
 set(UtilSourceFiles
+  "${PROJECT_SOURCE_DIR}/src/bits.cpp"
   "${PROJECT_SOURCE_DIR}/src/files.cpp"
   "${PROJECT_SOURCE_DIR}/src/format.cpp"
   "${PROJECT_SOURCE_DIR}/src/io.cpp"
@@ -116,6 +117,7 @@ set(TestServerFiles
 
 set(CppHeaders
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/args.h"
+  "${PROJECT_SOURCE_DIR}/include/AxleUtil/bits.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/files.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/files_base.h"
   "${PROJECT_SOURCE_DIR}/include/AxleUtil/format.h"
@@ -195,6 +197,7 @@ endforeach()
 
 set(TestFiles
   "${PROJECT_SOURCE_DIR}/tests/args_tests.cpp"
+  "${PROJECT_SOURCE_DIR}/tests/bits_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/containers_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/files_tests.cpp"
   "${PROJECT_SOURCE_DIR}/tests/format_tests.cpp"
