@@ -300,8 +300,17 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     Axle::serialize_le(out_handle, IPC::Serialize::QueryTestInfo{});
     if(!expect_test_info(in_handle, test_info)) {
       LOG::error("Failed to read test info");
+
+      // Already timed out, no wait
+      terminate_child(cp.process_handle.h, 0);
+      DisconnectNamedPipe(cp.pipe_handle.h);
+      
       return false;
     }
+
+    // Give 1 second for graceful termination
+    terminate_child(cp.process_handle.h, 1000/*ms*/);
+    DisconnectNamedPipe(cp.pipe_handle.h);
   }
 
   LOG::debug("{} tests found", test_info.tests.size);
@@ -346,11 +355,6 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
       continue;
     }
 
-    DEFER(&cp, timeout_time_ms, handle = cp.pipe_handle.h) {
-      terminate_child(cp.process_handle.h, timeout_time_ms);
-      DisconnectNamedPipe(handle);
-    };
-
     const Axle::Windows::FILES::TimeoutFile out_handle = {wait_event.h, cp.pipe_handle.h, timeout_time_ms};
     const Axle::Windows::FILES::TimeoutFile& in_handle = out_handle;
 
@@ -365,6 +369,10 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     if(!expect_report(in_handle, outcome_message)) {
       IO::print("Failed\n");
       failed_arr.insert({test_name, Axle::copy_arr("Internal Error: Message never recieved (likely timeout)")});
+
+      // Already timed out, no wait
+      terminate_child(cp.process_handle.h, 0);
+      DisconnectNamedPipe(cp.pipe_handle.h);
       continue;
     }
 
@@ -382,8 +390,11 @@ bool AxleTest::IPC::server_main(const Axle::ViewArr<const char>& client_exe,
     }
     else {
       failed_arr.insert({test_name, Axle::format("Unexpected Report Message Type: {}", outcome_message.type), {}});
-      continue;
     }
+
+    // Terminate the child (with a 1s timeout just in case)
+    terminate_child(cp.process_handle.h, 1000);
+    DisconnectNamedPipe(cp.pipe_handle.h);
   }
 
   if(failed_arr.size > 0) {
