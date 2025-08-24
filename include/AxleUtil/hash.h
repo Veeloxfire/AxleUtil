@@ -36,7 +36,28 @@ struct InternalHashSet {
     return static_cast<usize>(static_cast<float>(el_capacity) * LOAD_FACTOR) <= (used + extra);
   }
 
+  constexpr InternalHashSet() = default;
   ~InternalHashSet();
+
+  constexpr InternalHashSet(InternalHashSet&& t) :
+    data(std::exchange(t.data, nullptr)),
+    el_capacity(std::exchange(t.el_capacity, 0u)),
+    used(std::exchange(t.used, 0u))
+  {}
+
+  constexpr InternalHashSet& operator=(InternalHashSet&& t) {
+    if (this == &t) return *this;
+
+    data = std::exchange(t.data, nullptr);
+    el_capacity = std::exchange(t.el_capacity, 0u);
+    used = std::exchange(t.used, 0u);
+
+    return *this;
+  }
+
+
+  InternalHashSet(const InternalHashSet&) = delete;
+  InternalHashSet& operator=(const InternalHashSet&) = delete;
 
   bool contains(const param_t key) const;
   value_t& internal_get(const param_t key) const;
@@ -74,7 +95,9 @@ struct InternalHashTable {
   }
 
   constexpr bool ensure_invariants() const noexcept {
-    return el_capacity == 0 || !needs_resize(0);
+    return el_capacity == 0
+      ? (data == nullptr && used == 0)
+      : !needs_resize(0);
   }
 
   constexpr static usize val_arr_offset(usize size) {
@@ -99,7 +122,28 @@ struct InternalHashTable {
     return val_arr(data, el_capacity);
   }
 
+  constexpr InternalHashTable() = default;
   ~InternalHashTable();
+
+  constexpr InternalHashTable(InternalHashTable&& t) :
+    data(std::exchange(t.data, nullptr)),
+    el_capacity(std::exchange(t.el_capacity, 0u)),
+    used(std::exchange(t.used, 0u))
+  {}
+
+  constexpr InternalHashTable& operator=(InternalHashTable&& t) {
+    if (this == &t) return *this;
+
+    data = std::exchange(t.data, nullptr);
+    el_capacity = std::exchange(t.el_capacity, 0u);
+    used = std::exchange(t.used, 0u);
+
+    return *this;
+  }
+  
+  InternalHashTable(const InternalHashTable&) = delete;
+  InternalHashTable& operator=(const InternalHashTable&) = delete;
+
   bool contains(const param_t key) const;
   usize get_soa_index(const param_t key) const;
   void try_extend(usize num);
@@ -443,11 +487,12 @@ void InternalHashTable<K, T, Trait>::try_extend(size_t num) {
   }
 
   if (old_data != nullptr) {
-
     val_storage_t* values = val_arr();
 
     value_t* old_keys = key_arr(old_data);
     val_storage_t* old_values = val_arr(old_data, old_el_cap);
+
+    usize debug_copied = 0;
 
     for (size_t i = 0; i < old_el_cap; i++) {
       const value_t& key = old_keys[i];
@@ -461,9 +506,11 @@ void InternalHashTable<K, T, Trait>::try_extend(size_t num) {
         keys[new_index] = key;
         values[new_index].val = std::move(v.val);
         v.clear();
-
+        debug_copied += 1;
       }
     }
+
+    ASSERT(debug_copied == used);
 
     //Destruct and free
     {
@@ -558,9 +605,12 @@ T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) requires req
 
     const usize soa_index = get_soa_index(key);
 
+    value_t& test_key = key_arr()[soa_index];
     val_storage_t& val = val_arr()[soa_index];
+    
+    ASSERT(Trait::eq(Trait::EMPTY, test_key));
 
-    key_arr()[soa_index] = key;
+    test_key = key;
     val.val = T();
     used += 1;
     return &val.val;
@@ -634,7 +684,7 @@ ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_or_create_multiple(const p
     ConstArray<T*, N> found{};
 
     for (usize i = 0; i < N; ++i) {
-      param_t key = keys[i];
+      const param_t& key = keys[i];
       const usize soa_index = get_soa_index(key);
 
       value_t& test_key = key_arr()[soa_index];

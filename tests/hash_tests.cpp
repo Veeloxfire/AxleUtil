@@ -792,3 +792,45 @@ TEST_FUNCTION(Hash, HashTable_insert_duplicate) {
   TEST_EQ(static_cast<u64>(1), counter_a);
   TEST_EQ(static_cast<u64>(1), counter_b);
 }
+
+
+TEST_FUNCTION(Hash, HashTable_move) {
+  KeyGenerator gen = {};
+
+  u64 counter = 0;
+  {
+    Hash::InternalHashTable<FakeKey, OwnedDestructCounter, FakeKeyTrait> table = {};
+
+    table.insert(gen(), { &counter });
+    TEST_EQ(static_cast<u64>(0), counter);
+    TEST_EQ(static_cast<usize>(1), table.used);
+    TEST_NEQ(static_cast<usize>(0), table.el_capacity);
+    
+    Hash::InternalHashTable<FakeKey, OwnedDestructCounter, FakeKeyTrait> table2 = std::move(table);
+
+    TEST_EQ(static_cast<u64>(0), counter);
+    TEST_EQ(static_cast<usize>(0), table.used);
+    TEST_EQ(static_cast<usize>(0), table.el_capacity);
+    TEST_EQ(static_cast<usize>(1), table2.used);
+    TEST_NEQ(static_cast<usize>(0), table2.el_capacity);
+    
+    Hash::InternalHashTable<FakeKey, OwnedDestructCounter, FakeKeyTrait> table3;
+
+    TEST_EQ(static_cast<u64>(0), counter);
+    TEST_EQ(static_cast<usize>(0), table.used);
+    TEST_EQ(static_cast<usize>(1), table2.used);
+    TEST_EQ(static_cast<usize>(0), table3.used);
+    TEST_EQ(static_cast<usize>(0), table3.el_capacity);
+
+    table3 = std::move(table2);
+
+    TEST_EQ(static_cast<u64>(0), counter);
+    TEST_EQ(static_cast<usize>(0), table.used);
+    TEST_EQ(static_cast<usize>(0), table2.used);
+    TEST_EQ(static_cast<usize>(0), table2.el_capacity);
+    TEST_EQ(static_cast<usize>(1), table3.used);
+    TEST_NEQ(static_cast<usize>(0), table3.el_capacity);
+  }
+
+  TEST_EQ(static_cast<u64>(1), counter);
+}
