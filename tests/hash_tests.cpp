@@ -567,6 +567,19 @@ TEST_FUNCTION(Hash, InternString_HashTable_Multiple) {
   const InternString* str5 = interner.intern("abc", 3);
   const InternString* str6 = interner.intern("abcd", 4);
   const InternString* str7 = interner.intern("abcde", 5);
+  const InternString* str8 = interner.intern("abcde", 5);
+  const InternString* str9 = interner.intern("9", 1);
+  const InternString* str10 = interner.intern("10", 2);
+  const InternString* str11 = interner.intern("11", 2);
+  const InternString* str12 = interner.intern("12", 2);
+  const InternString* str13 = interner.intern("13", 2);
+  const InternString* str14 = interner.intern("14", 2);
+  const InternString* str15 = interner.intern("15", 2);
+  const InternString* str16 = interner.intern("16", 2);
+  const InternString* str17 = interner.intern("17", 2);
+  const InternString* str18 = interner.intern("18", 2);
+  const InternString* str19 = interner.intern("19", 2);
+  const InternString* str20 = interner.intern("20", 2);
 
   InternHashTable<int> set = {};
 
@@ -586,7 +599,12 @@ TEST_FUNCTION(Hash, InternString_HashTable_Multiple) {
   }
 
   {
-    const ConstArray<int*, 5> created = set.get_or_create_multiple({ str3, str4, str5, str6, str7 });
+    ASSERT(set.needs_resize(18));
+    const ConstArray<int*, 18> created = set.get_or_create_multiple({
+        str3, str4, str5, str6, str7, str8, str9,
+        str10, str11, str12, str13, str14, str15,
+        str16, str17, str18, str19, str20,});
+
     for(int* i : created) {
       TEST_NEQ(static_cast<int*>(nullptr), i);
       TEST_EQ(0, *i);
@@ -693,14 +711,14 @@ TEST_FUNCTION(Hash, HashTable_destruction) {
     
     table.insert(gen(), { &counter });
 
-    TEST_EQ(static_cast<u64>(old_used + 1) + 1, counter);
+    TEST_EQ(static_cast<u64>(old_used + 1), counter);
     counter -= 1;
 
     TEST_EQ(old_used + 1, table.used);
     TEST_NEQ(old_capacity, table.el_capacity);
     ASSERT(old_capacity < table.el_capacity);
     
-    expected_out_count = table.used * 2;
+    expected_out_count = old_used + table.used;
   }
   TEST_EQ(expected_out_count, counter);
 }

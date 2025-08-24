@@ -69,8 +69,12 @@ struct InternalHashTable {
   usize el_capacity = 0;
   usize used = 0;
 
-  constexpr bool needs_resize(size_t extra) const {
+  constexpr bool needs_resize(size_t extra) const noexcept {
     return static_cast<usize>(static_cast<float>(el_capacity) * LOAD_FACTOR) <= (used + extra);
+  }
+
+  constexpr bool ensure_invariants() const noexcept {
+    return el_capacity == 0 || !needs_resize(0);
   }
 
   constexpr static usize val_arr_offset(usize size) {
@@ -306,6 +310,7 @@ void InternalHashSet<T, Trait>::remove(const param_t key) {
 
 template<typename K, typename T, ValidInternalTrait Trait>
 InternalHashTable<K, T, Trait>::~InternalHashTable() {
+  ASSERT(ensure_invariants());
   if(data != nullptr) {
     value_t* keys = key_arr();
     val_storage_t* vals = val_arr();
@@ -330,6 +335,7 @@ InternalHashTable<K, T, Trait>::~InternalHashTable() {
 
 template<typename K, typename T, ValidInternalTrait Trait>
 bool InternalHashTable<K, T, Trait>::contains(const param_t key) const {
+  ASSERT(ensure_invariants());
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
   if (el_capacity == 0) return false;
@@ -357,6 +363,7 @@ bool InternalHashTable<K, T, Trait>::contains(const param_t key) const {
 
 template<typename K, typename T, ValidInternalTrait Trait>
 size_t InternalHashTable<K, T, Trait>::get_soa_index(const param_t key) const {
+  ASSERT(ensure_invariants());
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
   const value_t* const keys = key_arr();
@@ -367,6 +374,8 @@ size_t InternalHashTable<K, T, Trait>::get_soa_index(const param_t key) const {
   const usize first_index = Trait::hash(key) % el_capacity;
   usize index = first_index;
 
+  bool debug_found_empty = false;
+
   do {
     const value_t& test_key = keys[index];
     if (Trait::eq(key, test_key)) {
@@ -374,10 +383,12 @@ size_t InternalHashTable<K, T, Trait>::get_soa_index(const param_t key) const {
     }
     else if (!found_tombstone &&
         Trait::eq(Trait::TOMBSTONE, test_key)) {
+      debug_found_empty = true;
       found_tombstone = true;
       tombstone_index = index;
     }
     else if(Trait::eq(Trait::EMPTY, test_key)) {
+      debug_found_empty = true;
       break;
     }
 
@@ -385,16 +396,21 @@ size_t InternalHashTable<K, T, Trait>::get_soa_index(const param_t key) const {
     index %= el_capacity;
   } while(first_index != index);
 
+  ASSERT(debug_found_empty);
+
   if (found_tombstone) {
+    ASSERT(Trait::eq(Trait::TOMBSTONE, keys[tombstone_index]));
     return tombstone_index;
   }
   else {
+    ASSERT(Trait::eq(Trait::EMPTY, keys[index]));
     return index;
   }
 }
 
 template<typename K, typename T, ValidInternalTrait Trait>
 void InternalHashTable<K, T, Trait>::try_extend(size_t num) {
+  ASSERT(ensure_invariants());
   ASSERT(needs_resize(num));
 
   uint8_t* old_data = data;
@@ -461,6 +477,7 @@ void InternalHashTable<K, T, Trait>::try_extend(size_t num) {
 
 template<typename K, typename T, ValidInternalTrait Trait>
 T* InternalHashTable<K, T, Trait>::get_val(const param_t key) const {
+  ASSERT(ensure_invariants());
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
   if (el_capacity == 0) return nullptr;
@@ -479,6 +496,7 @@ T* InternalHashTable<K, T, Trait>::get_val(const param_t key) const {
 template<typename K, typename T, ValidInternalTrait Trait>
 template<usize N>
 ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_val_multiple(const param_t (&key)[N]) const {
+  ASSERT(ensure_invariants());
   ConstArray<T*, N> out = {};
   for (usize i = 0; i < N; ++i) {
     out[i] = get_val(key[i]);
@@ -488,6 +506,7 @@ ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_val_multiple(const param_t
 
 template<typename K, typename T, ValidInternalTrait Trait>
 void InternalHashTable<K, T, Trait>::insert(const param_t key, T&& val) {
+  ASSERT(ensure_invariants());
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
 
@@ -512,19 +531,26 @@ void InternalHashTable<K, T, Trait>::insert(const param_t key, T&& val) {
     ASSERT(Trait::eq(Trait::EMPTY, key_loc)
         || Trait::eq(Trait::TOMBSTONE, key_loc));
 
-    key_loc = key;
-    val_arr()[soa_index].val = std::move(val);
-    used += 1;
+    if (needs_resize(1)) {
+      try_extend(1);
 
-    if (needs_resize(0)) {
-      try_extend(0);
+      const usize new_index = get_soa_index(key);
+      key_arr()[new_index] = key;
+      val_arr()[new_index].val = std::move(val);
     }
+    else {
+      key_loc = key;
+      val_arr()[soa_index].val = std::move(val);
+    }
+    
+    used += 1;
   }
 }
 
 template<typename K, typename T, ValidInternalTrait Trait>
 T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) requires requires(T t) { {T()}->IS_SAME_TYPE<T>; }
     {
+  ASSERT(ensure_invariants());
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
   if (el_capacity == 0) {
@@ -540,33 +566,44 @@ T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) requires req
     return &val.val;
   }
   else {
-    const usize soa_index = get_soa_index(key);
+    {
+      const usize soa_index = get_soa_index(key);
+      value_t& test_key = key_arr()[soa_index];
 
-    value_t& test_key = key_arr()[soa_index];
+      if (Trait::eq(key, test_key)) {
+        return &val_arr()[soa_index].val;
+      }
 
-    if (Trait::eq(key, test_key)) {
-      return &val_arr()[soa_index].val;
+      ASSERT(Trait::eq(Trait::EMPTY, test_key)
+          || Trait::eq(Trait::TOMBSTONE, test_key));
+      
+      if (!needs_resize(1)) {
+        val_storage_t& val = val_arr()[soa_index];
+
+        test_key = key;
+        val.val = T();
+        used += 1;
+
+        return &val.val;
+      }
+
+      try_extend(1);
     }
-    
-    ASSERT(Trait::eq(Trait::EMPTY, test_key)
-        || Trait::eq(Trait::TOMBSTONE, test_key));
 
-    val_storage_t& val = val_arr()[soa_index];
+    //need to reset the key and val location
+    {
+      const usize soa_index = get_soa_index(key);
+      value_t& test_key = key_arr()[soa_index];
+      val_storage_t& val = val_arr()[soa_index];
 
-    test_key = key;
-    val.val = T();
-    used += 1;
+      ASSERT(Trait::eq(Trait::EMPTY, test_key)
+          || Trait::eq(Trait::TOMBSTONE, test_key));
+      
+      test_key = key;
+      val.val = T();
+      used += 1;
 
-    if (needs_resize(0)) {
-      try_extend(0);
-
-      //need to reset the key and val location
-      const usize re_index = get_soa_index(key);
-
-      ASSERT(Trait::eq(key, key_arr()[re_index]));
-      return &val_arr()[re_index].val;
-    }
-    else {
+      ASSERT(ensure_invariants());
       return &val.val;
     }
   }
@@ -577,6 +614,7 @@ template<typename K, typename T, ValidInternalTrait Trait>
 template<usize N>
 ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_or_create_multiple(const param_t (&keys)[N]) requires requires(T t) { {T()}->IS_SAME_TYPE<T>; }
 {
+  ASSERT(ensure_invariants());
   {
     ConstArray<T*, N> found = get_val_multiple(keys);
 
@@ -607,10 +645,13 @@ ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_or_create_multiple(const p
             || Trait::eq(Trait::TOMBSTONE, test_key));
         test_key = key;
         val.val = T();
+        used += 1;
       }
       
       found[i] = &val.val;
     }
+
+    ASSERT(ensure_invariants());
 
     return found;
   }
