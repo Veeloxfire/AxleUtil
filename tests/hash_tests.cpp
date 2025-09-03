@@ -269,203 +269,203 @@ TEST_FUNCTION(Hash, InternString_HashTable) {
   TEST_NEQ(str10, str12);
   TEST_NEQ(str11, str12);
 
-  InternHashTable<int> set = {};
-  TEST_EQ(false, set.contains(str1));
-  TEST_EQ(false, set.contains(str2));
-  TEST_EQ(false, set.contains(str3));
-  TEST_EQ(false, set.contains(str4));
-  TEST_EQ(false, set.contains(str5));
-  TEST_EQ(false, set.contains(str6));
-  TEST_EQ(false, set.contains(str7));
-  TEST_EQ(false, set.contains(str8));
-  TEST_EQ(false, set.contains(str9));
-  TEST_EQ(false, set.contains(str10));
-  TEST_EQ(false, set.contains(str11));
-  TEST_EQ(false, set.contains(str12));
-  TEST_EQ((uint8_t*)nullptr, set.data);
-  TEST_EQ((usize)0, set.el_capacity);
-  TEST_EQ((usize)0, set.used);
+  InternHashTable<int> table = {};
+  TEST_EQ(false, table.contains(str1));
+  TEST_EQ(false, table.contains(str2));
+  TEST_EQ(false, table.contains(str3));
+  TEST_EQ(false, table.contains(str4));
+  TEST_EQ(false, table.contains(str5));
+  TEST_EQ(false, table.contains(str6));
+  TEST_EQ(false, table.contains(str7));
+  TEST_EQ(false, table.contains(str8));
+  TEST_EQ(false, table.contains(str9));
+  TEST_EQ(false, table.contains(str10));
+  TEST_EQ(false, table.contains(str11));
+  TEST_EQ(false, table.contains(str12));
+  TEST_EQ((uint8_t*)nullptr, table.data);
+  TEST_EQ((usize)0, table.el_capacity);
+  TEST_EQ((usize)0, table.used);
 
-  set.insert(str1, 1);
-  TEST_EQ(true, set.contains(str1));
-  TEST_EQ(false, set.contains(str2));
-  TEST_EQ(false, set.contains(str3));
-  TEST_EQ(false, set.contains(str4));
-  TEST_EQ(false, set.contains(str5));
-  TEST_EQ(false, set.contains(str6));
-  TEST_EQ(false, set.contains(str7));
-  TEST_EQ(false, set.contains(str8));
-  TEST_EQ(false, set.contains(str9));
-  TEST_EQ(false, set.contains(str10));
-  TEST_EQ(false, set.contains(str11));
-  TEST_EQ(false, set.contains(str12));
+  table.insert(str1, 1);
+  TEST_EQ(true, table.contains(str1));
+  TEST_EQ(false, table.contains(str2));
+  TEST_EQ(false, table.contains(str3));
+  TEST_EQ(false, table.contains(str4));
+  TEST_EQ(false, table.contains(str5));
+  TEST_EQ(false, table.contains(str6));
+  TEST_EQ(false, table.contains(str7));
+  TEST_EQ(false, table.contains(str8));
+  TEST_EQ(false, table.contains(str9));
+  TEST_EQ(false, table.contains(str10));
+  TEST_EQ(false, table.contains(str11));
+  TEST_EQ(false, table.contains(str12));
 
-  TEST_NEQ((uint8_t*)nullptr, set.data);
-  TEST_NEQ((usize)0, set.el_capacity);
-  TEST_EQ((usize)1, set.used);
+  TEST_NEQ((uint8_t*)nullptr, table.data);
+  TEST_NEQ((usize)0, table.el_capacity);
+  TEST_EQ((usize)1, table.used);
 
-  TEST_EQ(1, *set.get_val(str1));
-  TEST_EQ(1, *set.get_or_create(str1));
+  TEST_EQ(1, *table.get_val(str1));
+  TEST_EQ(1, *table.get_or_create(str1));
 
-  TEST_EQ((int*)nullptr, set.get_val(str2));
-  TEST_EQ((int*)nullptr, set.get_val(str3));
-  TEST_EQ((int*)nullptr, set.get_val(str4));
-  TEST_EQ((int*)nullptr, set.get_val(str5));
-  TEST_EQ((int*)nullptr, set.get_val(str6));
-  TEST_EQ((int*)nullptr, set.get_val(str7));
-  TEST_EQ((int*)nullptr, set.get_val(str8));
-  TEST_EQ((int*)nullptr, set.get_val(str9));
-  TEST_EQ((int*)nullptr, set.get_val(str10));
-  TEST_EQ((int*)nullptr, set.get_val(str11));
-  TEST_EQ((int*)nullptr, set.get_val(str12));
+  TEST_EQ((int*)nullptr, table.get_val(str2));
+  TEST_EQ((int*)nullptr, table.get_val(str3));
+  TEST_EQ((int*)nullptr, table.get_val(str4));
+  TEST_EQ((int*)nullptr, table.get_val(str5));
+  TEST_EQ((int*)nullptr, table.get_val(str6));
+  TEST_EQ((int*)nullptr, table.get_val(str7));
+  TEST_EQ((int*)nullptr, table.get_val(str8));
+  TEST_EQ((int*)nullptr, table.get_val(str9));
+  TEST_EQ((int*)nullptr, table.get_val(str10));
+  TEST_EQ((int*)nullptr, table.get_val(str11));
+  TEST_EQ((int*)nullptr, table.get_val(str12));
 
-  set.insert(str1, 2);
-  TEST_EQ(true, set.contains(str1));
-  TEST_EQ(false, set.contains(str2));
-  TEST_EQ(false, set.contains(str3));
-  TEST_EQ(false, set.contains(str4));
-  TEST_EQ(false, set.contains(str5));
-  TEST_EQ(false, set.contains(str6));
-  TEST_EQ(false, set.contains(str7));
-  TEST_EQ(false, set.contains(str8));
-  TEST_EQ(false, set.contains(str9));
-  TEST_EQ(false, set.contains(str10));
-  TEST_EQ(false, set.contains(str11));
-  TEST_EQ(false, set.contains(str12));
+  table.insert(str1, 2);
+  TEST_EQ(true, table.contains(str1));
+  TEST_EQ(false, table.contains(str2));
+  TEST_EQ(false, table.contains(str3));
+  TEST_EQ(false, table.contains(str4));
+  TEST_EQ(false, table.contains(str5));
+  TEST_EQ(false, table.contains(str6));
+  TEST_EQ(false, table.contains(str7));
+  TEST_EQ(false, table.contains(str8));
+  TEST_EQ(false, table.contains(str9));
+  TEST_EQ(false, table.contains(str10));
+  TEST_EQ(false, table.contains(str11));
+  TEST_EQ(false, table.contains(str12));
 
-  TEST_EQ((usize)1, set.used);
+  TEST_EQ((usize)1, table.used);
 
-  TEST_EQ(2, *set.get_val(str1));
-  TEST_EQ(2, *set.get_or_create(str1));
+  TEST_EQ(2, *table.get_val(str1));
+  TEST_EQ(2, *table.get_or_create(str1));
 
-  *set.get_or_create(str2) = 3;
-  TEST_EQ(true, set.contains(str1));
-  TEST_EQ(true, set.contains(str2));
-  TEST_EQ(false, set.contains(str3));
-  TEST_EQ(false, set.contains(str4));
-  TEST_EQ(false, set.contains(str5));
-  TEST_EQ(false, set.contains(str6));
-  TEST_EQ(false, set.contains(str7));
-  TEST_EQ(false, set.contains(str8));
-  TEST_EQ(false, set.contains(str9));
-  TEST_EQ(false, set.contains(str10));
-  TEST_EQ(false, set.contains(str11));
-  TEST_EQ(false, set.contains(str12));
+  *table.get_or_create(str2) = 3;
+  TEST_EQ(true, table.contains(str1));
+  TEST_EQ(true, table.contains(str2));
+  TEST_EQ(false, table.contains(str3));
+  TEST_EQ(false, table.contains(str4));
+  TEST_EQ(false, table.contains(str5));
+  TEST_EQ(false, table.contains(str6));
+  TEST_EQ(false, table.contains(str7));
+  TEST_EQ(false, table.contains(str8));
+  TEST_EQ(false, table.contains(str9));
+  TEST_EQ(false, table.contains(str10));
+  TEST_EQ(false, table.contains(str11));
+  TEST_EQ(false, table.contains(str12));
 
-  TEST_EQ((usize)2, set.used);
+  TEST_EQ((usize)2, table.used);
 
-  TEST_EQ(2, *set.get_val(str1));
-  TEST_EQ(2, *set.get_or_create(str1));
+  TEST_EQ(2, *table.get_val(str1));
+  TEST_EQ(2, *table.get_or_create(str1));
 
-  TEST_EQ(3, *set.get_val(str2));
-  TEST_EQ(3, *set.get_or_create(str2));
+  TEST_EQ(3, *table.get_val(str2));
+  TEST_EQ(3, *table.get_or_create(str2));
 
 
-  const auto save_data = set.data;
-  const auto el_capacity = set.el_capacity;
+  const auto save_data = table.data;
+  const auto el_capacity = table.el_capacity;
 
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
-  set.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
+  table.insert(str2, 3);
 
-  TEST_EQ(true, set.contains(str1));
-  TEST_EQ(true, set.contains(str2));
+  TEST_EQ(true, table.contains(str1));
+  TEST_EQ(true, table.contains(str2));
 
-  TEST_EQ(save_data, set.data);
-  TEST_EQ(el_capacity, set.el_capacity);
-  TEST_EQ((usize)2, set.used);
+  TEST_EQ(save_data, table.data);
+  TEST_EQ(el_capacity, table.el_capacity);
+  TEST_EQ((usize)2, table.used);
 
-  TEST_EQ(false, set.contains(str3));
-  TEST_EQ(false, set.contains(str4));
-  TEST_EQ(false, set.contains(str5));
-  TEST_EQ(false, set.contains(str6));
-  TEST_EQ(false, set.contains(str7));
-  TEST_EQ(false, set.contains(str8));
-  TEST_EQ(false, set.contains(str9));
-  TEST_EQ(false, set.contains(str10));
-  TEST_EQ(false, set.contains(str11));
-  TEST_EQ(false, set.contains(str12));
+  TEST_EQ(false, table.contains(str3));
+  TEST_EQ(false, table.contains(str4));
+  TEST_EQ(false, table.contains(str5));
+  TEST_EQ(false, table.contains(str6));
+  TEST_EQ(false, table.contains(str7));
+  TEST_EQ(false, table.contains(str8));
+  TEST_EQ(false, table.contains(str9));
+  TEST_EQ(false, table.contains(str10));
+  TEST_EQ(false, table.contains(str11));
+  TEST_EQ(false, table.contains(str12));
 
-  TEST_EQ(2, *set.get_val(str1));
-  TEST_EQ(2, *set.get_or_create(str1));
+  TEST_EQ(2, *table.get_val(str1));
+  TEST_EQ(2, *table.get_or_create(str1));
 
-  TEST_EQ(3, *set.get_val(str2));
-  TEST_EQ(3, *set.get_or_create(str2));
+  TEST_EQ(3, *table.get_val(str2));
+  TEST_EQ(3, *table.get_or_create(str2));
 
-  set.insert(str1, 0);
-  set.insert(str2, 1);
-  set.insert(str3, 2);
-  set.insert(str4, 3);
-  set.insert(str5, 4);
-  set.insert(str6, 5);
-  set.insert(str7, 6);
-  set.insert(str8, 7);
-  set.insert(str9, 8);
-  set.insert(str10, 9);
-  set.insert(str11, 10);
-  set.insert(str12, 11);
+  table.insert(str1, 0);
+  table.insert(str2, 1);
+  table.insert(str3, 2);
+  table.insert(str4, 3);
+  table.insert(str5, 4);
+  table.insert(str6, 5);
+  table.insert(str7, 6);
+  table.insert(str8, 7);
+  table.insert(str9, 8);
+  table.insert(str10, 9);
+  table.insert(str11, 10);
+  table.insert(str12, 11);
 
-  if (el_capacity == set.el_capacity) {
-    test_errors->report_error("Test assert failed!\nLine: {}, Test: {}\nTest was invalid as it didn't make the set grow", __LINE__, test_errors->test_name);
+  if (el_capacity == table.el_capacity) {
+    test_errors->report_error("Test assert failed!\nLine: {}, Test: {}\nTest was invalid as it didn't make the table grow", __LINE__, test_errors->test_name);
     return;
   }
 
-  TEST_EQ(true, set.contains(str1));
-  TEST_EQ(true, set.contains(str2));
-  TEST_EQ(true, set.contains(str3));
-  TEST_EQ(true, set.contains(str4));
-  TEST_EQ(true, set.contains(str5));
-  TEST_EQ(true, set.contains(str6));
-  TEST_EQ(true, set.contains(str7));
-  TEST_EQ(true, set.contains(str8));
-  TEST_EQ(true, set.contains(str9));
-  TEST_EQ(true, set.contains(str10));
-  TEST_EQ(true, set.contains(str11));
-  TEST_EQ(true, set.contains(str12));
+  TEST_EQ(true, table.contains(str1));
+  TEST_EQ(true, table.contains(str2));
+  TEST_EQ(true, table.contains(str3));
+  TEST_EQ(true, table.contains(str4));
+  TEST_EQ(true, table.contains(str5));
+  TEST_EQ(true, table.contains(str6));
+  TEST_EQ(true, table.contains(str7));
+  TEST_EQ(true, table.contains(str8));
+  TEST_EQ(true, table.contains(str9));
+  TEST_EQ(true, table.contains(str10));
+  TEST_EQ(true, table.contains(str11));
+  TEST_EQ(true, table.contains(str12));
 
-  TEST_EQ(0, *set.get_val(str1));
-  TEST_EQ(1, *set.get_val(str2));
-  TEST_EQ(2, *set.get_val(str3));
-  TEST_EQ(3, *set.get_val(str4));
-  TEST_EQ(4, *set.get_val(str5));
-  TEST_EQ(5, *set.get_val(str6));
-  TEST_EQ(6, *set.get_val(str7));
-  TEST_EQ(7, *set.get_val(str8));
-  TEST_EQ(8, *set.get_val(str9));
-  TEST_EQ(9, *set.get_val(str10));
-  TEST_EQ(10, *set.get_val(str11));
-  TEST_EQ(11, *set.get_val(str12));
+  TEST_EQ(0, *table.get_val(str1));
+  TEST_EQ(1, *table.get_val(str2));
+  TEST_EQ(2, *table.get_val(str3));
+  TEST_EQ(3, *table.get_val(str4));
+  TEST_EQ(4, *table.get_val(str5));
+  TEST_EQ(5, *table.get_val(str6));
+  TEST_EQ(6, *table.get_val(str7));
+  TEST_EQ(7, *table.get_val(str8));
+  TEST_EQ(8, *table.get_val(str9));
+  TEST_EQ(9, *table.get_val(str10));
+  TEST_EQ(10, *table.get_val(str11));
+  TEST_EQ(11, *table.get_val(str12));
 
-  TEST_EQ(0, *set.get_or_create(str1));
-  TEST_EQ(1, *set.get_or_create(str2));
-  TEST_EQ(2, *set.get_or_create(str3));
-  TEST_EQ(3, *set.get_or_create(str4));
-  TEST_EQ(4, *set.get_or_create(str5));
-  TEST_EQ(5, *set.get_or_create(str6));
-  TEST_EQ(6, *set.get_or_create(str7));
-  TEST_EQ(7, *set.get_or_create(str8));
-  TEST_EQ(8, *set.get_or_create(str9));
-  TEST_EQ(9, *set.get_or_create(str10));
-  TEST_EQ(10, *set.get_or_create(str11));
-  TEST_EQ(11, *set.get_or_create(str12));
+  TEST_EQ(0, *table.get_or_create(str1));
+  TEST_EQ(1, *table.get_or_create(str2));
+  TEST_EQ(2, *table.get_or_create(str3));
+  TEST_EQ(3, *table.get_or_create(str4));
+  TEST_EQ(4, *table.get_or_create(str5));
+  TEST_EQ(5, *table.get_or_create(str6));
+  TEST_EQ(6, *table.get_or_create(str7));
+  TEST_EQ(7, *table.get_or_create(str8));
+  TEST_EQ(8, *table.get_or_create(str9));
+  TEST_EQ(9, *table.get_or_create(str10));
+  TEST_EQ(10, *table.get_or_create(str11));
+  TEST_EQ(11, *table.get_or_create(str12));
 
-  TEST_NEQ(save_data, set.data);
-  TEST_NEQ(el_capacity, set.el_capacity);
-  TEST_EQ((usize)12, set.used);
+  TEST_NEQ(save_data, table.data);
+  TEST_NEQ(el_capacity, table.el_capacity);
+  TEST_EQ((usize)12, table.used);
 
-  auto itr = set.itr();
+  auto itr = table.itr();
 
   bool found[12] = {false};
 
@@ -581,13 +581,13 @@ TEST_FUNCTION(Hash, InternString_HashTable_Multiple) {
   const InternString* str19 = interner.intern("19", 2);
   const InternString* str20 = interner.intern("20", 2);
 
-  InternHashTable<int> set = {};
+  InternHashTable<int> table = {};
 
-  set.insert(str1, 0);
-  set.insert(str2, 1);
+  table.insert(str1, 0);
+  table.insert(str2, 1);
 
   {
-    const ConstArray<int*, 3> found = set.get_val_multiple({ str1, str2, str3 });
+    const ConstArray<int*, 3> found = table.get_val_multiple({ str1, str2, str3 });
 
     TEST_NEQ(static_cast<int*>(nullptr), found[0]);
     TEST_EQ(0, *(found[0]));
@@ -599,8 +599,8 @@ TEST_FUNCTION(Hash, InternString_HashTable_Multiple) {
   }
 
   {
-    ASSERT(set.needs_resize(18));
-    const ConstArray<int*, 18> created = set.get_or_create_multiple({
+    ASSERT(table.needs_resize(18));
+    const ConstArray<int*, 18> created = table.get_or_create_multiple({
         str3, str4, str5, str6, str7, str8, str9,
         str10, str11, str12, str13, str14, str15,
         str16, str17, str18, str19, str20,});
