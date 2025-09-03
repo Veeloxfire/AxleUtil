@@ -404,6 +404,32 @@ TEST_FUNCTION(Hash, InternString_HashTable) {
   TEST_EQ(3, *table.get_val(str2));
   TEST_EQ(3, *table.get_or_create(str2));
 
+  table.remove(str1);
+
+  TEST_EQ(false, table.contains(str1));
+  TEST_EQ(true, table.contains(str2));
+  TEST_EQ(static_cast<int*>(nullptr), table.get_val(str1));
+
+  TEST_EQ(3, *table.get_val(str2));
+  TEST_EQ(3, *table.get_or_create(str2));
+
+  table.insert(str1, 2);
+
+
+  {
+    int i = table.take(str1);
+    TEST_EQ(2, i);
+
+    TEST_EQ(false, table.contains(str1));
+    TEST_EQ(true, table.contains(str2));
+    TEST_EQ(static_cast<int*>(nullptr), table.get_val(str1));
+
+    TEST_EQ(3, *table.get_val(str2));
+    TEST_EQ(3, *table.get_or_create(str2));
+
+    table.insert(str1, 2);
+  }
+
   table.insert(str1, 0);
   table.insert(str2, 1);
   table.insert(str3, 2);
@@ -703,22 +729,30 @@ TEST_FUNCTION(Hash, HashTable_destruction) {
       TEST_EQ(past_used + 1, table.used);
     }
 
-    TEST_EQ(static_cast<u64>(0), counter);
-
-    ASSERT(table.needs_resize(1));
     const usize old_used = table.used;
     const usize old_capacity = table.el_capacity;
     
-    table.insert(gen(), { &counter });
+    {
+      ASSERT(table.needs_resize(1));// next insert will resize
+      
+      TEST_EQ(static_cast<u64>(0), counter);
 
-    TEST_EQ(static_cast<u64>(old_used + 1), counter);
-    counter -= 1;
+      auto key = gen();
+      table.insert(key, { &counter });
+      counter -= 1;// for the temporary
+      
+      // destroyed all the elements when resizing because they cannot move 
+      TEST_EQ(static_cast<u64>(old_used), counter);
 
-    TEST_EQ(old_used + 1, table.used);
-    TEST_NEQ(old_capacity, table.el_capacity);
-    ASSERT(old_capacity < table.el_capacity);
-    
-    expected_out_count = old_used + table.used;
+      TEST_EQ(old_used + 1, table.used);
+      TEST_NEQ(old_capacity, table.el_capacity);
+      ASSERT(old_capacity < table.el_capacity);
+
+      table.remove(key);
+      TEST_EQ(static_cast<u64>(old_used + 1), counter);
+    }
+   
+    expected_out_count = old_used + 1 /* for removed */ + table.used;
   }
   TEST_EQ(expected_out_count, counter);
 }

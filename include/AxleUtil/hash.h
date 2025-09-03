@@ -67,6 +67,8 @@ struct InternalHashSet {
   void remove(const param_t key);
 };
 
+inline constexpr usize INVALID_SOA_INDEX = static_cast<usize>(-1);
+
 template<typename K, typename T, ValidInternalTrait Trait = DefaultHashmapTrait<K>>
 struct InternalHashTable {
   constexpr static float LOAD_FACTOR = 0.75;
@@ -84,6 +86,14 @@ struct InternalHashTable {
     }
 
     constexpr ~val_storage_t() {}
+  };
+
+  struct SoaIndex {
+    usize soa_index;
+
+    constexpr bool is_valid() const noexcept {
+      return soa_index != INVALID_SOA_INDEX;
+    }
   };
 
   u8* data = nullptr;// ptr to data in the array
@@ -145,11 +155,20 @@ struct InternalHashTable {
   InternalHashTable& operator=(const InternalHashTable&) = delete;
 
   bool contains(const param_t key) const;
-  usize get_soa_index(const param_t key) const;
+  SoaIndex get_contains_soa_index(const param_t key) const;
+  usize get_insert_soa_index(const param_t key) const;
   void try_extend(usize num);
+  
   T* get_val(const param_t key) const;
+  T& get_val(SoaIndex index) const;
+  
   void insert(const param_t key, T&& val);
   T* get_or_create(const param_t key) requires requires(T t) { {T()}->IS_SAME_TYPE<T>; };
+
+  void remove(const param_t key);
+  void remove(SoaIndex soa_index);
+  T take(const param_t key);
+  T take(const SoaIndex soa_index);
 
   template<usize N>
   ConstArray<T*, N> get_val_multiple(const param_t (&arr)[N]) const;
@@ -379,10 +398,15 @@ InternalHashTable<K, T, Trait>::~InternalHashTable() {
 
 template<typename K, typename T, ValidInternalTrait Trait>
 bool InternalHashTable<K, T, Trait>::contains(const param_t key) const {
+  return get_contains_soa_index(key).is_valid();
+}
+
+template<typename K, typename T, ValidInternalTrait Trait>
+typename InternalHashTable<K, T, Trait>::SoaIndex InternalHashTable<K, T, Trait>::get_contains_soa_index(const param_t key) const {
   ASSERT(ensure_invariants());
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
-  if (el_capacity == 0) return false;
+  if (el_capacity == 0) return { INVALID_SOA_INDEX };
 
   const value_t* keys = key_arr();
 
@@ -392,21 +416,21 @@ bool InternalHashTable<K, T, Trait>::contains(const param_t key) const {
   do {
     const value_t& test_key = keys[index];
     if (Trait::eq(key, test_key)) {
-      return true;
+      return { index };
     }
     else if (Trait::eq(Trait::EMPTY, test_key)) {
-      return false;
+      return { INVALID_SOA_INDEX };
     }
 
     index++;
     index %= el_capacity;
   } while(index != first_index);
 
-  return false;
+  return { INVALID_SOA_INDEX };
 }
 
 template<typename K, typename T, ValidInternalTrait Trait>
-size_t InternalHashTable<K, T, Trait>::get_soa_index(const param_t key) const {
+usize InternalHashTable<K, T, Trait>::get_insert_soa_index(const param_t key) const {
   ASSERT(ensure_invariants());
   ASSERT(!Trait::eq(key, Trait::EMPTY)
       && !Trait::eq(key, Trait::TOMBSTONE));
@@ -499,7 +523,7 @@ void InternalHashTable<K, T, Trait>::try_extend(size_t num) {
 
       if (!Trait::eq(Trait::EMPTY, key)
           && !Trait::eq(Trait::TOMBSTONE, key)) {
-        const usize new_index = get_soa_index(key);
+        const usize new_index = get_insert_soa_index(key);
 
         val_storage_t& v = old_values[i];
 
@@ -529,15 +553,20 @@ T* InternalHashTable<K, T, Trait>::get_val(const param_t key) const {
       && !Trait::eq(key, Trait::TOMBSTONE));
   if (el_capacity == 0) return nullptr;
 
-  const size_t soa_index = get_soa_index(key);
-
-  value_t& test_key = key_arr()[soa_index];
-  if (Trait::eq(key, test_key)) return &val_arr()[soa_index].val;
-  else {
-    ASSERT(Trait::eq(Trait::EMPTY, test_key)
-        || Trait::eq(Trait::TOMBSTONE, test_key));
+  SoaIndex index = get_contains_soa_index(key);
+  if (!index.is_valid()) {
     return nullptr;
   }
+  else {
+    ASSERT(Trait::eq(key_arr()[index.soa_index], key));
+    return &get_val(index);
+  }
+}
+
+template<typename K, typename T, ValidInternalTrait Trait>
+T& InternalHashTable<K, T, Trait>::get_val(const SoaIndex i) const {
+  ASSERT(i.is_valid());
+  return val_arr()[i.soa_index].val;
 }
 
 template<typename K, typename T, ValidInternalTrait Trait>
@@ -560,14 +589,14 @@ void InternalHashTable<K, T, Trait>::insert(const param_t key, T&& val) {
   if (el_capacity == 0) {
     try_extend(1);
 
-    const usize soa_index = get_soa_index(key);
+    const usize soa_index = get_insert_soa_index(key);
 
     key_arr()[soa_index] = key;
     val_arr()[soa_index].val = std::move(val);
     used += 1;
   }
   else {
-    const usize soa_index = get_soa_index(key);
+    const usize soa_index = get_insert_soa_index(key);
     
     value_t& key_loc = key_arr()[soa_index];
     if (Trait::eq(key, key_loc)) {
@@ -581,7 +610,7 @@ void InternalHashTable<K, T, Trait>::insert(const param_t key, T&& val) {
     if (needs_resize(1)) {
       try_extend(1);
 
-      const usize new_index = get_soa_index(key);
+      const usize new_index = get_insert_soa_index(key);
       key_arr()[new_index] = key;
       val_arr()[new_index].val = std::move(val);
     }
@@ -603,7 +632,7 @@ T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) requires req
   if (el_capacity == 0) {
     try_extend(1);
 
-    const usize soa_index = get_soa_index(key);
+    const usize soa_index = get_insert_soa_index(key);
 
     value_t& test_key = key_arr()[soa_index];
     val_storage_t& val = val_arr()[soa_index];
@@ -617,7 +646,7 @@ T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) requires req
   }
   else {
     {
-      const usize soa_index = get_soa_index(key);
+      const usize soa_index = get_insert_soa_index(key);
       value_t& test_key = key_arr()[soa_index];
 
       if (Trait::eq(key, test_key)) {
@@ -642,7 +671,7 @@ T* InternalHashTable<K, T, Trait>::get_or_create(const param_t key) requires req
 
     //need to reset the key and val location
     {
-      const usize soa_index = get_soa_index(key);
+      const usize soa_index = get_insert_soa_index(key);
       value_t& test_key = key_arr()[soa_index];
       val_storage_t& val = val_arr()[soa_index];
 
@@ -685,7 +714,7 @@ ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_or_create_multiple(const p
 
     for (usize i = 0; i < N; ++i) {
       const param_t& key = keys[i];
-      const usize soa_index = get_soa_index(key);
+      const usize soa_index = get_insert_soa_index(key);
 
       value_t& test_key = key_arr()[soa_index];
       val_storage_t& val = val_arr()[soa_index];
@@ -705,6 +734,46 @@ ConstArray<T*, N> InternalHashTable<K, T, Trait>::get_or_create_multiple(const p
 
     return found;
   }
+}
+
+template<typename K, typename T, ValidInternalTrait Trait>
+void InternalHashTable<K, T, Trait>::remove(const param_t key) {
+  SoaIndex s = get_contains_soa_index(key);
+  
+  remove(s);
+}
+
+template<typename K, typename T, ValidInternalTrait Trait>
+T InternalHashTable<K, T, Trait>::take(const param_t key) {
+  SoaIndex s = get_contains_soa_index(key);
+  
+  return take(s);
+}
+
+
+template<typename K, typename T, ValidInternalTrait Trait>
+void InternalHashTable<K, T, Trait>::remove(const SoaIndex s) {
+  if (!s.is_valid()) { return; }
+
+  key_arr()[s.soa_index] = Trait::TOMBSTONE;
+  val_arr()[s.soa_index].clear();
+
+  used -= 1;
+}
+
+template<typename K, typename T, ValidInternalTrait Trait>
+T InternalHashTable<K, T, Trait>::take(const SoaIndex s) {
+  ASSERT(s.is_valid());
+
+  key_arr()[s.soa_index] = Trait::TOMBSTONE;
+  val_storage_t& store = val_arr()[s.soa_index];
+
+  T t = std::move(store.val);
+  store.clear();
+
+  used -= 1;
+
+  return t;
 }
 
 }
