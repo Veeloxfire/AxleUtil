@@ -4,41 +4,43 @@
 
 using namespace Axle::Primitives;
 
-struct DeleteCounter {
-  usize* i = nullptr;
+namespace {
+  struct DeleteCounter {
+    usize* i = nullptr;
 
-  DeleteCounter() = default;
-  DeleteCounter(usize* p) : i(p) {}
+    DeleteCounter() = default;
+    DeleteCounter(usize* p) : i(p) {}
 
-  DeleteCounter(const DeleteCounter&) = delete;
-  DeleteCounter(DeleteCounter&&) = delete;
-  DeleteCounter& operator=(const DeleteCounter&) = delete;
-  DeleteCounter& operator=(DeleteCounter&&) = delete;
+    DeleteCounter(const DeleteCounter&) = delete;
+    DeleteCounter(DeleteCounter&&) = delete;
+    DeleteCounter& operator=(const DeleteCounter&) = delete;
+    DeleteCounter& operator=(DeleteCounter&&) = delete;
 
-  ~DeleteCounter() {
-    if(i != nullptr) {
-      *i += 1;
+    ~DeleteCounter() {
+      if(i != nullptr) {
+        *i += 1;
+      }
     }
-  }
-};
+  };
 
 
-struct DeleteCounter2 {
-  usize* i = nullptr;
+  struct DeleteCounter2 {
+    usize* i = nullptr;
 
-  DeleteCounter2() = default;
+    DeleteCounter2() = default;
 
-  DeleteCounter2(const DeleteCounter2&) = delete;
-  DeleteCounter2(DeleteCounter2&&) = delete;
-  DeleteCounter2& operator=(const DeleteCounter2&) = delete;
-  DeleteCounter2& operator=(DeleteCounter2&&) = delete;
+    DeleteCounter2(const DeleteCounter2&) = delete;
+    DeleteCounter2(DeleteCounter2&&) = delete;
+    DeleteCounter2& operator=(const DeleteCounter2&) = delete;
+    DeleteCounter2& operator=(DeleteCounter2&&) = delete;
 
-  ~DeleteCounter2() {
-    if(i != nullptr) {
-      *i += 1;
+    ~DeleteCounter2() {
+      if(i != nullptr) {
+        *i += 1;
+      }
     }
-  }
-};
+  };
+}
 
 TEST_FUNCTION(GlobalAllocators, basic) {
   {
@@ -242,6 +244,166 @@ TEST_FUNCTION(GrowingMemoryPool, destruct_n) {
 
   TEST_EQ(static_cast<usize>(25 * 10 + 25 * 5 + BIG_DELETE_COUNTER_N), counter);
 }
+
+TEST_FUNCTION(FreelistBlockAllocator, basic) {
+  Axle::FreelistBlockAllocator<int> alloc = {};
+  TEST_EQ(true, alloc._debug_all_are_free());
+
+  int* i1 = alloc.allocate();
+  TEST_EQ(false, alloc._debug_all_are_free());
+  *i1 = 1;
+  int* i2 = alloc.allocate();
+  TEST_EQ(false, alloc._debug_all_are_free());
+  *i2 = 2;
+  int* i3 = alloc.allocate();
+  TEST_EQ(false, alloc._debug_all_are_free());
+  *i3 = 3;
+  int* i4 = alloc.allocate();
+  TEST_EQ(false, alloc._debug_all_are_free());
+  *i4 = 4;
+  int* i5 = alloc.allocate();
+  TEST_EQ(false, alloc._debug_all_are_free());
+  *i5 = 5;
+
+
+  TEST_EQ(1, *i1);
+  TEST_EQ(2, *i2);
+  TEST_EQ(3, *i3);
+  TEST_EQ(4, *i4);
+  TEST_EQ(5, *i5);
+
+  alloc.free(i2);
+  TEST_EQ(false, alloc._debug_all_are_free());
+
+  TEST_EQ(1, *i1);
+  TEST_EQ(3, *i3);
+  TEST_EQ(4, *i4);
+  TEST_EQ(5, *i5);
+
+  int* i6 = alloc.allocate();
+  *i6 = 6;
+
+  TEST_EQ(1, *i1);
+  TEST_EQ(3, *i3);
+  TEST_EQ(4, *i4);
+  TEST_EQ(5, *i5);
+  TEST_EQ(6, *i6);
+
+  alloc.free(i1);
+  TEST_EQ(false, alloc._debug_all_are_free());
+  alloc.free(i6);
+  TEST_EQ(false, alloc._debug_all_are_free());
+  alloc.free(i4);
+  TEST_EQ(false, alloc._debug_all_are_free());
+  alloc.free(i5);
+  TEST_EQ(false, alloc._debug_all_are_free());
+
+  TEST_EQ(3, *i3);
+
+
+  alloc.free(i3);
+
+  TEST_EQ(true, alloc._debug_all_are_free());
+}
+
+TEST_FUNCTION(FreelistBlockAllocator, free_individual) {
+  usize counter = 0;
+
+  {
+    Axle::FreelistBlockAllocator<DeleteCounter> alloc = {};
+
+    DeleteCounter* i1 = alloc.allocate();
+    i1->i = &counter;
+    DeleteCounter* i2 = alloc.allocate();
+    i2->i = &counter;
+    DeleteCounter* i3 = alloc.allocate();
+    i3->i = &counter;
+    DeleteCounter* i4 = alloc.allocate();
+    i4->i = &counter;
+    DeleteCounter* i5 = alloc.allocate();
+    i5->i = &counter;
+
+    TEST_EQ(static_cast<usize>(0), counter);
+
+    alloc.free(i2);
+
+    TEST_EQ(static_cast<usize>(1), counter);
+
+    DeleteCounter* i6 = alloc.allocate();
+    i6->i = &counter;
+
+    alloc.free(i1);
+    TEST_EQ(static_cast<usize>(2), counter);
+    alloc.free(i6);
+    TEST_EQ(static_cast<usize>(3), counter);
+    alloc.free(i4);
+    TEST_EQ(static_cast<usize>(4), counter);
+    alloc.free(i5);
+    TEST_EQ(static_cast<usize>(5), counter);
+    alloc.free(i3);
+    TEST_EQ(static_cast<usize>(6), counter);
+
+    TEST_EQ(true, alloc._debug_all_are_free());
+  }
+
+  TEST_EQ(static_cast<usize>(6), counter);
+}
+
+TEST_FUNCTION(FreelistBlockAllocator, free_all) {
+  usize counter = 0;
+
+  {
+    Axle::FreelistBlockAllocator<DeleteCounter> alloc = {};
+
+    DeleteCounter* i1 = alloc.allocate();
+    i1->i = &counter;
+    DeleteCounter* i2 = alloc.allocate();
+    i2->i = &counter;
+    DeleteCounter* i3 = alloc.allocate();
+    i3->i = &counter;
+    DeleteCounter* i4 = alloc.allocate();
+    i4->i = &counter;
+    DeleteCounter* i5 = alloc.allocate();
+    i5->i = &counter;
+
+
+    TEST_EQ(false, alloc._debug_all_are_free());
+    TEST_EQ(static_cast<usize>(0), counter);
+
+    alloc.free_all();
+
+    TEST_EQ(static_cast<usize>(5), counter);
+    TEST_EQ(true, alloc._debug_all_are_free());
+  }
+
+  TEST_EQ(static_cast<usize>(5), counter);
+}
+
+TEST_FUNCTION(FreelistBlockAllocator, cleanup) {
+  usize counter = 0;
+
+  {
+    Axle::FreelistBlockAllocator<DeleteCounter> alloc = {};
+
+    DeleteCounter* i1 = alloc.allocate();
+    i1->i = &counter;
+    DeleteCounter* i2 = alloc.allocate();
+    i2->i = &counter;
+    DeleteCounter* i3 = alloc.allocate();
+    i3->i = &counter;
+    DeleteCounter* i4 = alloc.allocate();
+    i4->i = &counter;
+    DeleteCounter* i5 = alloc.allocate();
+    i5->i = &counter;
+
+
+    TEST_EQ(false, alloc._debug_all_are_free());
+    TEST_EQ(static_cast<usize>(0), counter);
+  }
+
+  TEST_EQ(static_cast<usize>(5), counter);
+}
+
 
 TEST_FUNCTION(DenseBlockAllocator, allocate) {
   usize counter = 0;

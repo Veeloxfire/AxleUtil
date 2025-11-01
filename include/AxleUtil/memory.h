@@ -611,6 +611,142 @@ struct GrowingMemoryPool {
   }
 };
 
+template<typename T>
+struct FreelistBlockAllocator {
+  struct Element {
+    alignas(T) u8 el[sizeof(T)];
+    Element* next;
+  };
+
+  struct BLOCK {
+    constexpr static size_t BLOCK_SIZE = 32u;
+
+    //size_t filled = 0;
+    BLOCK* prev = nullptr;
+    Element data[BLOCK_SIZE] = {};
+    
+    constexpr BLOCK() = default;
+    constexpr ~BLOCK() = default;
+    
+    constexpr BLOCK(const BLOCK&) = delete;
+    constexpr BLOCK& operator=(const BLOCK&) = delete;
+  };
+
+  BLOCK* top = nullptr;
+  Element* alloc_list = nullptr;
+
+  FreelistBlockAllocator() = default;
+  FreelistBlockAllocator(const FreelistBlockAllocator&) = delete;
+  FreelistBlockAllocator(FreelistBlockAllocator&&) = delete;
+  FreelistBlockAllocator& operator=(const FreelistBlockAllocator&) = delete;
+  FreelistBlockAllocator& operator=(FreelistBlockAllocator&&) = delete;
+
+  ~FreelistBlockAllocator() noexcept 
+  {
+    free_all();
+  }
+
+  void new_block() {
+    BLOCK* const new_b = allocate_default<BLOCK>();
+
+    new_b->prev = top;
+    top = new_b;
+
+    for (usize i = 0; i < BLOCK::BLOCK_SIZE - 1; i++) {
+      top->data[i].next = &top->data[i + 1u];
+    }
+
+    top->data[BLOCK::BLOCK_SIZE - 1u].next = alloc_list;
+
+    alloc_list = top->data;
+  }
+
+  T* allocate() {
+    if (alloc_list == nullptr) {
+      new_block();
+    }
+
+    Element* e = alloc_list;
+    alloc_list = e->next;
+
+    e->next = nullptr;
+    return new(e->el) T();
+  }
+
+  bool _debug_valid_free_ptr(const T* const t) const {
+    const Element* e = alloc_list;
+    while (e != nullptr) {
+      if (e->el == reinterpret_cast<const u8*>(t)) return false;
+      e = e->next;
+    }
+
+    const BLOCK* b = top;
+    while (b != nullptr) {
+      const u8* block_base = reinterpret_cast<const u8*>(b->data);
+      const u8* block_top = reinterpret_cast<const u8*>(b->data + BLOCK::BLOCK_SIZE);
+
+      const u8* t_base = reinterpret_cast<const u8*>(t);
+      const u8* t_top = reinterpret_cast<const u8*>(t + 1u);
+      if (block_base <= t_base && t_top <= block_top) return true;
+
+      b = b->prev;
+    }
+
+    return false;
+  }
+
+  bool _debug_all_are_free() const {
+    usize actual = 0u;
+    const Element* e = alloc_list;
+    while (e != nullptr) {
+      actual += 1u;
+      e = e->next;
+    }
+
+    usize expected = 0u;
+    const BLOCK* b = top;
+    while (b != nullptr) {
+      expected += BLOCK::BLOCK_SIZE;
+      b = b->prev;
+    }
+
+    return actual == expected;
+  }
+
+
+  void free(const T* t) {
+    ASSERT(_debug_valid_free_ptr(t));
+
+    destruct_single<const T>(t);
+
+    Element* new_e = const_cast<Element*>(reinterpret_cast<const Element*>(t));
+    new_e->next = alloc_list;
+
+    for (u8& b: new_e->el) {
+      b = 0;
+    }
+
+    alloc_list = new_e;
+  }
+
+  void free_all() {
+    while (top != nullptr) {
+      for (Element& e : top->data) {
+        if (e.next == nullptr) {
+          T* t = std::launder(reinterpret_cast<T*>(e.el));
+          destruct_single<T>(t);
+        }
+      }
+
+      BLOCK* old = top;
+      top = top->prev;
+      free_destruct_single<BLOCK>(old);
+    }
+
+    top = nullptr;
+    alloc_list = nullptr;
+  }
+};
 
 template<typename T>
 struct DenseBlockAllocator {
