@@ -109,7 +109,25 @@ static void other_thread_2(const Axle::ThreadHandle* handle, void* data) {
   shared->signal.set();
 }
 
-TEST_FUNCTION(Threading, Thread) {
+static void other_thread_1_template(const Axle::ThreadHandle* handle, Shared* shared) {
+  AxleTest::TestErrors* test_errors = shared->test_errors;
+
+  TEST_NEQ(static_cast<const Axle::ThreadHandle*>(nullptr), handle);
+  TEST_EQ(static_cast<u32>(2), Axle::THREAD_ID.id);
+
+  shared->signal.set();
+}
+
+static void other_thread_2_template(const Axle::ThreadHandle* handle, Shared* shared) {
+  AxleTest::TestErrors* test_errors = shared->test_errors;
+
+  TEST_NEQ(static_cast<const Axle::ThreadHandle*>(nullptr), handle);
+  TEST_EQ(static_cast<u32>(3), Axle::THREAD_ID.id);
+  
+  shared->signal.set();
+}
+
+TEST_FUNCTION(Threading, start_thread) {
   {
     Shared shared = {
       test_errors, {}
@@ -127,6 +145,32 @@ TEST_FUNCTION(Threading, Thread) {
       test_errors, {}
     };
     const Axle::ThreadHandle* handle = Axle::start_thread(other_thread_2, &shared);
+    TEST_NEQ(static_cast<const Axle::ThreadHandle*>(nullptr), handle);
+
+    Axle::wait_for_thread_end(handle);
+
+    TEST_EQ(true, shared.signal.test());
+  }
+}
+
+TEST_FUNCTION(Threading, start_thread_template) {
+  {
+    Shared shared = {
+      test_errors, {}
+    };
+    const Axle::ThreadHandle* handle = Axle::start_thread<other_thread_1_template>(&shared);
+    TEST_NEQ(static_cast<const Axle::ThreadHandle*>(nullptr), handle);
+
+    Axle::wait_for_thread_end(handle);
+    
+    TEST_EQ(true, shared.signal.test());
+  }
+
+  {
+    Shared shared = {
+      test_errors, {}
+    };
+    const Axle::ThreadHandle* handle = Axle::start_thread<other_thread_2_template>(&shared);
     TEST_NEQ(static_cast<const Axle::ThreadHandle*>(nullptr), handle);
 
     Axle::wait_for_thread_end(handle);

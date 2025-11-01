@@ -1,7 +1,7 @@
 #ifndef AXLEUTIL_THREADING_H_
 #define AXLEUTIL_THREADING_H_
 
-#include <AxleUtil/primitives.h>
+#include <AxleUtil/safe_lib.h>
 
 namespace Axle {
 struct ThreadID {
@@ -107,6 +107,17 @@ struct ThreadHandle;
 using THREAD_PROC = void(*)(const ThreadHandle*, void*);
 
 const ThreadHandle* start_thread(THREAD_PROC thread_proc, void* data);
+
+template<auto thread_proc, typename T> requires(requires(const ThreadHandle* h, T* t) {
+  { thread_proc(h, t) } -> IS_SAME_TYPE<void>;
+})
+const ThreadHandle* start_thread(T* data) {
+  return start_thread(
+    +[](const ThreadHandle* h, void* d) { thread_proc(h, reinterpret_cast<T*>(d)); },
+    reinterpret_cast<void*>(data)
+  );
+}
+
 void wait_for_thread_end(const ThreadHandle* thread);
 }
 #endif
